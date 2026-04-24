@@ -1,0 +1,2313 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+index.html
+package.json
+postcss.config.js
+README.md
+src/App.jsx
+src/components/admin/AdminHeader.jsx
+src/components/admin/AdminSidebar.jsx
+src/components/admin/FieldGroup.jsx
+src/components/admin/ImageUploadField.jsx
+src/components/admin/tabs/ContactTab.jsx
+src/components/admin/tabs/EcosystemsTab.jsx
+src/components/admin/tabs/HeroTab.jsx
+src/components/admin/tabs/ProjectsTab.jsx
+src/components/admin/tabs/ServicesTab.jsx
+src/components/admin/tabs/SiteConfigTab.jsx
+src/components/admin/tabs/TestimonialsTab.jsx
+src/components/site/ContactSection.jsx
+src/components/site/EcosystemSection.jsx
+src/components/site/Footer.jsx
+src/components/site/Hero.jsx
+src/components/site/NavBar.jsx
+src/components/site/ProjectsSection.jsx
+src/components/site/ServicesSection.jsx
+src/components/site/TestimonialsSection.jsx
+src/hooks/useSiteData.js
+src/index.css
+src/lib/firebase.js
+src/lib/firebaseHelpers.js
+src/lib/useAuth.js
+src/main.jsx
+src/pages/AdminLogin.jsx
+src/pages/AdminPanel.jsx
+src/pages/PublicSite.jsx
+tailwind.config.js
+vite.config.js
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="index.html">
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Polartronic Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&family=Bebas+Neue&family=Cinzel:wght@700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+</file>
+
+<file path="package.json">
+{
+  "name": "polartronic-studio",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "firebase": "^10.12.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.23.1",
+    "react-hot-toast": "^2.4.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
+    "vite": "^5.3.1"
+  }
+}
+</file>
+
+<file path="postcss.config.js">
+export default {
+  plugins: { tailwindcss: {}, autoprefixer: {} },
+}
+</file>
+
+<file path="README.md">
+# POLARTRONIC STUDIO — Plataforma de Agencia Digital
+
+## Stack
+- **React 18** + Vite
+- **Firebase** (Firestore + Auth + Storage)
+- **Tailwind CSS**
+- **react-router-dom** + **react-hot-toast**
+
+---
+
+## Instalación
+
+```bash
+# 1. Instalar dependencias
+npm install
+
+# 2. Configurar Firebase (OBLIGATORIO antes de usar)
+# Edita: src/lib/firebase.js
+# Reemplaza los valores con los de tu proyecto Firebase
+
+# 3. Lanzar en desarrollo
+npm run dev
+
+# 4. Build de producción
+npm run build
+```
+
+---
+
+## Configurar Firebase (paso a paso)
+
+### 1. Crear proyecto
+- Ve a https://console.firebase.google.com
+- Crea un nuevo proyecto
+- Activa **Google Analytics** (opcional)
+
+### 2. Habilitar Authentication
+- Firebase Console → Authentication → Get Started
+- Habilita **Email/Password**
+- Crea un usuario: Authentication → Users → Add user
+
+### 3. Habilitar Firestore
+- Firebase Console → Firestore Database → Create database
+- Empieza en **modo producción**
+- Aplica estas reglas en Firestore → Rules:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Lectura pública del sitio
+    match /site/{doc} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /ecosystems/{doc} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /projects/{doc} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /testimonials/{doc} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /services/{doc} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}
+```
+
+### 4. Habilitar Storage
+- Firebase Console → Storage → Get Started
+- Aplica estas reglas:
+
+```
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}
+```
+
+### 5. Obtener credenciales
+- Firebase Console → Project Settings (⚙️) → Your apps → Web
+- Registra la app → copia el `firebaseConfig`
+- Pega en `src/lib/firebase.js`
+
+---
+
+## Estructura del Proyecto
+
+```
+src/
+├── lib/
+│   ├── firebase.js          ← 🔑 TUS CREDENCIALES AQUÍ
+│   ├── firebaseHelpers.js   ← CRUD para Firestore + Storage
+│   └── useAuth.js           ← Hook de autenticación
+├── hooks/
+│   └── useSiteData.js       ← Carga todos los datos del sitio
+├── pages/
+│   ├── PublicSite.jsx       ← Sitio público
+│   ├── AdminLogin.jsx       ← Login del panel
+│   └── AdminPanel.jsx       ← Panel de control
+├── components/
+│   ├── admin/
+│   │   ├── AdminSidebar.jsx
+│   │   ├── AdminHeader.jsx
+│   │   ├── ImageUploadField.jsx  ← Sube imágenes a Firebase Storage
+│   │   ├── FieldGroup.jsx
+│   │   └── tabs/
+│   │       ├── SiteConfigTab.jsx     ← Marca, colores, about
+│   │       ├── HeroTab.jsx           ← Portada principal
+│   │       ├── ServicesTab.jsx       ← Servicios CRUD
+│   │       ├── EcosystemsTab.jsx     ← Tarjetas de nicho CRUD
+│   │       ├── ProjectsTab.jsx       ← Portfolio CRUD
+│   │       ├── TestimonialsTab.jsx   ← Testimonios CRUD
+│   │       └── ContactTab.jsx        ← Contacto & Footer
+│   └── site/
+│       ├── NavBar.jsx
+│       ├── Hero.jsx
+│       ├── ServicesSection.jsx
+│       ├── EcosystemSection.jsx
+│       ├── ProjectsSection.jsx
+│       ├── TestimonialsSection.jsx
+│       ├── ContactSection.jsx
+│       └── Footer.jsx
+```
+
+---
+
+## Acceso al Panel de Administración
+
+- URL: `http://localhost:5173/admin`
+- Usa las credenciales del usuario que creaste en Firebase Auth
+
+---
+
+## Personalización
+
+Todos los cambios se hacen desde `/admin` y se guardan en Firestore:
+
+| Sección            | Qué puedes editar                              |
+|-------------------|------------------------------------------------|
+| Marca & Colores   | Nombre, tagline, color primario, fondo         |
+| Hero              | Badge, titular, subtítulo, CTA, imagen de fondo|
+| Servicios         | CRUD completo (emoji, título, desc, precio)    |
+| Ecosistemas       | CRUD completo con imagen                       |
+| Proyectos         | CRUD completo con imagen y link                |
+| Testimonios       | CRUD completo con avatar                       |
+| Contacto & Footer | Email, WhatsApp, Instagram, textos legales     |
+</file>
+
+<file path="src/App.jsx">
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from './lib/useAuth'
+import PublicSite  from './pages/PublicSite'
+import AdminLogin  from './pages/AdminLogin'
+import AdminPanel  from './pages/AdminPanel'
+
+function ProtectedRoute({ children }) {
+  const { user, loading } = useAuth()
+  if (loading) return (
+    <div style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center',
+      justifyContent: 'center', background: '#030303',
+    }}>
+      <div style={{
+        width: 36, height: 36, border: '3px solid rgba(255,60,60,0.3)',
+        borderTopColor: '#ff3c3c', borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite',
+      }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  )
+  return user ? children : <Navigate to="/admin/login" replace />
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/"             element={<PublicSite />} />
+      <Route path="/admin/login"  element={<AdminLogin />} />
+      <Route path="/admin/*"      element={
+        <ProtectedRoute>
+          <AdminPanel />
+        </ProtectedRoute>
+      } />
+    </Routes>
+  )
+}
+</file>
+
+<file path="src/components/admin/AdminHeader.jsx">
+export default function AdminHeader({ onLogout, onToggleSidebar }) {
+  return (
+    <header style={{ height:60, background:'#080808', borderBottom:'1px solid rgba(255,255,255,0.07)',
+      display:'flex', alignItems:'center', justifyContent:'space-between',
+      padding:'0 2rem', flexShrink:0 }}>
+      <button onClick={onToggleSidebar} style={{ background:'none', border:'none',
+        color:'rgba(255,255,255,0.5)', fontSize:20, cursor:'pointer', padding:4 }}>
+        ☰
+      </button>
+      <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+        <span style={{ fontSize:12, color:'rgba(255,255,255,0.3)' }}>Panel de Control</span>
+        <button onClick={onLogout} style={{ background:'rgba(255,60,60,0.1)',
+          border:'1px solid rgba(255,60,60,0.3)', color:'#ff3c3c',
+          padding:'6px 16px', borderRadius:6, fontSize:12, cursor:'pointer', fontWeight:600 }}>
+          Salir
+        </button>
+      </div>
+    </header>
+  )
+}
+</file>
+
+<file path="src/components/admin/AdminSidebar.jsx">
+const TABS = [
+  { id: 'site',         icon: '⚙️', label: 'Marca & Colores'  },
+  { id: 'hero',         icon: '🖼', label: 'Hero / Portada'   },
+  { id: 'services',     icon: '💼', label: 'Servicios'        },
+  { id: 'ecosystems',   icon: '🌐', label: 'Ecosistemas'      },
+  { id: 'projects',     icon: '🗂',  label: 'Proyectos'        },
+  { id: 'testimonials', icon: '💬', label: 'Testimonios'      },
+  { id: 'contact',      icon: '📬', label: 'Contacto & Footer'},
+]
+
+export default function AdminSidebar({ activeTab, onTabChange, open }) {
+  if (!open) return null
+
+  return (
+    <aside style={{ width:240, flexShrink:0, background:'#080808',
+      borderRight:'1px solid rgba(255,255,255,0.07)', height:'100vh',
+      overflowY:'auto', display:'flex', flexDirection:'column', padding:'1.5rem 0' }}>
+
+      <div style={{ padding:'0 1.5rem 1.5rem', borderBottom:'1px solid rgba(255,255,255,0.07)' }}>
+        <div style={{ fontFamily:'Bebas Neue, sans-serif', fontSize:'1.6rem',
+          color:'#ff3c3c', letterSpacing:2 }}>POLARTRONIC</div>
+        <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:2 }}>Admin Panel</div>
+      </div>
+
+      <nav style={{ padding:'1rem 0', flex:1 }}>
+        {TABS.map(tab => (
+          <button key={tab.id} onClick={() => onTabChange(tab.id)}
+            style={{
+              width:'100%', display:'flex', alignItems:'center', gap:12,
+              padding:'11px 1.5rem', border:'none',
+              cursor:'pointer', textAlign:'left', transition:'all 0.15s',
+              borderLeft: activeTab === tab.id ? '2px solid #ff3c3c' : '2px solid transparent',
+              background: activeTab === tab.id ? 'rgba(255,60,60,0.06)' : 'transparent',
+              color: activeTab === tab.id ? '#fff' : 'rgba(255,255,255,0.45)',
+              fontSize: 13, fontWeight: activeTab === tab.id ? 600 : 400,
+            }}
+            onMouseEnter={e => { if (activeTab !== tab.id) e.currentTarget.style.color = 'rgba(255,255,255,0.8)' }}
+            onMouseLeave={e => { if (activeTab !== tab.id) e.currentTarget.style.color = 'rgba(255,255,255,0.45)' }}
+          >
+            <span style={{ fontSize:16 }}>{tab.icon}</span>
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
+      <div style={{ padding:'1rem 1.5rem', borderTop:'1px solid rgba(255,255,255,0.07)' }}>
+        <a href="/" target="_blank" style={{ fontSize:12, color:'rgba(255,255,255,0.35)',
+          textDecoration:'none', display:'flex', alignItems:'center', gap:6 }}>
+          🌐 Ver sitio público ↗
+        </a>
+      </div>
+    </aside>
+  )
+}
+</file>
+
+<file path="src/components/admin/FieldGroup.jsx">
+export default function FieldGroup({ label, children, hint }) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <label style={{ fontSize:12, color:'rgba(255,255,255,0.5)',
+        textTransform:'uppercase', letterSpacing:1, display:'block', marginBottom:6 }}>
+        {label}
+      </label>
+      {children}
+      {hint && <p style={{ fontSize:11, color:'rgba(255,255,255,0.25)', marginTop:5 }}>{hint}</p>}
+    </div>
+  )
+}
+</file>
+
+<file path="src/components/admin/ImageUploadField.jsx">
+import { useState } from 'react'
+import { uploadImage } from '../../lib/firebaseHelpers'
+import toast from 'react-hot-toast'
+
+export default function ImageUploadField({ value, onChange, label = 'Imagen', folder = 'images' }) {
+  const [uploading, setUploading] = useState(false)
+
+  const handleFile = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const url = await uploadImage(file, folder)
+      onChange(url)
+      toast.success('Imagen subida ✓')
+    } catch {
+      toast.error('Error al subir imagen')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div>
+      <label style={{ fontSize:12, color:'rgba(255,255,255,0.5)',
+        textTransform:'uppercase', letterSpacing:1, display:'block', marginBottom:6 }}>
+        {label}
+      </label>
+
+      {value && (
+        <div style={{ marginBottom:10, borderRadius:8, overflow:'hidden',
+          border:'1px solid rgba(255,255,255,0.1)', maxHeight:160 }}>
+          <img src={value} alt="" style={{ width:'100%', height:160, objectFit:'cover' }} />
+        </div>
+      )}
+
+      <div style={{ display:'flex', gap:8 }}>
+        <input className="admin-input" style={{ flex:1 }}
+          placeholder="URL de imagen (https://...)"
+          value={value || ''} onChange={e => onChange(e.target.value)} />
+        <label style={{ display:'flex', alignItems:'center', gap:6,
+          background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)',
+          padding:'0 14px', borderRadius:8, cursor: uploading ? 'not-allowed' : 'pointer',
+          fontSize:12, color:'rgba(255,255,255,0.6)', whiteSpace:'nowrap',
+          opacity: uploading ? 0.5 : 1 }}>
+          {uploading ? '⏳ Subiendo...' : '📁 Subir'}
+          <input type="file" accept="image/*" style={{ display:'none' }}
+            onChange={handleFile} disabled={uploading} />
+        </label>
+      </div>
+    </div>
+  )
+}
+</file>
+
+<file path="src/components/admin/tabs/ContactTab.jsx">
+import { useState } from 'react'
+import { saveSiteConfig } from '../../../lib/firebaseHelpers'
+import FieldGroup from '../FieldGroup'
+import toast from 'react-hot-toast'
+
+export default function ContactTab({ data }) {
+  const { site, setSite } = data
+  const [saving, setSaving] = useState(false)
+  const [local, setLocal]   = useState(site)
+
+  const set = (section, key, val) =>
+    setLocal(p => ({ ...p, [section]: { ...p[section], [key]: val } }))
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      await saveSiteConfig({ footer: local.footer })
+      setSite(local)
+      toast.success('Contacto actualizado ✓')
+    } catch { toast.error('Error al guardar') }
+    finally  { setSaving(false) }
+  }
+
+  return (
+    <div>
+      <h2 style={{ fontSize:'1.5rem', fontWeight:800, marginBottom:6 }}>Contacto & Footer</h2>
+      <p style={{ color:'rgba(255,255,255,0.4)', fontSize:14, marginBottom:24 }}>
+        Información de contacto y textos del pie de página.
+      </p>
+
+      <div className="section-card">
+        <h3 style={{ fontSize:14, fontWeight:700, marginBottom:16, color:'rgba(255,255,255,0.6)',
+          textTransform:'uppercase', letterSpacing:1 }}>Datos de Contacto</h3>
+        <FieldGroup label="Email">
+          <input className="admin-input" value={local.footer?.email || ''}
+            onChange={e => set('footer','email',e.target.value)}
+            placeholder="hello@polartronic.com" type="email" />
+        </FieldGroup>
+        <FieldGroup label="Link de WhatsApp">
+          <input className="admin-input" value={local.footer?.whatsapp || ''}
+            onChange={e => set('footer','whatsapp',e.target.value)}
+            placeholder="https://wa.me/549..." />
+        </FieldGroup>
+        <FieldGroup label="Link de Instagram">
+          <input className="admin-input" value={local.footer?.instagram || ''}
+            onChange={e => set('footer','instagram',e.target.value)}
+            placeholder="https://instagram.com/..." />
+        </FieldGroup>
+      </div>
+
+      <div className="section-card">
+        <h3 style={{ fontSize:14, fontWeight:700, marginBottom:16, color:'rgba(255,255,255,0.6)',
+          textTransform:'uppercase', letterSpacing:1 }}>Textos del Footer</h3>
+        <FieldGroup label="Copyright">
+          <input className="admin-input" value={local.footer?.copy || ''}
+            onChange={e => set('footer','copy',e.target.value)}
+            placeholder="© 2026 Polartronic Studio..." />
+        </FieldGroup>
+        <FieldGroup label="Tagline Footer">
+          <input className="admin-input" value={local.footer?.sub || ''}
+            onChange={e => set('footer','sub',e.target.value)}
+            placeholder="Diseño Web & Branding de Alto Impacto." />
+        </FieldGroup>
+      </div>
+
+      <button className="save-btn" onClick={handleSave} disabled={saving}>
+        {saving ? 'Guardando...' : '💾 GUARDAR CONTACTO'}
+      </button>
+    </div>
+  )
+}
+</file>
+
+<file path="src/components/admin/tabs/EcosystemsTab.jsx">
+import { useState } from 'react'
+import { saveEcosystem, deleteEcosystem } from '../../../lib/firebaseHelpers'
+import FieldGroup from '../FieldGroup'
+import ImageUploadField from '../ImageUploadField'
+import toast from 'react-hot-toast'
+
+const EMPTY = { category:'', title:'', desc:'', image:'', order:0 }
+
+export default function EcosystemsTab({ data }) {
+  const { ecosystems, setEcosystems } = data
+  const [editing,  setEditing]  = useState(null)
+  const [form,     setForm]     = useState(EMPTY)
+  const [saving,   setSaving]   = useState(false)
+  const [deleting, setDeleting] = useState(null)
+
+  const startEdit = (item, idx) => { setForm({ ...item }); setEditing(idx) }
+  const startNew  = ()          => { setForm({ ...EMPTY, order: ecosystems.length }); setEditing('new') }
+  const cancel    = ()          => { setEditing(null) }
+
+  const handleSave = async () => {
+    if (!form.title.trim()) { toast.error('El título es obligatorio'); return }
+    setSaving(true)
+    try {
+      const id = editing !== 'new' ? ecosystems[editing]?.id : null
+      await saveEcosystem(id, form)
+      if (editing === 'new') {
+        setEcosystems(prev => [...prev, { ...form, id: Date.now().toString() }])
+      } else {
+        setEcosystems(prev => prev.map((s,i) => i === editing ? { ...s, ...form } : s))
+      }
+      toast.success('Ecosistema guardado ✓')
+      setEditing(null)
+    } catch { toast.error('Error al guardar') }
+    finally  { setSaving(false) }
+  }
+
+  const handleDelete = async (item, idx) => {
+    setDeleting(idx)
+    try {
+      if (item.id && !item.id.startsWith('e')) await deleteEcosystem(item.id)
+      setEcosystems(prev => prev.filter((_,i) => i !== idx))
+      toast.success('Eliminado')
+    } catch { toast.error('Error') }
+    finally  { setDeleting(null) }
+  }
+
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24 }}>
+        <div>
+          <h2 style={{ fontSize:'1.5rem', fontWeight:800, marginBottom:4 }}>Ecosistemas</h2>
+          <p style={{ color:'rgba(255,255,255,0.4)', fontSize:14 }}>Las tarjetas de nicho del sitio.</p>
+        </div>
+        {editing === null && <button className="save-btn" onClick={startNew}>+ NUEVO</button>}
+      </div>
+
+      {editing !== null && (
+        <div className="section-card" style={{ border:'1px solid rgba(255,60,60,0.3)' }}>
+          <h3 style={{ fontSize:14, fontWeight:700, marginBottom:16, color:'#ff3c3c' }}>
+            {editing === 'new' ? 'Nuevo Ecosistema' : 'Editando Ecosistema'}
+          </h3>
+          <FieldGroup label="Categoría (texto pequeño)">
+            <input className="admin-input" value={form.category}
+              onChange={e => setForm(p=>({...p,category:e.target.value}))}
+              placeholder="Gourmet & Nightlife" />
+          </FieldGroup>
+          <FieldGroup label="Título">
+            <input className="admin-input" value={form.title}
+              onChange={e => setForm(p=>({...p,title:e.target.value}))}
+              placeholder="Restaurantes" />
+          </FieldGroup>
+          <FieldGroup label="Descripción">
+            <textarea className="admin-textarea" value={form.desc}
+              onChange={e => setForm(p=>({...p,desc:e.target.value}))} rows={2} />
+          </FieldGroup>
+          <ImageUploadField label="Imagen de Fondo" folder="ecosystems"
+            value={form.image} onChange={url => setForm(p=>({...p,image:url}))} />
+          <div style={{ display:'flex', gap:10, marginTop:16 }}>
+            <button className="save-btn" onClick={handleSave} disabled={saving}>
+              {saving ? 'Guardando...' : '💾 Guardar'}
+            </button>
+            <button onClick={cancel} style={{ background:'transparent',
+              border:'1px solid rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.5)',
+              padding:'10px 20px', borderRadius:8, cursor:'pointer', fontSize:13 }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:14 }}>
+        {ecosystems.map((eco, idx) => (
+          <div key={eco.id||idx} style={{ borderRadius:12, overflow:'hidden',
+            border:'1px solid rgba(255,255,255,0.08)', position:'relative' }}>
+            {eco.image && (
+              <img src={eco.image} alt={eco.title}
+                style={{ width:'100%', height:140, objectFit:'cover', display:'block', filter:'brightness(0.6)' }} />
+            )}
+            <div style={{ padding:14, background:'rgba(0,0,0,0.8)' }}>
+              <div style={{ color:'#ff3c3c', fontSize:11, fontWeight:800,
+                textTransform:'uppercase', letterSpacing:1, marginBottom:4 }}>{eco.category}</div>
+              <div style={{ fontWeight:700, fontSize:15, marginBottom:4 }}>{eco.title}</div>
+              <div style={{ color:'rgba(255,255,255,0.4)', fontSize:12 }}>{eco.desc}</div>
+              <div style={{ display:'flex', gap:8, marginTop:12 }}>
+                <button onClick={() => startEdit(eco, idx)}
+                  style={{ flex:1, background:'rgba(255,255,255,0.05)',
+                    border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.6)',
+                    padding:'6px', borderRadius:6, cursor:'pointer', fontSize:12 }}>✏️ Editar</button>
+                <button onClick={() => handleDelete(eco, idx)} disabled={deleting===idx}
+                  style={{ background:'rgba(255,60,60,0.08)', border:'1px solid rgba(255,60,60,0.2)',
+                    color:'#ff3c3c', padding:'6px 12px', borderRadius:6, cursor:'pointer', fontSize:12 }}>
+                  {deleting===idx ? '...' : '🗑'}
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+</file>
+
+<file path="src/components/admin/tabs/HeroTab.jsx">
+import { useState } from 'react'
+import { saveSiteConfig } from '../../../lib/firebaseHelpers'
+import FieldGroup from '../FieldGroup'
+import ImageUploadField from '../ImageUploadField'
+import toast from 'react-hot-toast'
+
+export default function HeroTab({ data }) {
+  const { site, setSite } = data
+  const [saving, setSaving] = useState(false)
+  const [local, setLocal]   = useState(site)
+
+  const set = (key, val) =>
+    setLocal(p => ({ ...p, hero: { ...p.hero, [key]: val } }))
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      await saveSiteConfig({ hero: local.hero })
+      setSite(local)
+      toast.success('Hero actualizado ✓')
+    } catch { toast.error('Error al guardar') }
+    finally  { setSaving(false) }
+  }
+
+  return (
+    <div>
+      <h2 style={{ fontSize:'1.5rem', fontWeight:800, marginBottom:6 }}>Hero / Portada</h2>
+      <p style={{ color:'rgba(255,255,255,0.4)', fontSize:14, marginBottom:24 }}>
+        La primera sección que ven tus visitantes.
+      </p>
+
+      <div className="section-card">
+        <FieldGroup label="Badge (texto pequeño arriba)">
+          <input className="admin-input" value={local.hero?.badge || ''}
+            onChange={e => set('badge', e.target.value)} placeholder="Digital Creative Studio" />
+        </FieldGroup>
+        <FieldGroup label="Título Principal">
+          <input className="admin-input" value={local.hero?.headline || ''}
+            onChange={e => set('headline', e.target.value)} placeholder="ESTÉTICA QUE VENDE." />
+        </FieldGroup>
+        <FieldGroup label="Subtítulo">
+          <textarea className="admin-textarea" value={local.hero?.sub || ''}
+            onChange={e => set('sub', e.target.value)} rows={3}
+            placeholder="Fusionamos el arte cinematográfico..." />
+        </FieldGroup>
+        <FieldGroup label="Texto del botón CTA">
+          <input className="admin-input" value={local.hero?.cta || ''}
+            onChange={e => set('cta', e.target.value)} placeholder="EXPLORAR ÁREAS" />
+        </FieldGroup>
+        <ImageUploadField label="Imagen de Fondo" folder="hero"
+          value={local.hero?.bgImage || ''}
+          onChange={url => set('bgImage', url)} />
+      </div>
+
+      <button className="save-btn" onClick={handleSave} disabled={saving}>
+        {saving ? 'Guardando...' : '💾 GUARDAR HERO'}
+      </button>
+    </div>
+  )
+}
+</file>
+
+<file path="src/components/admin/tabs/ProjectsTab.jsx">
+import { useState } from 'react'
+import { saveProject, deleteProject } from '../../../lib/firebaseHelpers'
+import FieldGroup from '../FieldGroup'
+import ImageUploadField from '../ImageUploadField'
+import toast from 'react-hot-toast'
+
+const EMPTY = { title:'', category:'', image:'', link:'#', order:0 }
+
+export default function ProjectsTab({ data }) {
+  const { projects, setProjects } = data
+  const [editing,  setEditing]  = useState(null)
+  const [form,     setForm]     = useState(EMPTY)
+  const [saving,   setSaving]   = useState(false)
+  const [deleting, setDeleting] = useState(null)
+
+  const startEdit = (item, idx) => { setForm({...item}); setEditing(idx) }
+  const startNew  = ()          => { setForm({...EMPTY, order:projects.length}); setEditing('new') }
+  const cancel    = ()          => { setEditing(null) }
+
+  const handleSave = async () => {
+    if (!form.title.trim()) { toast.error('El título es obligatorio'); return }
+    setSaving(true)
+    try {
+      const id = editing !== 'new' ? projects[editing]?.id : null
+      await saveProject(id, form)
+      if (editing === 'new') {
+        setProjects(prev => [...prev, {...form, id: Date.now().toString()}])
+      } else {
+        setProjects(prev => prev.map((s,i) => i === editing ? {...s,...form} : s))
+      }
+      toast.success('Proyecto guardado ✓')
+      setEditing(null)
+    } catch { toast.error('Error al guardar') }
+    finally  { setSaving(false) }
+  }
+
+  const handleDelete = async (item, idx) => {
+    setDeleting(idx)
+    try {
+      if (item.id && !item.id.startsWith('p')) await deleteProject(item.id)
+      setProjects(prev => prev.filter((_,i) => i !== idx))
+      toast.success('Eliminado')
+    } catch { toast.error('Error') }
+    finally  { setDeleting(null) }
+  }
+
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24 }}>
+        <div>
+          <h2 style={{ fontSize:'1.5rem', fontWeight:800, marginBottom:4 }}>Proyectos</h2>
+          <p style={{ color:'rgba(255,255,255,0.4)', fontSize:14 }}>Portfolio de trabajos realizados.</p>
+        </div>
+        {editing === null && <button className="save-btn" onClick={startNew}>+ NUEVO</button>}
+      </div>
+
+      {editing !== null && (
+        <div className="section-card" style={{ border:'1px solid rgba(255,60,60,0.3)' }}>
+          <h3 style={{ fontSize:14, fontWeight:700, marginBottom:16, color:'#ff3c3c' }}>
+            {editing === 'new' ? 'Nuevo Proyecto' : 'Editando Proyecto'}
+          </h3>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <FieldGroup label="Título">
+              <input className="admin-input" value={form.title}
+                onChange={e => setForm(p=>({...p,title:e.target.value}))} placeholder="Maison Noir" />
+            </FieldGroup>
+            <FieldGroup label="Categoría">
+              <input className="admin-input" value={form.category}
+                onChange={e => setForm(p=>({...p,category:e.target.value}))} placeholder="Restaurante" />
+            </FieldGroup>
+          </div>
+          <FieldGroup label="Link del proyecto">
+            <input className="admin-input" value={form.link}
+              onChange={e => setForm(p=>({...p,link:e.target.value}))} placeholder="https://..." />
+          </FieldGroup>
+          <ImageUploadField label="Imagen" folder="projects"
+            value={form.image} onChange={url => setForm(p=>({...p,image:url}))} />
+          <div style={{ display:'flex', gap:10, marginTop:16 }}>
+            <button className="save-btn" onClick={handleSave} disabled={saving}>
+              {saving ? 'Guardando...' : '💾 Guardar'}
+            </button>
+            <button onClick={cancel} style={{ background:'transparent',
+              border:'1px solid rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.5)',
+              padding:'10px 20px', borderRadius:8, cursor:'pointer', fontSize:13 }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:14 }}>
+        {projects.map((proj, idx) => (
+          <div key={proj.id||idx} style={{ borderRadius:12, overflow:'hidden',
+            border:'1px solid rgba(255,255,255,0.08)' }}>
+            {proj.image && (
+              <img src={proj.image} alt={proj.title}
+                style={{ width:'100%', height:130, objectFit:'cover', display:'block' }} />
+            )}
+            <div style={{ padding:14, background:'rgba(0,0,0,0.8)' }}>
+              <div style={{ color:'#ff3c3c', fontSize:11, fontWeight:800, letterSpacing:1 }}>{proj.category}</div>
+              <div style={{ fontWeight:700, fontSize:15 }}>{proj.title}</div>
+              <div style={{ display:'flex', gap:8, marginTop:10 }}>
+                <button onClick={() => startEdit(proj,idx)}
+                  style={{ flex:1, background:'rgba(255,255,255,0.05)',
+                    border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.6)',
+                    padding:'6px', borderRadius:6, cursor:'pointer', fontSize:12 }}>✏️ Editar</button>
+                <button onClick={() => handleDelete(proj,idx)} disabled={deleting===idx}
+                  style={{ background:'rgba(255,60,60,0.08)', border:'1px solid rgba(255,60,60,0.2)',
+                    color:'#ff3c3c', padding:'6px 12px', borderRadius:6, cursor:'pointer', fontSize:12 }}>
+                  {deleting===idx?'...':'🗑'}
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+</file>
+
+<file path="src/components/admin/tabs/ServicesTab.jsx">
+import { useState } from 'react'
+import { saveService, deleteService } from '../../../lib/firebaseHelpers'
+import FieldGroup from '../FieldGroup'
+import toast from 'react-hot-toast'
+
+const EMPTY = { icon:'🎨', title:'', desc:'', price:'', order:0 }
+
+export default function ServicesTab({ data }) {
+  const { services, setServices } = data
+  const [editing,  setEditing]  = useState(null) // null | index | 'new'
+  const [form,     setForm]     = useState(EMPTY)
+  const [saving,   setSaving]   = useState(false)
+  const [deleting, setDeleting] = useState(null)
+
+  const startEdit = (svc, idx) => { setForm({ ...svc }); setEditing(idx) }
+  const startNew  = ()         => { setForm(EMPTY); setEditing('new') }
+  const cancel    = ()         => { setEditing(null) }
+
+  const handleSave = async () => {
+    if (!form.title.trim()) { toast.error('El título es obligatorio'); return }
+    setSaving(true)
+    try {
+      const id = editing !== 'new' ? services[editing]?.id : null
+      await saveService(id, form)
+      if (editing === 'new') {
+        setServices(prev => [...prev, { ...form, id: Date.now().toString() }])
+      } else {
+        setServices(prev => prev.map((s,i) => i === editing ? { ...s, ...form } : s))
+      }
+      toast.success('Servicio guardado ✓')
+      setEditing(null)
+    } catch { toast.error('Error al guardar') }
+    finally  { setSaving(false) }
+  }
+
+  const handleDelete = async (svc, idx) => {
+    setDeleting(idx)
+    try {
+      if (svc.id && !svc.id.startsWith('s')) await deleteService(svc.id)
+      setServices(prev => prev.filter((_,i) => i !== idx))
+      toast.success('Servicio eliminado')
+    } catch { toast.error('Error') }
+    finally  { setDeleting(null) }
+  }
+
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24 }}>
+        <div>
+          <h2 style={{ fontSize:'1.5rem', fontWeight:800, marginBottom:4 }}>Servicios</h2>
+          <p style={{ color:'rgba(255,255,255,0.4)', fontSize:14 }}>Los servicios que ofrece tu studio.</p>
+        </div>
+        {editing === null && (
+          <button className="save-btn" onClick={startNew}>+ NUEVO</button>
+        )}
+      </div>
+
+      {editing !== null && (
+        <div className="section-card" style={{ border:'1px solid rgba(255,60,60,0.3)' }}>
+          <h3 style={{ fontSize:14, fontWeight:700, marginBottom:16, color:'#ff3c3c' }}>
+            {editing === 'new' ? 'Nuevo Servicio' : 'Editando Servicio'}
+          </h3>
+          <div style={{ display:'grid', gridTemplateColumns:'80px 1fr', gap:12 }}>
+            <FieldGroup label="Emoji">
+              <input className="admin-input" value={form.icon}
+                onChange={e => setForm(p => ({...p, icon: e.target.value}))}
+                style={{ textAlign:'center', fontSize:22 }} />
+            </FieldGroup>
+            <FieldGroup label="Título">
+              <input className="admin-input" value={form.title}
+                onChange={e => setForm(p => ({...p, title: e.target.value}))}
+                placeholder="Diseño Web" />
+            </FieldGroup>
+          </div>
+          <FieldGroup label="Descripción">
+            <textarea className="admin-textarea" value={form.desc}
+              onChange={e => setForm(p => ({...p, desc: e.target.value}))} rows={2} />
+          </FieldGroup>
+          <FieldGroup label="Precio">
+            <input className="admin-input" value={form.price}
+              onChange={e => setForm(p => ({...p, price: e.target.value}))}
+              placeholder="Desde $800" />
+          </FieldGroup>
+          <div style={{ display:'flex', gap:10, marginTop:8 }}>
+            <button className="save-btn" onClick={handleSave} disabled={saving}>
+              {saving ? 'Guardando...' : '💾 Guardar'}
+            </button>
+            <button onClick={cancel} style={{ background:'transparent',
+              border:'1px solid rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.5)',
+              padding:'10px 20px', borderRadius:8, cursor:'pointer', fontSize:13 }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+        {services.map((svc, idx) => (
+          <div key={svc.id || idx} style={{ background:'rgba(255,255,255,0.03)',
+            border:'1px solid rgba(255,255,255,0.08)', borderRadius:12,
+            padding:'16px 18px', display:'flex', alignItems:'center', gap:14 }}>
+            <span style={{ fontSize:28, flexShrink:0 }}>{svc.icon}</span>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontWeight:700, fontSize:15 }}>{svc.title}</div>
+              <div style={{ color:'rgba(255,255,255,0.4)', fontSize:13, marginTop:2 }}>{svc.desc}</div>
+              <div style={{ color:'#ff3c3c', fontSize:12, fontWeight:600, marginTop:4 }}>{svc.price}</div>
+            </div>
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={() => startEdit(svc, idx)}
+                style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)',
+                  color:'rgba(255,255,255,0.6)', padding:'6px 14px', borderRadius:6,
+                  cursor:'pointer', fontSize:12 }}>✏️ Editar</button>
+              <button onClick={() => handleDelete(svc, idx)} disabled={deleting === idx}
+                style={{ background:'rgba(255,60,60,0.08)', border:'1px solid rgba(255,60,60,0.2)',
+                  color:'#ff3c3c', padding:'6px 14px', borderRadius:6, cursor:'pointer', fontSize:12 }}>
+                {deleting === idx ? '...' : '🗑 Borrar'}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+</file>
+
+<file path="src/components/admin/tabs/SiteConfigTab.jsx">
+import { useState } from 'react'
+import { saveSiteConfig } from '../../../lib/firebaseHelpers'
+import FieldGroup from '../FieldGroup'
+import toast from 'react-hot-toast'
+
+export default function SiteConfigTab({ data }) {
+  const { site, setSite } = data
+  const [saving, setSaving] = useState(false)
+  const [local, setLocal]   = useState(site)
+
+  const set = (section, key, val) =>
+    setLocal(p => ({ ...p, [section]: { ...p[section], [key]: val } }))
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      await saveSiteConfig(local)
+      setSite(local)
+      // Aplicar colores inmediatamente
+      document.documentElement.style.setProperty('--primary', local.brand?.primary || '#ff3c3c')
+      toast.success('Configuración guardada ✓')
+    } catch { toast.error('Error al guardar') }
+    finally  { setSaving(false) }
+  }
+
+  return (
+    <div>
+      <h2 style={{ fontSize:'1.5rem', fontWeight:800, marginBottom:6 }}>Marca & Colores</h2>
+      <p style={{ color:'rgba(255,255,255,0.4)', fontSize:14, marginBottom:24 }}>
+        Configura la identidad visual de tu sitio.
+      </p>
+
+      <div className="section-card">
+        <h3 style={{ fontSize:14, fontWeight:700, marginBottom:16, color:'rgba(255,255,255,0.6)',
+          textTransform:'uppercase', letterSpacing:1 }}>Identidad de Marca</h3>
+        <FieldGroup label="Nombre del Studio">
+          <input className="admin-input" value={local.brand?.name || ''}
+            onChange={e => set('brand','name',e.target.value)} placeholder="POLARTRONIC" />
+        </FieldGroup>
+        <FieldGroup label="Tagline / Eslogan">
+          <input className="admin-input" value={local.brand?.tagline || ''}
+            onChange={e => set('brand','tagline',e.target.value)} placeholder="Elite Digital Studio" />
+        </FieldGroup>
+      </div>
+
+      <div className="section-card">
+        <h3 style={{ fontSize:14, fontWeight:700, marginBottom:16, color:'rgba(255,255,255,0.6)',
+          textTransform:'uppercase', letterSpacing:1 }}>Colores</h3>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+          <FieldGroup label="Color Primario (acento)">
+            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+              <input type="color" value={local.brand?.primary || '#ff3c3c'}
+                onChange={e => set('brand','primary',e.target.value)}
+                style={{ width:48, height:42, borderRadius:8, border:'none',
+                  background:'none', cursor:'pointer', padding:2 }} />
+              <input className="admin-input" style={{ flex:1 }}
+                value={local.brand?.primary || '#ff3c3c'}
+                onChange={e => set('brand','primary',e.target.value)} placeholder="#ff3c3c" />
+            </div>
+          </FieldGroup>
+          <FieldGroup label="Color de Fondo">
+            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+              <input type="color" value={local.brand?.bg || '#030303'}
+                onChange={e => set('brand','bg',e.target.value)}
+                style={{ width:48, height:42, borderRadius:8, border:'none',
+                  background:'none', cursor:'pointer', padding:2 }} />
+              <input className="admin-input" style={{ flex:1 }}
+                value={local.brand?.bg || '#030303'}
+                onChange={e => set('brand','bg',e.target.value)} placeholder="#030303" />
+            </div>
+          </FieldGroup>
+        </div>
+      </div>
+
+      <div className="section-card">
+        <h3 style={{ fontSize:14, fontWeight:700, marginBottom:16, color:'rgba(255,255,255,0.6)',
+          textTransform:'uppercase', letterSpacing:1 }}>Sección About</h3>
+        <FieldGroup label="Título">
+          <input className="admin-input" value={local.about?.title || ''}
+            onChange={e => set('about','title',e.target.value)} placeholder="Quiénes Somos" />
+        </FieldGroup>
+        <FieldGroup label="Descripción">
+          <textarea className="admin-textarea" value={local.about?.text || ''}
+            onChange={e => set('about','text',e.target.value)} rows={3} />
+        </FieldGroup>
+      </div>
+
+      <button className="save-btn" onClick={handleSave} disabled={saving}>
+        {saving ? 'Guardando...' : '💾 GUARDAR CONFIGURACIÓN'}
+      </button>
+    </div>
+  )
+}
+</file>
+
+<file path="src/components/admin/tabs/TestimonialsTab.jsx">
+import { useState } from 'react'
+import { saveTestimonial, deleteTestimonial } from '../../../lib/firebaseHelpers'
+import FieldGroup from '../FieldGroup'
+import toast from 'react-hot-toast'
+
+const EMPTY = { name:'', role:'', text:'', avatar:'', order:0 }
+
+export default function TestimonialsTab({ data }) {
+  const { testimonials, setTestimonials } = data
+  const [editing,  setEditing]  = useState(null)
+  const [form,     setForm]     = useState(EMPTY)
+  const [saving,   setSaving]   = useState(false)
+  const [deleting, setDeleting] = useState(null)
+
+  const startEdit = (item, idx) => { setForm({...item}); setEditing(idx) }
+  const startNew  = ()          => { setForm({...EMPTY, order:testimonials.length}); setEditing('new') }
+  const cancel    = ()          => { setEditing(null) }
+
+  const handleSave = async () => {
+    if (!form.name.trim() || !form.text.trim()) { toast.error('Nombre y texto son obligatorios'); return }
+    setSaving(true)
+    try {
+      const id = editing !== 'new' ? testimonials[editing]?.id : null
+      await saveTestimonial(id, form)
+      if (editing === 'new') {
+        setTestimonials(prev => [...prev, {...form, id:Date.now().toString()}])
+      } else {
+        setTestimonials(prev => prev.map((s,i) => i === editing ? {...s,...form} : s))
+      }
+      toast.success('Testimonio guardado ✓')
+      setEditing(null)
+    } catch { toast.error('Error al guardar') }
+    finally  { setSaving(false) }
+  }
+
+  const handleDelete = async (item, idx) => {
+    setDeleting(idx)
+    try {
+      if (item.id && !item.id.startsWith('t')) await deleteTestimonial(item.id)
+      setTestimonials(prev => prev.filter((_,i) => i !== idx))
+      toast.success('Eliminado')
+    } catch { toast.error('Error') }
+    finally  { setDeleting(null) }
+  }
+
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24 }}>
+        <div>
+          <h2 style={{ fontSize:'1.5rem', fontWeight:800, marginBottom:4 }}>Testimonios</h2>
+          <p style={{ color:'rgba(255,255,255,0.4)', fontSize:14 }}>Lo que dicen tus clientes.</p>
+        </div>
+        {editing === null && <button className="save-btn" onClick={startNew}>+ NUEVO</button>}
+      </div>
+
+      {editing !== null && (
+        <div className="section-card" style={{ border:'1px solid rgba(255,60,60,0.3)' }}>
+          <h3 style={{ fontSize:14, fontWeight:700, marginBottom:16, color:'#ff3c3c' }}>
+            {editing === 'new' ? 'Nuevo Testimonio' : 'Editando Testimonio'}
+          </h3>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <FieldGroup label="Nombre">
+              <input className="admin-input" value={form.name}
+                onChange={e => setForm(p=>({...p,name:e.target.value}))} placeholder="María G." />
+            </FieldGroup>
+            <FieldGroup label="Cargo / Empresa">
+              <input className="admin-input" value={form.role}
+                onChange={e => setForm(p=>({...p,role:e.target.value}))} placeholder="CEO, Maison Noir" />
+            </FieldGroup>
+          </div>
+          <FieldGroup label="Testimonio">
+            <textarea className="admin-textarea" value={form.text}
+              onChange={e => setForm(p=>({...p,text:e.target.value}))} rows={3}
+              placeholder="Polartronic transformó nuestra presencia digital..." />
+          </FieldGroup>
+          <FieldGroup label="URL Avatar (opcional)">
+            <input className="admin-input" value={form.avatar}
+              onChange={e => setForm(p=>({...p,avatar:e.target.value}))} placeholder="https://..." />
+          </FieldGroup>
+          <div style={{ display:'flex', gap:10, marginTop:8 }}>
+            <button className="save-btn" onClick={handleSave} disabled={saving}>
+              {saving ? 'Guardando...' : '💾 Guardar'}
+            </button>
+            <button onClick={cancel} style={{ background:'transparent',
+              border:'1px solid rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.5)',
+              padding:'10px 20px', borderRadius:8, cursor:'pointer', fontSize:13 }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+        {testimonials.map((t, idx) => (
+          <div key={t.id||idx} style={{ background:'rgba(255,255,255,0.03)',
+            border:'1px solid rgba(255,255,255,0.08)', borderRadius:12, padding:18,
+            display:'flex', gap:14, alignItems:'flex-start' }}>
+            <div style={{ width:44, height:44, borderRadius:'50%', flexShrink:0,
+              background:'rgba(255,60,60,0.15)', overflow:'hidden',
+              display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>
+              {t.avatar ? <img src={t.avatar} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : '👤'}
+            </div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontWeight:700 }}>{t.name}</div>
+              <div style={{ color:'#ff3c3c', fontSize:12, marginBottom:6 }}>{t.role}</div>
+              <div style={{ color:'rgba(255,255,255,0.5)', fontSize:13, fontStyle:'italic', lineHeight:1.6 }}>
+                "{t.text}"
+              </div>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              <button onClick={() => startEdit(t,idx)}
+                style={{ background:'rgba(255,255,255,0.05)',
+                  border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.6)',
+                  padding:'6px 12px', borderRadius:6, cursor:'pointer', fontSize:11 }}>✏️</button>
+              <button onClick={() => handleDelete(t,idx)} disabled={deleting===idx}
+                style={{ background:'rgba(255,60,60,0.08)', border:'1px solid rgba(255,60,60,0.2)',
+                  color:'#ff3c3c', padding:'6px 12px', borderRadius:6, cursor:'pointer', fontSize:11 }}>
+                {deleting===idx?'...':'🗑'}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+</file>
+
+<file path="src/components/site/ContactSection.jsx">
+export default function ContactSection({ footer, brand }) {
+  const primary = brand?.primary || '#ff3c3c'
+  const email   = footer?.email     || 'hello@polartronic.com'
+  const wa      = footer?.whatsapp  || '#'
+  const ig      = footer?.instagram || '#'
+
+  return (
+    <section id="contacto" style={{ padding:'100px 6%',
+      background:`radial-gradient(circle at center, ${primary}06 0%, transparent 70%)`,
+      textAlign:'center' }}>
+      <p style={{ color: primary, fontSize:'0.75rem', fontWeight:800,
+        textTransform:'uppercase', letterSpacing:4, marginBottom:16 }}>Hablemos</p>
+      <h2 style={{ fontSize:'clamp(2.5rem,6vw,4rem)', fontWeight:800, marginBottom:16, lineHeight:1.1 }}>
+        ¿Listo para el<br /><span style={{ color: primary }}>siguiente nivel?</span>
+      </h2>
+      <p style={{ color:'rgba(255,255,255,0.45)', fontSize:16, maxWidth:500,
+        margin:'0 auto 48px', lineHeight:1.7 }}>
+        Cuéntanos tu proyecto. Si buscas lo ordinario, no somos tu agencia.
+      </p>
+      <div style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap' }}>
+        <a href={`mailto:${email}`}
+          style={{ padding:'16px 40px', background: primary, color:'white',
+            textDecoration:'none', borderRadius:6, fontWeight:800, fontSize:'0.9rem',
+            letterSpacing:1.5, textTransform:'uppercase',
+            boxShadow:`0 0 30px ${primary}40`, transition:'all 0.3s' }}
+          onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow=`0 12px 40px ${primary}60` }}
+          onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)';    e.currentTarget.style.boxShadow=`0 0 30px ${primary}40` }}>
+          ✉ ESCRIBIR EMAIL
+        </a>
+        {wa !== '#' && (
+          <a href={wa} target="_blank" rel="noreferrer"
+            style={{ padding:'16px 40px', background:'transparent', color:'white',
+              textDecoration:'none', border:'1px solid rgba(255,255,255,0.2)',
+              borderRadius:6, fontWeight:800, fontSize:'0.9rem',
+              letterSpacing:1.5, textTransform:'uppercase', transition:'all 0.3s' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor=primary; e.currentTarget.style.color=primary }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor='rgba(255,255,255,0.2)'; e.currentTarget.style.color='white' }}>
+            💬 WHATSAPP
+          </a>
+        )}
+      </div>
+    </section>
+  )
+}
+</file>
+
+<file path="src/components/site/EcosystemSection.jsx">
+export default function EcosystemSection({ ecosystems }) {
+  if (!ecosystems?.length) return null
+
+  return (
+    <section id="ecosistemas" style={{ padding:'100px 6%' }}>
+      <div style={{ textAlign:'center', marginBottom:60 }}>
+        <p style={{ color:'var(--primary)', fontSize:'0.75rem', fontWeight:800,
+          textTransform:'uppercase', letterSpacing:4, marginBottom:12 }}>Nuestros Nichos</p>
+        <h2 style={{ fontSize:'clamp(2rem,5vw,3rem)', fontWeight:800 }}>
+          Ecosistemas <span style={{ color:'var(--primary)' }}>Vivos</span>
+        </h2>
+        <p style={{ color:'rgba(255,255,255,0.45)', marginTop:12 }}>
+          Dominamos cada nicho con soluciones visuales a medida.
+        </p>
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(350px,1fr))', gap:24 }}>
+        {ecosystems.map((eco, i) => (
+          <div key={eco.id||i} style={{ position:'relative', height:450, borderRadius:24,
+            overflow:'hidden', border:'1px solid rgba(255,255,255,0.06)',
+            transition:'all 0.5s cubic-bezier(0.23,1,0.32,1)', cursor:'pointer' }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform   = 'translateY(-12px)'
+              e.currentTarget.style.borderColor = 'var(--primary)'
+              e.currentTarget.style.boxShadow   = '0 20px 50px rgba(0,0,0,0.7)'
+              e.currentTarget.querySelector('img').style.transform = 'scale(1.1)'
+              e.currentTarget.querySelector('img').style.filter    = 'brightness(0.8)'
+              e.currentTarget.querySelector('.eco-desc').style.opacity   = '1'
+              e.currentTarget.querySelector('.eco-desc').style.transform = 'translateY(0)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform   = 'translateY(0)'
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+              e.currentTarget.style.boxShadow   = 'none'
+              e.currentTarget.querySelector('img').style.transform = 'scale(1)'
+              e.currentTarget.querySelector('img').style.filter    = 'brightness(0.55)'
+              e.currentTarget.querySelector('.eco-desc').style.opacity   = '0'
+              e.currentTarget.querySelector('.eco-desc').style.transform = 'translateY(20px)'
+            }}>
+            <img src={eco.image} alt={eco.title}
+              style={{ width:'100%', height:'100%', objectFit:'cover',
+                filter:'brightness(0.55)', transition:'all 0.5s cubic-bezier(0.23,1,0.32,1)' }} />
+            <div style={{ position:'absolute', inset:0, padding:40,
+              display:'flex', flexDirection:'column', justifyContent:'flex-end',
+              background:'linear-gradient(to top, rgba(0,0,0,0.95) 10%, transparent 70%)' }}>
+              <span style={{ color:'var(--primary)', fontWeight:800, fontSize:'0.75rem',
+                textTransform:'uppercase', letterSpacing:2, marginBottom:10 }}>{eco.category}</span>
+              <h3 style={{ fontSize:'1.8rem', fontWeight:800, marginBottom:10 }}>{eco.title}</h3>
+              <p className="eco-desc" style={{ color:'rgba(255,255,255,0.7)', fontSize:'0.95rem',
+                opacity:0, transform:'translateY(20px)',
+                transition:'all 0.5s cubic-bezier(0.23,1,0.32,1)' }}>
+                {eco.desc}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+</file>
+
+<file path="src/components/site/Footer.jsx">
+export default function Footer({ site }) {
+  const { brand, footer } = site
+  const primary = brand?.primary || '#ff3c3c'
+  const name    = brand?.name    || 'POLARTRONIC'
+
+  return (
+    <footer style={{ background:'#060606', padding:'80px 6% 40px',
+      borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+      <div style={{ display:'grid', gridTemplateColumns:'2fr repeat(3, 1fr)', gap:50, marginBottom:50 }}>
+        {/* Brand */}
+        <div>
+          <div style={{ fontFamily:'Bebas Neue, sans-serif', fontSize:'2rem',
+            color: primary, letterSpacing:2, marginBottom:16 }}>{name}</div>
+          <p style={{ color:'rgba(255,255,255,0.35)', lineHeight:1.8, fontSize:14 }}>
+            Creamos el estándar del futuro digital. Si buscas lo ordinario, no somos tu agencia.
+          </p>
+        </div>
+
+        {/* Nav */}
+        <div>
+          <h4 style={{ fontSize:13, fontWeight:700, marginBottom:20,
+            textTransform:'uppercase', letterSpacing:1.5, color:'rgba(255,255,255,0.6)' }}>
+            Navegación
+          </h4>
+          <ul style={{ listStyle:'none', padding:0, display:'flex', flexDirection:'column', gap:10 }}>
+            {['#home|Home','#servicios|Servicios','#ecosistemas|Áreas','#proyectos|Proyectos'].map(l => {
+              const [href, label] = l.split('|')
+              return (
+                <li key={href}>
+                  <a href={href} style={{ color:'rgba(255,255,255,0.4)', textDecoration:'none',
+                    fontSize:14, transition:'0.2s' }}
+                    onMouseEnter={e => { e.currentTarget.style.color=primary; e.currentTarget.style.paddingLeft='5px' }}
+                    onMouseLeave={e => { e.currentTarget.style.color='rgba(255,255,255,0.4)'; e.currentTarget.style.paddingLeft='0' }}>
+                    {label}
+                  </a>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+
+        {/* Services */}
+        <div>
+          <h4 style={{ fontSize:13, fontWeight:700, marginBottom:20,
+            textTransform:'uppercase', letterSpacing:1.5, color:'rgba(255,255,255,0.6)' }}>
+            Servicios
+          </h4>
+          <ul style={{ listStyle:'none', padding:0, display:'flex', flexDirection:'column', gap:10 }}>
+            {['Diseño Web','Desarrollo','Branding','Marketing'].map(s => (
+              <li key={s}>
+                <a href="#servicios" style={{ color:'rgba(255,255,255,0.4)',
+                  textDecoration:'none', fontSize:14 }}>{s}</a>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Contact */}
+        <div>
+          <h4 style={{ fontSize:13, fontWeight:700, marginBottom:20,
+            textTransform:'uppercase', letterSpacing:1.5, color:'rgba(255,255,255,0.6)' }}>
+            Contacto
+          </h4>
+          <ul style={{ listStyle:'none', padding:0, display:'flex', flexDirection:'column', gap:12 }}>
+            {footer?.email && (
+              <li><a href={`mailto:${footer.email}`}
+                style={{ color:'rgba(255,255,255,0.4)', textDecoration:'none', fontSize:14 }}>
+                {footer.email}</a></li>
+            )}
+            {footer?.whatsapp && footer.whatsapp !== '#' && (
+              <li><a href={footer.whatsapp} target="_blank" rel="noreferrer"
+                style={{ color:'rgba(255,255,255,0.4)', textDecoration:'none', fontSize:14 }}>
+                WhatsApp Business</a></li>
+            )}
+            {footer?.instagram && footer.instagram !== '#' && (
+              <li><a href={footer.instagram} target="_blank" rel="noreferrer"
+                style={{ color:'rgba(255,255,255,0.4)', textDecoration:'none', fontSize:14 }}>
+                Instagram Studio</a></li>
+            )}
+          </ul>
+        </div>
+      </div>
+
+      <div style={{ borderTop:'1px solid rgba(255,255,255,0.06)', paddingTop:30,
+        display:'flex', justifyContent:'space-between', color:'rgba(255,255,255,0.25)',
+        fontSize:13, flexWrap:'wrap', gap:10 }}>
+        <span>{footer?.copy || `© 2026 ${name}. Todos los derechos reservados.`}</span>
+        <span>{footer?.sub  || 'Diseño Web & Branding de Alto Impacto.'}</span>
+      </div>
+    </footer>
+  )
+}
+</file>
+
+<file path="src/components/site/Hero.jsx">
+export default function Hero({ hero, brand }) {
+  const primary = brand?.primary || '#ff3c3c'
+  const bg      = hero?.bgImage || 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?auto=format&fit=crop&w=1920&q=80'
+
+  return (
+    <section id="home" style={{
+      height:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
+      textAlign:'center', padding:'0 6%',
+      background: `radial-gradient(circle at center, ${primary}10 0%, transparent 70%),
+                   linear-gradient(to bottom, rgba(3,3,3,0.4), var(--bg)),
+                   url('${bg}') center/cover`,
+    }}>
+      <div style={{ maxWidth:800 }}>
+        <p className="animate-fade-up" style={{ textTransform:'uppercase', letterSpacing:5,
+          color: primary, fontWeight:800, fontSize:'0.85rem', marginBottom:20 }}>
+          {hero?.badge || 'Digital Creative Studio'}
+        </p>
+        <h1 className="animate-fade-up delay-100" style={{
+          fontFamily:'Cinzel, serif', fontSize:'clamp(3rem, 8vw, 6rem)',
+          lineHeight:0.95, marginBottom:24, color:'white',
+        }}>
+          {(hero?.headline || 'ESTÉTICA QUE VENDE.').split(' ').map((word, i, arr) => (
+            <span key={i} style={{ color: i === arr.length - 1 ? primary : 'white' }}>
+              {word}{' '}
+            </span>
+          ))}
+        </h1>
+        <p className="animate-fade-up delay-200" style={{ color:'rgba(255,255,255,0.55)',
+          fontSize:'1.15rem', maxWidth:600, margin:'0 auto 40px', lineHeight:1.7 }}>
+          {hero?.sub || 'Fusionamos el arte cinematográfico con la ingeniería web.'}
+        </p>
+        <a className="animate-fade-up delay-300" href="#ecosistemas"
+          style={{ display:'inline-block', padding:'18px 48px', background: primary,
+            color:'white', textDecoration:'none', borderRadius:5,
+            fontWeight:800, fontSize:'0.9rem', letterSpacing:2, textTransform:'uppercase',
+            transition:'all 0.3s', boxShadow:`0 0 40px ${primary}40` }}
+          onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow=`0 12px 40px ${primary}60` }}
+          onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow=`0 0 40px ${primary}40` }}>
+          {hero?.cta || 'EXPLORAR ÁREAS'}
+        </a>
+      </div>
+    </section>
+  )
+}
+</file>
+
+<file path="src/components/site/NavBar.jsx">
+import { useState, useEffect } from 'react'
+
+const NAV_LINKS = [
+  { href:'#home',         label:'Home'      },
+  { href:'#servicios',    label:'Servicios' },
+  { href:'#ecosistemas',  label:'Áreas'     },
+  { href:'#proyectos',    label:'Proyectos' },
+  { href:'#testimonios',  label:'Clientes'  },
+  { href:'#contacto',     label:'Contacto'  },
+]
+
+export default function NavBar({ brand }) {
+  const [scrolled, setScrolled] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 50)
+    window.addEventListener('scroll', fn, { passive: true })
+    return () => window.removeEventListener('scroll', fn)
+  }, [])
+
+  const name    = brand?.name || 'POLARTRONIC'
+  const primary = brand?.primary || '#ff3c3c'
+
+  return (
+    <header style={{
+      position:'fixed', top:0, width:'100%', zIndex:1000,
+      height: scrolled ? 70 : 85,
+      padding:'0 6%',
+      display:'flex', alignItems:'center', justifyContent:'space-between',
+      background: scrolled ? 'rgba(3,3,3,0.9)' : 'transparent',
+      backdropFilter: scrolled ? 'blur(20px)' : 'none',
+      borderBottom: scrolled ? '1px solid rgba(255,255,255,0.06)' : 'none',
+      transition:'all 0.5s cubic-bezier(0.23,1,0.32,1)',
+    }}>
+      <a href="#home" style={{ fontFamily:'Bebas Neue, sans-serif', fontSize:'2.2rem',
+        color: primary, textDecoration:'none', letterSpacing:2 }}>
+        {name}
+      </a>
+
+      {/* Desktop nav */}
+      <nav style={{ display:'flex', gap:30, listStyle:'none' }} className="desktop-nav">
+        {NAV_LINKS.map(l => (
+          <a key={l.href} href={l.href} style={{ color:'rgba(255,255,255,0.6)',
+            textDecoration:'none', fontSize:'0.85rem', fontWeight:600,
+            textTransform:'uppercase', letterSpacing:1, transition:'0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.color=primary; e.currentTarget.style.opacity='1' }}
+            onMouseLeave={e => { e.currentTarget.style.color='rgba(255,255,255,0.6)' }}>
+            {l.label}
+          </a>
+        ))}
+        <a href="/admin" style={{ padding:'8px 20px', background:primary,
+          color:'white', textDecoration:'none', borderRadius:5,
+          fontSize:'0.8rem', fontWeight:700, letterSpacing:1 }}>
+          ADMIN
+        </a>
+      </nav>
+
+      {/* Mobile hamburger */}
+      <button onClick={() => setMenuOpen(p=>!p)}
+        style={{ display:'none', background:'none', border:'none', color:'white',
+          fontSize:24, cursor:'pointer' }} className="mobile-menu-btn">
+        {menuOpen ? '✕' : '☰'}
+      </button>
+
+      {/* Mobile menu */}
+      {menuOpen && (
+        <div style={{ position:'fixed', top:70, left:0, right:0, bottom:0,
+          background:'rgba(3,3,3,0.98)', backdropFilter:'blur(20px)',
+          display:'flex', flexDirection:'column', alignItems:'center',
+          justifyContent:'center', gap:32, zIndex:999 }}>
+          {NAV_LINKS.map(l => (
+            <a key={l.href} href={l.href} onClick={() => setMenuOpen(false)}
+              style={{ color:'white', textDecoration:'none', fontSize:'1.5rem',
+                fontWeight:800, textTransform:'uppercase', letterSpacing:2 }}>
+              {l.label}
+            </a>
+          ))}
+        </div>
+      )}
+
+      <style>{`
+        @media (max-width: 768px) {
+          .desktop-nav { display: none !important; }
+          .mobile-menu-btn { display: block !important; }
+        }
+      `}</style>
+    </header>
+  )
+}
+</file>
+
+<file path="src/components/site/ProjectsSection.jsx">
+export default function ProjectsSection({ projects }) {
+  if (!projects?.length) return null
+
+  return (
+    <section id="proyectos" style={{ padding:'100px 6%', background:'rgba(255,255,255,0.01)' }}>
+      <div style={{ textAlign:'center', marginBottom:60 }}>
+        <p style={{ color:'var(--primary)', fontSize:'0.75rem', fontWeight:800,
+          textTransform:'uppercase', letterSpacing:4, marginBottom:12 }}>Portfolio</p>
+        <h2 style={{ fontSize:'clamp(2rem,5vw,3rem)', fontWeight:800 }}>
+          Nuestros <span style={{ color:'var(--primary)' }}>Proyectos</span>
+        </h2>
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:20 }}>
+        {projects.map((proj, i) => (
+          <a key={proj.id||i} href={proj.link || '#'} target="_blank" rel="noreferrer"
+            style={{ display:'block', borderRadius:16, overflow:'hidden', textDecoration:'none',
+              border:'1px solid rgba(255,255,255,0.07)', position:'relative',
+              transition:'all 0.4s', aspectRatio:'4/3' }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform   = 'scale(1.02)'
+              e.currentTarget.style.borderColor = 'var(--primary)'
+              e.currentTarget.querySelector('.overlay').style.opacity = '1'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform   = 'scale(1)'
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'
+              e.currentTarget.querySelector('.overlay').style.opacity = '0'
+            }}>
+            {proj.image && (
+              <img src={proj.image} alt={proj.title}
+                style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+            )}
+            <div className="overlay" style={{ position:'absolute', inset:0, opacity:0,
+              background:'rgba(0,0,0,0.75)', display:'flex', flexDirection:'column',
+              alignItems:'center', justifyContent:'center', transition:'opacity 0.3s' }}>
+              <div style={{ color:'var(--primary)', fontSize:'0.75rem', fontWeight:800,
+                textTransform:'uppercase', letterSpacing:2, marginBottom:8 }}>{proj.category}</div>
+              <div style={{ fontSize:'1.4rem', fontWeight:800, color:'white' }}>{proj.title}</div>
+              <div style={{ marginTop:16, color:'var(--primary)', fontSize:24 }}>↗</div>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  )
+}
+</file>
+
+<file path="src/components/site/ServicesSection.jsx">
+export default function ServicesSection({ services }) {
+  if (!services?.length) return null
+  const primary = 'var(--primary)'
+
+  return (
+    <section id="servicios" style={{ padding:'100px 6%', background:'var(--bg)' }}>
+      <div style={{ textAlign:'center', marginBottom:60 }}>
+        <p style={{ color: primary, fontSize:'0.75rem', fontWeight:800,
+          textTransform:'uppercase', letterSpacing:4, marginBottom:12 }}>Lo que hacemos</p>
+        <h2 style={{ fontSize:'clamp(2rem,5vw,3rem)', fontWeight:800, lineHeight:1.1 }}>
+          Nuestros <span style={{ color: primary }}>Servicios</span>
+        </h2>
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:20 }}>
+        {services.map((svc, i) => (
+          <div key={svc.id||i}
+            style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)',
+              borderRadius:16, padding:'32px 28px', transition:'all 0.4s',
+              cursor:'default', position:'relative', overflow:'hidden' }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'rgba(255,60,60,0.4)'
+              e.currentTarget.style.transform   = 'translateY(-8px)'
+              e.currentTarget.style.background  = 'rgba(255,60,60,0.05)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'
+              e.currentTarget.style.transform   = 'translateY(0)'
+              e.currentTarget.style.background  = 'rgba(255,255,255,0.03)'
+            }}>
+            <div style={{ fontSize:36, marginBottom:18 }}>{svc.icon}</div>
+            <h3 style={{ fontSize:'1.15rem', fontWeight:800, marginBottom:10 }}>{svc.title}</h3>
+            <p style={{ color:'rgba(255,255,255,0.45)', fontSize:14, lineHeight:1.7, marginBottom:16 }}>
+              {svc.desc}
+            </p>
+            <div style={{ color: primary, fontWeight:700, fontSize:13, letterSpacing:0.5 }}>
+              {svc.price}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+</file>
+
+<file path="src/components/site/TestimonialsSection.jsx">
+export default function TestimonialsSection({ testimonials }) {
+  if (!testimonials?.length) return null
+
+  return (
+    <section id="testimonios" style={{ padding:'100px 6%' }}>
+      <div style={{ textAlign:'center', marginBottom:60 }}>
+        <p style={{ color:'var(--primary)', fontSize:'0.75rem', fontWeight:800,
+          textTransform:'uppercase', letterSpacing:4, marginBottom:12 }}>Social Proof</p>
+        <h2 style={{ fontSize:'clamp(2rem,5vw,3rem)', fontWeight:800 }}>
+          Lo que dicen <span style={{ color:'var(--primary)' }}>nuestros clientes</span>
+        </h2>
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))', gap:20 }}>
+        {testimonials.map((t, i) => (
+          <div key={t.id||i} style={{ background:'rgba(255,255,255,0.03)',
+            border:'1px solid rgba(255,255,255,0.08)', borderRadius:16, padding:'28px 24px',
+            transition:'all 0.3s' }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'rgba(255,60,60,0.3)'
+              e.currentTarget.style.background  = 'rgba(255,60,60,0.04)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+              e.currentTarget.style.background  = 'rgba(255,255,255,0.03)'
+            }}>
+            <div style={{ color:'var(--primary)', fontSize:32, marginBottom:16, lineHeight:1 }}>"</div>
+            <p style={{ color:'rgba(255,255,255,0.65)', fontSize:15, lineHeight:1.8,
+              fontStyle:'italic', marginBottom:20 }}>{t.text}</p>
+            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+              <div style={{ width:44, height:44, borderRadius:'50%',
+                background:'rgba(255,60,60,0.15)', overflow:'hidden',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontSize:18, flexShrink:0 }}>
+                {t.avatar
+                  ? <img src={t.avatar} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                  : '👤'}
+              </div>
+              <div>
+                <div style={{ fontWeight:700, fontSize:14 }}>{t.name}</div>
+                <div style={{ color:'var(--primary)', fontSize:12 }}>{t.role}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+</file>
+
+<file path="src/hooks/useSiteData.js">
+import { useState, useEffect } from 'react'
+import {
+  getSiteConfig, getEcosystems, getProjects,
+  getTestimonials, getServices,
+} from '../lib/firebaseHelpers'
+
+// Datos por defecto (se usan mientras no hay Firebase o como fallback)
+export const DEFAULT_SITE = {
+  hero: {
+    badge:    'Digital Creative Studio',
+    headline: 'ESTÉTICA QUE VENDE.',
+    sub:      'Fusionamos el arte cinematográfico con la ingeniería web para crear negocios digitales imparables.',
+    cta:      'EXPLORAR ÁREAS',
+    bgImage:  'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?auto=format&fit=crop&w=1920&q=80',
+  },
+  brand: {
+    name:    'POLARTRONIC',
+    tagline: 'Elite Digital Studio',
+    primary: '#ff3c3c',
+    bg:      '#030303',
+  },
+  about: {
+    title:   'Quiénes Somos',
+    text:    'Somos un estudio de diseño y desarrollo web de alto impacto. Creamos el estándar del futuro digital con soluciones visuales a medida.',
+    stats:   [
+      { value: '120+', label: 'Proyectos' },
+      { value: '98%',  label: 'Clientes Felices' },
+      { value: '8',    label: 'Años de Experiencia' },
+    ],
+  },
+  footer: {
+    email:     'hello@polartronic.com',
+    whatsapp:  '#',
+    instagram: '#',
+    copy:      '© 2026 Polartronic Studio. Todos los derechos reservados.',
+    sub:       'Diseño Web & Branding de Alto Impacto.',
+  },
+}
+
+export const DEFAULT_ECOSYSTEMS = [
+  { id: 'e1', category: 'Gourmet & Nightlife',      title: 'Restaurantes',  desc: 'Menús inmersivos y sistemas de reservas de alta gama.',          image: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80', order: 0 },
+  { id: 'e2', category: 'Wellness & Medical',       title: 'Salud',         desc: 'Plataformas que transmiten confianza y profesionalismo.',          image: 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80', order: 1 },
+  { id: 'e3', category: 'Lifestyle & Grooming',     title: 'Barberías',     desc: 'Agendas digitales y estética urbana impecable.',                  image: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=800&q=80', order: 2 },
+  { id: 'e4', category: 'Luxury Retail',            title: 'Moda',          desc: 'Showrooms que elevan el valor percibido de tus prendas.',          image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=800&q=80', order: 3 },
+  { id: 'e5', category: 'Streetwear & Shoes',       title: 'Calzado',       desc: 'E-commerce optimizados para lanzamientos de alto volumen.',        image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=80', order: 4 },
+  { id: 'e6', category: 'Professional Services',    title: 'Consultoría',   desc: 'Landing pages de autoridad para servicios de élite.',              image: 'https://images.unsplash.com/photo-1454165833767-02a92206f250?auto=format&fit=crop&w=800&q=80', order: 5 },
+]
+
+export const DEFAULT_PROJECTS = [
+  { id: 'p1', title: 'Maison Noir',    category: 'Restaurante', image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80', link: '#', order: 0 },
+  { id: 'p2', title: 'VitaCare',       category: 'Salud',       image: 'https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=800&q=80', link: '#', order: 1 },
+  { id: 'p3', title: 'Urban Cuts',     category: 'Barbería',    image: 'https://images.unsplash.com/photo-1596728325488-58c87691e9af?auto=format&fit=crop&w=800&q=80', link: '#', order: 2 },
+  { id: 'p4', title: 'Luxe Fashion',   category: 'Moda',        image: 'https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=800&q=80', link: '#', order: 3 },
+]
+
+export const DEFAULT_TESTIMONIALS = [
+  { id: 't1', name: 'María G.',    role: 'CEO, Maison Noir',  text: 'Polartronic transformó nuestra presencia digital. Las reservas online aumentaron un 300%.',  avatar: '', order: 0 },
+  { id: 't2', name: 'Carlos M.',   role: 'Director, VitaCare', text: 'El diseño transmite exactamente la confianza que nuestros pacientes necesitan ver.',         avatar: '', order: 1 },
+  { id: 't3', name: 'Ana P.',      role: 'Owner, Urban Cuts',  text: 'En 2 semanas teníamos la agenda llena gracias al nuevo sistema de citas online.',            avatar: '', order: 2 },
+]
+
+export const DEFAULT_SERVICES = [
+  { id: 's1', icon: '🎨', title: 'Diseño Web',       desc: 'Sitios web a medida con identidad visual única y experiencia premium.',  price: 'Desde $800',  order: 0 },
+  { id: 's2', icon: '⚡', title: 'Desarrollo',        desc: 'Aplicaciones web y mobile con las últimas tecnologías del mercado.',      price: 'Desde $1200', order: 1 },
+  { id: 's3', icon: '📈', title: 'Branding Digital',  desc: 'Identidad de marca completa que te posiciona como líder de tu nicho.',    price: 'Desde $600',  order: 2 },
+  { id: 's4', icon: '🚀', title: 'Marketing Digital', desc: 'Estrategias SEO y performance marketing para escalar tu negocio.',         price: 'Desde $500',  order: 3 },
+]
+
+export function useSiteData() {
+  const [site,         setSite]         = useState(DEFAULT_SITE)
+  const [ecosystems,   setEcosystems]   = useState(DEFAULT_ECOSYSTEMS)
+  const [projects,     setProjects]     = useState(DEFAULT_PROJECTS)
+  const [testimonials, setTestimonials] = useState(DEFAULT_TESTIMONIALS)
+  const [services,     setServices]     = useState(DEFAULT_SERVICES)
+  const [loading,      setLoading]      = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [cfg, eco, proj, test, svc] = await Promise.all([
+          getSiteConfig(),
+          getEcosystems(),
+          getProjects(),
+          getTestimonials(),
+          getServices(),
+        ])
+        if (cfg)           setSite(prev => ({ ...prev, ...cfg }))
+        if (eco.length)    setEcosystems(eco.sort((a,b) => (a.order||0)-(b.order||0)))
+        if (proj.length)   setProjects(proj.sort((a,b) => (a.order||0)-(b.order||0)))
+        if (test.length)   setTestimonials(test.sort((a,b) => (a.order||0)-(b.order||0)))
+        if (svc.length)    setServices(svc.sort((a,b) => (a.order||0)-(b.order||0)))
+      } catch (e) {
+        console.warn('Firebase not configured — using local defaults:', e.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  return { site, ecosystems, projects, testimonials, services, loading,
+           setSite, setEcosystems, setProjects, setTestimonials, setServices }
+}
+</file>
+
+<file path="src/index.css">
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #ff3c3c;
+  --bg: #030303;
+  --card-bg: #0d0d0d;
+  --text-main: #ffffff;
+  --text-dim: #a1a1a1;
+  --border: rgba(255, 255, 255, 0.08);
+}
+
+* { box-sizing: border-box; scroll-behavior: smooth; }
+
+body {
+  background-color: var(--bg);
+  color: var(--text-main);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  overflow-x: hidden;
+  margin: 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #0a0a0a; }
+::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 2px; }
+
+/* Animations */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.animate-fade-up  { animation: fadeInUp 0.7s cubic-bezier(0.23,1,0.32,1) both; }
+.animate-fade     { animation: fadeIn  0.5s ease both; }
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+
+/* Admin panel inputs */
+.admin-input {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 8px;
+  width: 100%;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.admin-input:focus { border-color: var(--primary); }
+.admin-input::placeholder { color: rgba(255,255,255,0.3); }
+
+.admin-textarea {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 8px;
+  width: 100%;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  resize: vertical;
+  min-height: 90px;
+}
+.admin-textarea:focus { border-color: var(--primary); }
+
+.save-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.save-btn:hover { background: #ff5555; transform: translateY(-1px); }
+.save-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.section-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+</file>
+
+<file path="src/lib/firebase.js">
+// ╔══════════════════════════════════════════════════════════╗
+// ║  FIREBASE CONFIG — reemplaza con tus credenciales reales ║
+// ╚══════════════════════════════════════════════════════════╝
+import { initializeApp } from 'firebase/app'
+import { getFirestore }  from 'firebase/firestore'
+import { getAuth }       from 'firebase/auth'
+import { getStorage }    from 'firebase/storage'
+
+const firebaseConfig = {
+   apiKey: "AIzaSyCYThbHoPglpb-8RuT308pLLxo6enaRmb0",
+  authDomain: "polartronic-27bf7.firebaseapp.com",
+  projectId: "polartronic-27bf7",
+  storageBucket: "polartronic-27bf7.firebasestorage.app",
+  messagingSenderId: "218217170970",
+  appId: "1:218217170970:web:d7d67d35fe98147b7469a3"
+};
+
+const app     = initializeApp(firebaseConfig)
+export const db      = getFirestore(app)
+export const auth    = getAuth(app)
+export const storage = getStorage(app)
+export default app
+</file>
+
+<file path="src/lib/firebaseHelpers.js">
+import {
+  doc, getDoc, setDoc, updateDoc,
+  collection, getDocs, addDoc, deleteDoc,
+} from 'firebase/firestore'
+import {
+  ref, uploadBytes, getDownloadURL,
+} from 'firebase/storage'
+import { db, storage } from './firebase'
+
+// ── SITE CONFIG (documento único) ─────────────────────────────────────
+const SITE_DOC = 'site/config'
+
+export async function getSiteConfig() {
+  const snap = await getDoc(doc(db, 'site', 'config'))
+  return snap.exists() ? snap.data() : null
+}
+
+export async function saveSiteConfig(data) {
+  await setDoc(doc(db, 'site', 'config'), data, { merge: true })
+}
+
+// ── ECOSYSTEMS (colección) ─────────────────────────────────────────────
+export async function getEcosystems() {
+  const snap = await getDocs(collection(db, 'ecosystems'))
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+}
+
+export async function saveEcosystem(id, data) {
+  if (id) {
+    await updateDoc(doc(db, 'ecosystems', id), data)
+  } else {
+    await addDoc(collection(db, 'ecosystems'), data)
+  }
+}
+
+export async function deleteEcosystem(id) {
+  await deleteDoc(doc(db, 'ecosystems', id))
+}
+
+// ── PROJECTS ───────────────────────────────────────────────────────────
+export async function getProjects() {
+  const snap = await getDocs(collection(db, 'projects'))
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+}
+
+export async function saveProject(id, data) {
+  if (id) {
+    await updateDoc(doc(db, 'projects', id), data)
+  } else {
+    await addDoc(collection(db, 'projects'), data)
+  }
+}
+
+export async function deleteProject(id) {
+  await deleteDoc(doc(db, 'projects', id))
+}
+
+// ── TESTIMONIALS ───────────────────────────────────────────────────────
+export async function getTestimonials() {
+  const snap = await getDocs(collection(db, 'testimonials'))
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+}
+
+export async function saveTestimonial(id, data) {
+  if (id) {
+    await updateDoc(doc(db, 'testimonials', id), data)
+  } else {
+    await addDoc(collection(db, 'testimonials'), data)
+  }
+}
+
+export async function deleteTestimonial(id) {
+  await deleteDoc(doc(db, 'testimonials', id))
+}
+
+// ── SERVICES ──────────────────────────────────────────────────────────
+export async function getServices() {
+  const snap = await getDocs(collection(db, 'services'))
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+}
+
+export async function saveService(id, data) {
+  if (id) {
+    await updateDoc(doc(db, 'services', id), data)
+  } else {
+    await addDoc(collection(db, 'services'), data)
+  }
+}
+
+export async function deleteService(id) {
+  await deleteDoc(doc(db, 'services', id))
+}
+
+// ── IMAGE UPLOAD ───────────────────────────────────────────────────────
+export async function uploadImage(file, folder = 'images') {
+  const path = `${folder}/${Date.now()}_${file.name}`
+  const r    = ref(storage, path)
+  await uploadBytes(r, file)
+  return getDownloadURL(r)
+}
+</file>
+
+<file path="src/lib/useAuth.js">
+import { useState, useEffect } from 'react'
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+} from 'firebase/auth'
+import { auth } from './firebase'
+
+export function useAuth() {
+  const [user,    setUser]    = useState(undefined) // undefined = loading
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, u => {
+      setUser(u ?? null)
+      setLoading(false)
+    })
+    return unsub
+  }, [])
+
+  const login = (email, password) =>
+    signInWithEmailAndPassword(auth, email, password)
+
+  const logout = () => signOut(auth)
+
+  return { user, loading, login, logout }
+}
+</file>
+
+<file path="src/main.jsx">
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
+import App from './App'
+import './index.css'
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <App />
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: '#111',
+            color: '#fff',
+            border: '1px solid rgba(255,60,60,0.3)',
+            borderRadius: '8px',
+          },
+        }}
+      />
+    </BrowserRouter>
+  </React.StrictMode>
+)
+</file>
+
+<file path="src/pages/AdminLogin.jsx">
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../lib/useAuth'
+import toast from 'react-hot-toast'
+
+export default function AdminLogin() {
+  const [email,    setEmail]    = useState('')
+  const [password, setPassword] = useState('')
+  const [loading,  setLoading]  = useState(false)
+  const { login } = useAuth()
+  const navigate  = useNavigate()
+
+  const handleLogin = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      await login(email, password)
+      toast.success('Bienvenido al panel')
+      navigate('/admin')
+    } catch (err) {
+      toast.error('Credenciales incorrectas')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center',
+      justifyContent:'center', background:'#030303', padding:'2rem' }}>
+      <div style={{ width:'100%', maxWidth:400, background:'#0d0d0d',
+        border:'1px solid rgba(255,255,255,0.08)', borderRadius:20, padding:'2.5rem' }}>
+        <div style={{ textAlign:'center', marginBottom:'2rem' }}>
+          <div style={{ fontFamily:'Bebas Neue, sans-serif', fontSize:'2rem',
+            color:'#ff3c3c', letterSpacing:2 }}>POLARTRONIC</div>
+          <div style={{ color:'rgba(255,255,255,0.4)', fontSize:'0.85rem', marginTop:6 }}>
+            Panel de Administración
+          </div>
+        </div>
+
+        <form onSubmit={handleLogin} style={{ display:'flex', flexDirection:'column', gap:14 }}>
+          <div>
+            <label style={{ fontSize:12, color:'rgba(255,255,255,0.5)',
+              textTransform:'uppercase', letterSpacing:1, display:'block', marginBottom:6 }}>Email</label>
+            <input className="admin-input" type="email" value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="admin@polartronic.com" required />
+          </div>
+          <div>
+            <label style={{ fontSize:12, color:'rgba(255,255,255,0.5)',
+              textTransform:'uppercase', letterSpacing:1, display:'block', marginBottom:6 }}>Contraseña</label>
+            <input className="admin-input" type="password" value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••" required />
+          </div>
+          <button className="save-btn" type="submit" disabled={loading}
+            style={{ marginTop:8, width:'100%' }}>
+            {loading ? 'Entrando...' : 'ENTRAR AL PANEL →'}
+          </button>
+        </form>
+
+        <p style={{ textAlign:'center', marginTop:'1.5rem', fontSize:12,
+          color:'rgba(255,255,255,0.25)', lineHeight:1.7 }}>
+          En Firebase Console → Authentication → Users<br/>crea un usuario con tu email y contraseña.
+        </p>
+      </div>
+    </div>
+  )
+}
+</file>
+
+<file path="src/pages/AdminPanel.jsx">
+import { useState } from 'react'
+import { useAuth }     from '../lib/useAuth'
+import { useSiteData } from '../hooks/useSiteData'
+import AdminSidebar    from '../components/admin/AdminSidebar'
+import AdminHeader     from '../components/admin/AdminHeader'
+import SiteConfigTab   from '../components/admin/tabs/SiteConfigTab'
+import HeroTab         from '../components/admin/tabs/HeroTab'
+import ServicesTab     from '../components/admin/tabs/ServicesTab'
+import EcosystemsTab   from '../components/admin/tabs/EcosystemsTab'
+import ProjectsTab     from '../components/admin/tabs/ProjectsTab'
+import TestimonialsTab from '../components/admin/tabs/TestimonialsTab'
+import ContactTab      from '../components/admin/tabs/ContactTab'
+
+export default function AdminPanel() {
+  const [activeTab, setActiveTab] = useState('site')
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const { logout } = useAuth()
+  const data = useSiteData()
+
+  const tabs = {
+    site:         <SiteConfigTab    data={data} />,
+    hero:         <HeroTab          data={data} />,
+    services:     <ServicesTab      data={data} />,
+    ecosystems:   <EcosystemsTab    data={data} />,
+    projects:     <ProjectsTab      data={data} />,
+    testimonials: <TestimonialsTab  data={data} />,
+    contact:      <ContactTab       data={data} />,
+  }
+
+  return (
+    <div style={{ display:'flex', height:'100vh', overflow:'hidden', background:'#030303' }}>
+      <AdminSidebar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        open={sidebarOpen}
+        onToggle={() => setSidebarOpen(p => !p)}
+      />
+      <div style={{ flex:1, overflow:'auto', display:'flex', flexDirection:'column' }}>
+        <AdminHeader onLogout={logout} onToggleSidebar={() => setSidebarOpen(p => !p)} />
+        <main style={{ flex:1, padding:'2rem', maxWidth:900 }}>
+          {tabs[activeTab]}
+        </main>
+      </div>
+    </div>
+  )
+}
+</file>
+
+<file path="src/pages/PublicSite.jsx">
+import { useState, useEffect } from 'react'
+import { useSiteData } from '../hooks/useSiteData'
+import NavBar       from '../components/site/NavBar'
+import Hero         from '../components/site/Hero'
+import ServicesSection from '../components/site/ServicesSection'
+import EcosystemSection from '../components/site/EcosystemSection'
+import ProjectsSection  from '../components/site/ProjectsSection'
+import TestimonialsSection from '../components/site/TestimonialsSection'
+import ContactSection   from '../components/site/ContactSection'
+import Footer       from '../components/site/Footer'
+
+export default function PublicSite() {
+  const { site, ecosystems, projects, testimonials, services, loading } = useSiteData()
+
+  // Aplicar colores del brand dinámicamente
+  useEffect(() => {
+    if (site.brand?.primary) {
+      document.documentElement.style.setProperty('--primary', site.brand.primary)
+    }
+    if (site.brand?.bg) {
+      document.documentElement.style.setProperty('--bg', site.brand.bg)
+      document.body.style.backgroundColor = site.brand.bg
+    }
+  }, [site.brand])
+
+  if (loading) return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center',
+      justifyContent:'center', background:'#030303' }}>
+      <div style={{ width:40, height:40, border:'3px solid rgba(255,60,60,0.3)',
+        borderTopColor:'#ff3c3c', borderRadius:'50%',
+        animation:'spin 0.8s linear infinite' }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  )
+
+  return (
+    <div style={{ background: 'var(--bg)' }}>
+      <NavBar  brand={site.brand} />
+      <Hero    hero={site.hero}   brand={site.brand} />
+      <ServicesSection services={services} />
+      <EcosystemSection ecosystems={ecosystems} />
+      <ProjectsSection  projects={projects} />
+      <TestimonialsSection testimonials={testimonials} />
+      <ContactSection  footer={site.footer} brand={site.brand} />
+      <Footer  site={site} />
+    </div>
+  )
+}
+</file>
+
+<file path="tailwind.config.js">
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./index.html', './src/**/*.{js,jsx,ts,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        primary: 'var(--primary)',
+      },
+      fontFamily: {
+        display: ['Bebas Neue', 'sans-serif'],
+        cinzel:  ['Cinzel', 'serif'],
+        body:    ['Plus Jakarta Sans', 'sans-serif'],
+      },
+    },
+  },
+  plugins: [],
+}
+</file>
+
+<file path="vite.config.js">
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+})
+</file>
+
+</files>

@@ -1,0 +1,100 @@
+import {
+  doc, getDoc, setDoc, updateDoc,
+  collection, getDocs, addDoc, deleteDoc,
+} from 'firebase/firestore'
+import {
+  ref, uploadBytes, getDownloadURL,
+} from 'firebase/storage'
+import { db, storage } from './firebase'
+
+// ── SITE CONFIG (documento único) ─────────────────────────────────────
+const SITE_DOC = 'site/config'
+
+export async function getSiteConfig() {
+  const snap = await getDoc(doc(db, 'site', 'config'))
+  return snap.exists() ? snap.data() : null
+}
+
+export async function saveSiteConfig(data) {
+  await setDoc(doc(db, 'site', 'config'), data, { merge: true })
+}
+
+// ── ECOSYSTEMS (colección) ─────────────────────────────────────────────
+export async function getEcosystems() {
+  const snap = await getDocs(collection(db, 'ecosystems'))
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+}
+
+export async function saveEcosystem(id, data) {
+  if (id) {
+    await updateDoc(doc(db, 'ecosystems', id), data)
+  } else {
+    await addDoc(collection(db, 'ecosystems'), data)
+  }
+}
+
+export async function deleteEcosystem(id) {
+  await deleteDoc(doc(db, 'ecosystems', id))
+}
+
+// ── PROJECTS ───────────────────────────────────────────────────────────
+export async function getProjects() {
+  const snap = await getDocs(collection(db, 'projects'))
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+}
+
+export async function saveProject(id, data) {
+  if (id) {
+    await updateDoc(doc(db, 'projects', id), data)
+  } else {
+    await addDoc(collection(db, 'projects'), data)
+  }
+}
+
+export async function deleteProject(id) {
+  await deleteDoc(doc(db, 'projects', id))
+}
+
+// ── TESTIMONIALS ───────────────────────────────────────────────────────
+export async function getTestimonials() {
+  const snap = await getDocs(collection(db, 'testimonials'))
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+}
+
+export async function saveTestimonial(id, data) {
+  if (id) {
+    await updateDoc(doc(db, 'testimonials', id), data)
+  } else {
+    await addDoc(collection(db, 'testimonials'), data)
+  }
+}
+
+export async function deleteTestimonial(id) {
+  await deleteDoc(doc(db, 'testimonials', id))
+}
+
+// ── SERVICES ──────────────────────────────────────────────────────────
+export async function getServices() {
+  const snap = await getDocs(collection(db, 'services'))
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+}
+
+export async function saveService(id, data) {
+  if (id) {
+    await updateDoc(doc(db, 'services', id), data)
+  } else {
+    await addDoc(collection(db, 'services'), data)
+  }
+}
+
+export async function deleteService(id) {
+  await deleteDoc(doc(db, 'services', id))
+}
+
+// ── IMAGE UPLOAD ───────────────────────────────────────────────────────
+export async function uploadImage(file, folder = 'images') {
+  const path = `${folder}/${Date.now()}_${file.name}`
+  const r    = ref(storage, path)
+  await uploadBytes(r, file)
+  return getDownloadURL(r)
+}
