@@ -12,7 +12,7 @@ import TestimonialsTab from '../components/admin/tabs/TestimonialsTab'
 import ContactTab      from '../components/admin/tabs/ContactTab'
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState('site')
+  const [activeTab,   setActiveTab]   = useState('site')
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const { logout } = useAuth()
   const data = useSiteData()
@@ -28,19 +28,45 @@ export default function AdminPanel() {
   }
 
   return (
-    <div style={{ display:'flex', height:'100vh', overflow:'hidden', background:'#030303' }}>
-      <AdminSidebar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        open={sidebarOpen}
-        onToggle={() => setSidebarOpen(p => !p)}
-      />
-      <div style={{ flex:1, overflow:'auto', display:'flex', flexDirection:'column' }}>
-        <AdminHeader onLogout={logout} onToggleSidebar={() => setSidebarOpen(p => !p)} />
-        <main style={{ flex:1, padding:'2rem', maxWidth:900 }}>
-          {tabs[activeTab]}
-        </main>
+    <>
+      <style>{`
+        /* ── Admin responsive globals ── */
+        @media (max-width: 767px) {
+          .admin-main-content {
+            padding-bottom: 80px !important; /* espacio para el bottom nav */
+          }
+          .admin-header-wrap {
+            padding: 0 1rem !important;
+          }
+          .admin-main-wrap {
+            padding: 1rem !important;
+          }
+        }
+      `}</style>
+
+      <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#030303' }}>
+        <AdminSidebar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          open={sidebarOpen}
+          onToggle={() => setSidebarOpen(p => !p)}
+        />
+
+        <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <AdminHeader
+            onLogout={logout}
+            onToggleSidebar={() => setSidebarOpen(p => !p)}
+            activeTab={activeTab}
+          />
+
+          <main
+            className="admin-main-wrap"
+            style={{ flex: 1, padding: '2rem', maxWidth: 900 }}
+          >
+            {tabs[activeTab]}
+          </main>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
