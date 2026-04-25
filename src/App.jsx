@@ -1,10 +1,10 @@
+// src/App.jsx — FIX RUTA /admin
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './lib/useAuth'
 import PublicSite  from './pages/PublicSite'
 import AdminLogin  from './pages/AdminLogin'
 import AdminPanel  from './pages/AdminPanel'
 
-/* ─── Spinner compartido ─────────────────────────────────────────── */
 function AuthSpinner() {
   return (
     <div style={{
@@ -23,7 +23,6 @@ function AuthSpinner() {
   )
 }
 
-/* ─── Ruta protegida ─────────────────────────────────────────────── */
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return <AuthSpinner />
@@ -31,7 +30,6 @@ function ProtectedRoute({ children }) {
   return children
 }
 
-/* ─── Página de login (redirige si ya está autenticado) ──────────── */
 function AdminLoginPage() {
   const { user, loading } = useAuth()
   if (loading) return <AuthSpinner />
@@ -39,19 +37,16 @@ function AdminLoginPage() {
   return <AdminLogin />
 }
 
-/* ─── App ────────────────────────────────────────────────────────── */
 export default function App() {
   return (
     <Routes>
-      {/* Sitio público — sin ningún enlace al admin */}
       <Route path="/"            element={<PublicSite />} />
-
-      {/* Panel de administración — solo accesible escribiendo /admin en la URL */}
+      
+      {/* ── FIX: rutas /admin ── */}
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route path="/admin"       element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
       <Route path="/admin/*"     element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
-
-      {/* Cualquier ruta desconocida → sitio público */}
+      
       <Route path="*"            element={<Navigate to="/" replace />} />
     </Routes>
   )
