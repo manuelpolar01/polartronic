@@ -1,11 +1,12 @@
 /**
- * AdminSidebar.jsx — updated
- * Adds the 🌐 Lingua tab to the navigation.
+ * AdminSidebar.jsx — FIXED
+ * BUG: TABS_AGGIORNATO was defined but the code referenced TABS (undefined) → crash → black screen.
+ * FIX: renamed to TABS consistently throughout.
  */
 
 import { useEffect, useState } from 'react'
 
-const TABS_AGGIORNATO = [
+const TABS = [
   { id: 'site',          icon: '⚙️', label: 'Marca & Colores'      },
   { id: 'hero',          icon: '🖼',  label: 'Hero / Portada'       },
   { id: 'services',      icon: '💼', label: 'Servicios'            },
@@ -14,10 +15,9 @@ const TABS_AGGIORNATO = [
   { id: 'testimonials',  icon: '💬', label: 'Testimonios'          },
   { id: 'contact',       icon: '📬', label: 'Contacto & Footer'    },
   { id: 'language',      icon: '🌐', label: 'Lingua del Sito'      },
-  // ── NUOVI ──────────────────────────────────────────────────────────
-  { id: 'leads',         icon: '📥', label: 'Inbox Lead'           },  // ← NUOVO
-  { id: 'agents',        icon: '👥', label: 'Agenti Commerciali'   },  // ← NUOVO
-  { id: 'notifications', icon: '🔔', label: 'Notifiche & Canali'   },  // ← NUOVO
+  { id: 'leads',         icon: '📥', label: 'Inbox Lead'           },
+  { id: 'agents',        icon: '👥', label: 'Agenti Commerciali'   },
+  { id: 'notifications', icon: '🔔', label: 'Notifiche & Canali'   },
 ]
 
 export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, brand }) {
@@ -30,8 +30,8 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, b
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  const logo    = brand?.logo || ''
-  const name    = brand?.name || 'POLARTRONIC'
+  const logo = brand?.logo || ''
+  const name = brand?.name || 'POLARTRONIC'
 
   const BrandMark = ({ height = 28 }) => logo ? (
     <img src={logo} alt={name} style={{ height, maxWidth: 160, objectFit: 'contain' }} />
@@ -41,7 +41,7 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, b
     </span>
   )
 
-  /* ── MOBILE: bottom nav ── */
+  /* ── MOBILE: bottom sheet ── */
   if (isMobile) {
     return (
       <>
