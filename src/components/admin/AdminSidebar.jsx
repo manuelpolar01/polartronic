@@ -1,13 +1,23 @@
+/**
+ * AdminSidebar.jsx — updated
+ * Adds the 🌐 Lingua tab to the navigation.
+ */
+
 import { useEffect, useState } from 'react'
 
-const TABS = [
-  { id: 'site',         icon: '⚙️', label: 'Marca & Colores'   },
-  { id: 'hero',         icon: '🖼',  label: 'Hero / Portada'    },
-  { id: 'services',     icon: '💼', label: 'Servicios'         },
-  { id: 'ecosystems',   icon: '🎟',  label: 'Membresías'        },
-  { id: 'projects',     icon: '🗂',  label: 'Proyectos'         },
-  { id: 'testimonials', icon: '💬', label: 'Testimonios'       },
-  { id: 'contact',      icon: '📬', label: 'Contacto & Footer' },
+const TABS_AGGIORNATO = [
+  { id: 'site',          icon: '⚙️', label: 'Marca & Colores'      },
+  { id: 'hero',          icon: '🖼',  label: 'Hero / Portada'       },
+  { id: 'services',      icon: '💼', label: 'Servicios'            },
+  { id: 'ecosystems',    icon: '🎟',  label: 'Membresías'           },
+  { id: 'projects',      icon: '🗂',  label: 'Proyectos'            },
+  { id: 'testimonials',  icon: '💬', label: 'Testimonios'          },
+  { id: 'contact',       icon: '📬', label: 'Contacto & Footer'    },
+  { id: 'language',      icon: '🌐', label: 'Lingua del Sito'      },
+  // ── NUOVI ──────────────────────────────────────────────────────────
+  { id: 'leads',         icon: '📥', label: 'Inbox Lead'           },  // ← NUOVO
+  { id: 'agents',        icon: '👥', label: 'Agenti Commerciali'   },  // ← NUOVO
+  { id: 'notifications', icon: '🔔', label: 'Notifiche & Canali'   },  // ← NUOVO
 ]
 
 export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, brand }) {
@@ -22,9 +32,7 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, b
 
   const logo    = brand?.logo || ''
   const name    = brand?.name || 'POLARTRONIC'
-  const primary = brand?.primary || '#ff3c3c'
 
-  /* ── Logo o texto reutilizable ── */
   const BrandMark = ({ height = 28 }) => logo ? (
     <img src={logo} alt={name} style={{ height, maxWidth: 160, objectFit: 'contain' }} />
   ) : (
@@ -47,7 +55,6 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, b
           />
         )}
 
-        {/* Drawer */}
         <div style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1200,
           background: '#090909',
@@ -57,12 +64,10 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, b
           transition: 'transform 0.35s cubic-bezier(0.23,1,0.32,1)',
           maxHeight: '80vh', display: 'flex', flexDirection: 'column',
         }}>
-          {/* Handle */}
           <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px', flexShrink: 0 }}>
             <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
           </div>
 
-          {/* Título */}
           <div style={{
             padding: '4px 20px 12px',
             borderBottom: '1px solid rgba(255,255,255,0.07)',
@@ -80,7 +85,6 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, b
             }}>✕</button>
           </div>
 
-          {/* Lista */}
           <nav style={{ overflowY: 'auto', padding: '8px 0', flex: 1 }}>
             {TABS.map(tab => (
               <button
@@ -115,7 +119,7 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, b
           </div>
         </div>
 
-        {/* Bottom bar fija */}
+        {/* Bottom bar fissa */}
         <nav style={{
           position: 'fixed', bottom: 0, left: 0, right: 0,
           zIndex: open ? 0 : 1050,
@@ -156,14 +160,14 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, b
             }}
           >
             <span style={{ fontSize: 18 }}>☰</span>
-            <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: 'rgba(255,255,255,0.35)' }}>Más</span>
+            <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: 'rgba(255,255,255,0.35)' }}>Più</span>
           </button>
         </nav>
       </>
     )
   }
 
-  /* ── DESKTOP: sidebar clásico ── */
+  /* ── DESKTOP: sidebar classico ── */
   if (!open) return null
 
   return (

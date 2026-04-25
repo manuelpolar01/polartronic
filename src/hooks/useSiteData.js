@@ -35,23 +35,57 @@ export const DEFAULT_SITE = {
     copy:      '© 2026 Polartronic Studio. Todos los derechos reservados.',
     sub:       'Diseño Web & Branding de Alto Impacto.',
   },
-  // Configuración del formulario de contacto
   contact: {
     title:       '¿Listo para el siguiente nivel?',
     subtitle:    'Cuéntanos tu proyecto. Si buscas lo ordinario, no somos tu agencia.',
     fields: JSON.stringify([
-      { id: 'name',    label: 'Nombre',              type: 'text',     required: true,  placeholder: 'Tu nombre' },
-      { id: 'email',   label: 'Email',                type: 'email',    required: true,  placeholder: 'tu@email.com' },
-      { id: 'company', label: 'Empresa / Proyecto',   type: 'text',     required: false, placeholder: 'Nombre de tu empresa' },
-      { id: 'service', label: 'Servicio de interés',  type: 'select',   required: false, options: 'Diseño Web,Desarrollo,Branding Digital,Marketing Digital,Otro' },
-      { id: 'message', label: 'Cuéntanos tu proyecto',type: 'textarea', required: true,  placeholder: 'Describe brevemente qué necesitas...' },
+      { id: 'name',     label: 'Nombre',                  type: 'text',     required: true,  placeholder: 'Tu nombre' },
+      { id: 'email',    label: 'Email',                   type: 'email',    required: true,  placeholder: 'tu@email.com' },
+      { id: 'phone',    label: 'Telefono',                type: 'tel',      required: true,  placeholder: '+39 333 1234567' },
+      { id: 'zona',     label: 'Ciudad / Zona',           type: 'text',     required: true,  placeholder: 'Ej: Milano, Roma...' },
+      { id: 'company',  label: 'Empresa / Proyecto',      type: 'text',     required: false, placeholder: 'Nombre de tu empresa' },
+      { id: 'service',  label: 'Servicio de interés',     type: 'select',   required: false, options: 'Diseño Web,Desarrollo,Branding Digital,Marketing Digital,Otro' },
+      { id: 'message',  label: 'Cuéntanos tu proyecto',   type: 'textarea', required: false, placeholder: 'Describe brevemente qué necesitas...' },
     ]),
     emailjsServiceId:  '',
     emailjsTemplateId: '',
     emailjsPublicKey:  '',
-    successTitle:   '¡Mensaje enviado!',
-    successMessage: 'Nos pondremos en contacto contigo en menos de 24 horas.',
+    successTitle:   '¡Solicitud recibida!',
+    // CAMBIO 1: mensaje actualizado para reflejar el sistema de agentes por zona
+    successMessage: 'Un agente comercial cercano a tu zona se pondrá en contacto contigo en menos de 24 horas.',
     ctaLabel:       'ENVIAR MENSAJE',
+  },
+
+  // CAMBIO 2: array de agentes comerciales — se gestiona desde el tab Agentes en el admin
+  agents: [],
+
+  // CAMBIO 3: configuración de canales de notificación — se gestiona desde el tab Notificaciones en el admin
+  notifications: {
+    emailjs: {
+      serviceId:          '',
+      templateIdCliente:  '',
+      templateIdInterno:  '',
+      publicKey:          '',
+      attivo:             false,
+    },
+    whatsapp: {
+      apiKey:  '',
+      number:  '',
+      attivo:  false,
+    },
+    sms: {
+      accountSid:  '',
+      authToken:   '',
+      fromNumber:  '',
+      toNumber:    '',
+      attivo:      false,
+    },
+    templates: {
+      emailCliente:   '',
+      whatsappAgente: '',
+      smsAdmin:       '',
+    },
+    notificaAdmin: '',
   },
 }
 
@@ -160,8 +194,6 @@ export function useSiteData() {
   const [testimonials, setTestimonials] = useState(cached?.testimonials ?? DEFAULT_TESTIMONIALS)
   const [services,     setServices]     = useState(cached?.services     ?? DEFAULT_SERVICES)
 
-  // loading solo expuesto para usos internos opcionales (p.ej. admin spinner)
-  // PublicSite NO lo usa para bloquear el render
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -181,8 +213,15 @@ export function useSiteData() {
         if (cancelled) return
 
         const freshSite = cfg
-          ? { ...DEFAULT_SITE, ...cfg, contact: { ...DEFAULT_SITE.contact, ...(cfg.contact || {}) } }
+          ? {
+              ...DEFAULT_SITE,
+              ...cfg,
+              contact:       { ...DEFAULT_SITE.contact,       ...(cfg.contact       || {}) },
+              notifications: { ...DEFAULT_SITE.notifications, ...(cfg.notifications || {}) },
+              agents:        cfg.agents ?? DEFAULT_SITE.agents,
+            }
           : DEFAULT_SITE
+
         const freshEco  = eco.length  ? eco.sort((a, b)  => (a.order || 0) - (b.order || 0))  : DEFAULT_ECOSYSTEMS
         const freshProj = proj.length ? proj.sort((a, b) => (a.order || 0) - (b.order || 0))  : DEFAULT_PROJECTS
         const freshTest = test.length ? test.sort((a, b) => (a.order || 0) - (b.order || 0))  : DEFAULT_TESTIMONIALS

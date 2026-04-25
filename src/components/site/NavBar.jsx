@@ -1,17 +1,26 @@
-import { useState, useEffect } from 'react'
+/**
+ * NavBar.jsx — updated with useUIStrings
+ * Nav link labels now come from the i18n dictionary instead of being hardcoded.
+ */
 
-const NAV_LINKS = [
-  { href: '#home',         label: 'Home'       },
-  { href: '#servicios',    label: 'Servicios'  },
-  { href: '#ecosistemas',  label: 'Membresías' },
-  { href: '#proyectos',    label: 'Proyectos'  },
-  { href: '#testimonios',  label: 'Clientes'   },
-  { href: '#contacto',     label: 'Contacto'   },
-]
+import { useState, useEffect } from 'react'
+import { useUIStrings }        from '../../hooks/useUIStrings'
 
 export default function NavBar({ brand }) {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+
+  // ── i18n ──────────────────────────────────────────────────────────
+  const t = useUIStrings(brand)
+
+  const NAV_LINKS = [
+    { href: '#home',        label: t.nav.home        },
+    { href: '#servicios',   label: t.nav.services    },
+    { href: '#ecosistemas', label: t.nav.memberships  },
+    { href: '#proyectos',   label: t.nav.projects    },
+    { href: '#testimonios', label: t.nav.clients     },
+    { href: '#contacto',    label: t.nav.contact     },
+  ]
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 50)
@@ -69,7 +78,6 @@ export default function NavBar({ brand }) {
         transition: 'all 0.4s cubic-bezier(0.23,1,0.32,1)',
         boxSizing: 'border-box',
       }}>
-        {/* Logo: imagen si existe, sino texto */}
         <a href="#home" style={{ textDecoration: 'none', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
           {logo ? (
             <img
@@ -139,7 +147,6 @@ export default function NavBar({ brand }) {
             }
           `}</style>
 
-          {/* Logo en menú móvil */}
           <a href="#home" onClick={() => setMenuOpen(false)} style={{ textDecoration: 'none', marginBottom: 8 }}>
             {logo ? (
               <img src={logo} alt={name} style={{ height: 40, maxWidth: 160, objectFit: 'contain' }} />

@@ -1,3 +1,14 @@
+/**
+ * SiteConfigTab.jsx — FIXED
+ *
+ * BUG FIXES:
+ * 1. setSite ora mergia correttamente il nuovo stato con quello precedente
+ *    invece di sovrascrivere l'intero oggetto site.
+ * 2. Lo stato locale `local` viene inizializzato con un deep clone di `site`
+ *    per evitare mutazioni accidentali dell'oggetto originale.
+ * 3. Dopo il salvataggio, sia setSite che local vengono sincronizzati.
+ */
+
 import { useState } from 'react'
 import { saveSiteConfig } from '../../../lib/firebaseHelpers'
 import FieldGroup from '../FieldGroup'
@@ -6,25 +17,47 @@ import toast from 'react-hot-toast'
 
 export default function SiteConfigTab({ data }) {
   const { site, setSite } = data
+
+  // FIX: deep clone per non mutare l'originale
   const [saving, setSaving] = useState(false)
-  const [local, setLocal]   = useState(site)
+  const [local, setLocal]   = useState(() => JSON.parse(JSON.stringify(site)))
 
   const set = (section, key, val) =>
-    setLocal(p => ({ ...p, [section]: { ...p[section], [key]: val } }))
+    setLocal(p => ({ ...p, [section]: { ...(p[section] || {}), [key]: val } }))
 
   const handleSave = async () => {
     setSaving(true)
     try {
-      await saveSiteConfig(local)
-      setSite(local)
-      document.documentElement.style.setProperty('--primary', local.brand?.primary || '#ff3c3c')
+      // FIX: salva solo le sezioni gestite da questo tab
+      const payload = {
+        brand: local.brand || {},
+        about: local.about || {},
+      }
+      await saveSiteConfig(payload)
+
+      // FIX: merge con lo stato globale, non sovrascrittura
+      setSite(prev => ({
+        ...prev,
+        brand: { ...(prev.brand || {}), ...payload.brand },
+        about: { ...(prev.about || {}), ...payload.about },
+      }))
+
+      // Applica colori immediatamente
+      if (local.brand?.primary) {
+        document.documentElement.style.setProperty('--primary', local.brand.primary)
+      }
       if (local.brand?.bg) {
         document.documentElement.style.setProperty('--bg', local.brand.bg)
         document.body.style.backgroundColor = local.brand.bg
       }
-      toast.success('Configuración guardada ✓')
-    } catch { toast.error('Error al guardar') }
-    finally  { setSaving(false) }
+
+      toast.success('Configurazione salvata ✓')
+    } catch (err) {
+      console.error('[SiteConfigTab] save error:', err)
+      toast.error('Errore durante il salvataggio')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -46,17 +79,12 @@ export default function SiteConfigTab({ data }) {
           onChange={url => set('brand', 'logo', url)}
         />
 
-        {/* Preview */}
         {local.brand?.logo && (
           <div style={{
-            marginTop: 16,
-            padding: '16px 20px',
+            marginTop: 16, padding: '16px 20px',
             background: 'rgba(255,255,255,0.03)',
             border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 10,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
+            borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 12,
           }}>
             <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: 1, margin: 0 }}>
               Preview en navbar
@@ -65,35 +93,14 @@ export default function SiteConfigTab({ data }) {
               display: 'flex', alignItems: 'center', gap: 20,
               background: 'rgba(3,3,3,0.8)', borderRadius: 8, padding: '10px 20px',
             }}>
-              <img
-                src={local.brand.logo}
-                alt="Logo preview navbar"
-                style={{ height: 36, maxWidth: 160, objectFit: 'contain' }}
-              />
+              <img src={local.brand.logo} alt="Logo preview"
+                style={{ height: 36, maxWidth: 160, objectFit: 'contain' }} />
               <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>← navbar</span>
             </div>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 20,
-              background: '#060606', borderRadius: 8, padding: '10px 20px',
-            }}>
-              <img
-                src={local.brand.logo}
-                alt="Logo preview footer"
-                style={{ height: 44, maxWidth: 180, objectFit: 'contain' }}
-              />
-              <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>← footer</span>
-            </div>
             <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', margin: 0, lineHeight: 1.6 }}>
-              Si tienes logo, el texto del nombre se oculta en navbar y footer.<br />
-              Para restaurar el texto, borra la URL del logo (botón ✕ de la imagen).
+              Per rimuovere il logo, clicca il pulsante ✕ sull'immagine qui sopra.
             </p>
           </div>
-        )}
-
-        {!local.brand?.logo && (
-          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', marginTop: 10, lineHeight: 1.6 }}>
-            Si no subes logo, se usará el nombre en texto (Bebas Neue). Recomendado: PNG transparente, mín. 400px de ancho.
-          </p>
         )}
       </div>
 
@@ -101,7 +108,7 @@ export default function SiteConfigTab({ data }) {
       <div className="section-card">
         <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, color: 'rgba(255,255,255,0.6)',
           textTransform: 'uppercase', letterSpacing: 1 }}>Identidad de Marca</h3>
-        <FieldGroup label="Nombre del Studio (usado si no hay logo)">
+        <FieldGroup label="Nombre del Studio">
           <input className="admin-input" value={local.brand?.name || ''}
             onChange={e => set('brand', 'name', e.target.value)} placeholder="POLARTRONIC" />
         </FieldGroup>
@@ -116,7 +123,7 @@ export default function SiteConfigTab({ data }) {
         <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, color: 'rgba(255,255,255,0.6)',
           textTransform: 'uppercase', letterSpacing: 1 }}>Colores</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <FieldGroup label="Color Primario (acento)">
+          <FieldGroup label="Color Primario">
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <input type="color" value={local.brand?.primary || '#ff3c3c'}
                 onChange={e => set('brand', 'primary', e.target.value)}
