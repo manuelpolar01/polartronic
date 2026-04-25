@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth }     from '../lib/useAuth'
 import { useSiteData } from '../hooks/useSiteData'
 import AdminSidebar    from '../components/admin/AdminSidebar'
@@ -17,6 +17,18 @@ export default function AdminPanel() {
   const { logout } = useAuth()
   const data = useSiteData()
 
+  // FIX BUG 2: aplicar colores del brand cuando cargan desde Firebase/caché
+  // Antes solo se aplicaba al guardar desde SiteConfigTab, no al montar el panel
+  useEffect(() => {
+    if (data.site?.brand?.primary) {
+      document.documentElement.style.setProperty('--primary', data.site.brand.primary)
+    }
+    if (data.site?.brand?.bg) {
+      document.documentElement.style.setProperty('--bg', data.site.brand.bg)
+      document.body.style.backgroundColor = data.site.brand.bg
+    }
+  }, [data.site?.brand?.primary, data.site?.brand?.bg])
+
   const tabs = {
     site:         <SiteConfigTab    data={data} />,
     hero:         <HeroTab          data={data} />,
@@ -30,10 +42,9 @@ export default function AdminPanel() {
   return (
     <>
       <style>{`
-        /* ── Admin responsive globals ── */
         @media (max-width: 767px) {
           .admin-main-content {
-            padding-bottom: 80px !important; /* espacio para el bottom nav */
+            padding-bottom: 80px !important;
           }
           .admin-header-wrap {
             padding: 0 1rem !important;
@@ -50,6 +61,7 @@ export default function AdminPanel() {
           onTabChange={setActiveTab}
           open={sidebarOpen}
           onToggle={() => setSidebarOpen(p => !p)}
+          brand={data.site?.brand}
         />
 
         <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>

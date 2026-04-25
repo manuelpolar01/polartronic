@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 
 const NAV_LINKS = [
-  { href:'#home',         label:'Home'      },
-  { href:'#servicios',    label:'Servicios' },
-  { href:'#ecosistemas',  label:'Áreas'     },
-  { href:'#proyectos',    label:'Proyectos' },
-  { href:'#testimonios',  label:'Clientes'  },
-  { href:'#contacto',     label:'Contacto'  },
+  { href: '#home',         label: 'Home'       },
+  { href: '#servicios',    label: 'Servicios'  },
+  { href: '#ecosistemas',  label: 'Membresías' },
+  { href: '#proyectos',    label: 'Proyectos'  },
+  { href: '#testimonios',  label: 'Clientes'   },
+  { href: '#contacto',     label: 'Contacto'   },
 ]
 
 export default function NavBar({ brand }) {
@@ -19,72 +19,163 @@ export default function NavBar({ brand }) {
     return () => window.removeEventListener('scroll', fn)
   }, [])
 
-  const name    = brand?.name || 'POLARTRONIC'
+  useEffect(() => {
+    const fn = () => { if (window.innerWidth > 768) setMenuOpen(false) }
+    window.addEventListener('resize', fn)
+    return () => window.removeEventListener('resize', fn)
+  }, [])
+
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [menuOpen])
+
+  const name    = brand?.name    || 'POLARTRONIC'
   const primary = brand?.primary || '#ff3c3c'
+  const logo    = brand?.logo    || ''
 
   return (
-    <header style={{
-      position:'fixed', top:0, width:'100%', zIndex:1000,
-      height: scrolled ? 70 : 85,
-      padding:'0 6%',
-      display:'flex', alignItems:'center', justifyContent:'space-between',
-      background: scrolled ? 'rgba(3,3,3,0.9)' : 'transparent',
-      backdropFilter: scrolled ? 'blur(20px)' : 'none',
-      borderBottom: scrolled ? '1px solid rgba(255,255,255,0.06)' : 'none',
-      transition:'all 0.5s cubic-bezier(0.23,1,0.32,1)',
-    }}>
-      <a href="#home" style={{ fontFamily:'Bebas Neue, sans-serif', fontSize:'2.2rem',
-        color: primary, textDecoration:'none', letterSpacing:2 }}>
-        {name}
-      </a>
+    <>
+      <style>{`
+        .desktop-nav { display: flex; }
+        .mobile-menu-btn { display: none !important; }
+        @media (max-width: 768px) {
+          .desktop-nav { display: none !important; }
+          .mobile-menu-btn { display: flex !important; }
+        }
+        .nav-link {
+          color: rgba(255,255,255,0.6);
+          text-decoration: none;
+          font-size: 0.8rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 1.2px;
+          transition: color 0.2s;
+          white-space: nowrap;
+        }
+        .nav-link:hover { color: ${primary}; }
+      `}</style>
 
-      {/* Desktop nav */}
-      <nav style={{ display:'flex', gap:30, listStyle:'none' }} className="desktop-nav">
-        {NAV_LINKS.map(l => (
-          <a key={l.href} href={l.href} style={{ color:'rgba(255,255,255,0.6)',
-            textDecoration:'none', fontSize:'0.85rem', fontWeight:600,
-            textTransform:'uppercase', letterSpacing:1, transition:'0.2s' }}
-            onMouseEnter={e => { e.currentTarget.style.color=primary; e.currentTarget.style.opacity='1' }}
-            onMouseLeave={e => { e.currentTarget.style.color='rgba(255,255,255,0.6)' }}>
-            {l.label}
-          </a>
-        ))}
-        <a href="/admin" style={{ padding:'8px 20px', background:primary,
-          color:'white', textDecoration:'none', borderRadius:5,
-          fontSize:'0.8rem', fontWeight:700, letterSpacing:1 }}>
-          ADMIN
+      <header style={{
+        position: 'fixed', top: 0, left: 0, right: 0, width: '100%',
+        zIndex: 1000,
+        height: scrolled ? 64 : 80,
+        padding: '0 5%',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        background: scrolled ? 'rgba(3,3,3,0.92)' : 'transparent',
+        backdropFilter: scrolled ? 'blur(20px)' : 'none',
+        WebkitBackdropFilter: scrolled ? 'blur(20px)' : 'none',
+        borderBottom: scrolled ? '1px solid rgba(255,255,255,0.06)' : 'none',
+        transition: 'all 0.4s cubic-bezier(0.23,1,0.32,1)',
+        boxSizing: 'border-box',
+      }}>
+        {/* Logo: imagen si existe, sino texto */}
+        <a href="#home" style={{ textDecoration: 'none', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+          {logo ? (
+            <img
+              src={logo}
+              alt={name}
+              style={{
+                height: scrolled ? 32 : 40,
+                maxWidth: 180,
+                objectFit: 'contain',
+                transition: 'height 0.4s cubic-bezier(0.23,1,0.32,1)',
+              }}
+            />
+          ) : (
+            <span style={{
+              fontFamily: 'Bebas Neue, sans-serif',
+              fontSize: '2rem',
+              color: primary,
+              letterSpacing: 2,
+            }}>
+              {name}
+            </span>
+          )}
         </a>
-      </nav>
 
-      {/* Mobile hamburger */}
-      <button onClick={() => setMenuOpen(p=>!p)}
-        style={{ display:'none', background:'none', border:'none', color:'white',
-          fontSize:24, cursor:'pointer' }} className="mobile-menu-btn">
-        {menuOpen ? '✕' : '☰'}
-      </button>
-
-      {/* Mobile menu */}
-      {menuOpen && (
-        <div style={{ position:'fixed', top:70, left:0, right:0, bottom:0,
-          background:'rgba(3,3,3,0.98)', backdropFilter:'blur(20px)',
-          display:'flex', flexDirection:'column', alignItems:'center',
-          justifyContent:'center', gap:32, zIndex:999 }}>
+        {/* Desktop nav */}
+        <nav className="desktop-nav" style={{ gap: 28, alignItems: 'center' }}>
           {NAV_LINKS.map(l => (
-            <a key={l.href} href={l.href} onClick={() => setMenuOpen(false)}
-              style={{ color:'white', textDecoration:'none', fontSize:'1.5rem',
-                fontWeight:800, textTransform:'uppercase', letterSpacing:2 }}>
+            <a key={l.href} href={l.href} className="nav-link">{l.label}</a>
+          ))}
+        </nav>
+
+        {/* Mobile hamburger */}
+        <button
+          onClick={() => setMenuOpen(p => !p)}
+          className="mobile-menu-btn"
+          aria-label="Menu"
+          style={{
+            background: menuOpen ? `rgba(255,60,60,0.1)` : 'rgba(255,255,255,0.06)',
+            border: `1px solid ${menuOpen ? `rgba(255,60,60,0.4)` : 'rgba(255,255,255,0.12)'}`,
+            color: menuOpen ? primary : 'rgba(255,255,255,0.8)',
+            width: 40, height: 40, borderRadius: 8, cursor: 'pointer',
+            fontSize: 18, alignItems: 'center', justifyContent: 'center',
+            transition: 'all 0.2s', flexShrink: 0,
+          }}
+        >
+          {menuOpen ? '✕' : '☰'}
+        </button>
+      </header>
+
+      {/* Mobile fullscreen menu */}
+      {menuOpen && (
+        <div
+          onClick={() => setMenuOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 999,
+            background: 'rgba(3,3,3,0.97)',
+            backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            gap: 8, animation: 'menuFadeIn 0.25s ease',
+          }}
+        >
+          <style>{`
+            @keyframes menuFadeIn {
+              from { opacity: 0; transform: scale(0.98); }
+              to   { opacity: 1; transform: scale(1); }
+            }
+          `}</style>
+
+          {/* Logo en menú móvil */}
+          <a href="#home" onClick={() => setMenuOpen(false)} style={{ textDecoration: 'none', marginBottom: 8 }}>
+            {logo ? (
+              <img src={logo} alt={name} style={{ height: 40, maxWidth: 160, objectFit: 'contain' }} />
+            ) : (
+              <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '1.8rem', color: primary, letterSpacing: 2 }}>
+                {name}
+              </span>
+            )}
+          </a>
+
+          {NAV_LINKS.map((l, i) => (
+            <a
+              key={l.href}
+              href={l.href}
+              onClick={() => setMenuOpen(false)}
+              style={{
+                color: 'rgba(255,255,255,0.85)', textDecoration: 'none',
+                fontSize: 'clamp(1.6rem, 8vw, 2.2rem)', fontWeight: 800,
+                textTransform: 'uppercase', letterSpacing: 3,
+                padding: '10px 24px', borderRadius: 8, transition: 'all 0.2s',
+                animationDelay: `${i * 0.04}s`,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = primary
+                e.currentTarget.style.background = `rgba(255,60,60,0.08)`
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = 'rgba(255,255,255,0.85)'
+                e.currentTarget.style.background = 'transparent'
+              }}
+            >
               {l.label}
             </a>
           ))}
         </div>
       )}
-
-      <style>{`
-        @media (max-width: 768px) {
-          .desktop-nav { display: none !important; }
-          .mobile-menu-btn { display: block !important; }
-        }
-      `}</style>
-    </header>
+    </>
   )
 }

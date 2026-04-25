@@ -10,7 +10,7 @@ const TABS = [
   { id: 'contact',      icon: '📬', label: 'Contacto & Footer' },
 ]
 
-export default function AdminSidebar({ activeTab, onTabChange, open, onToggle }) {
+export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, brand }) {
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
@@ -20,11 +20,23 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle })
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  /* ── MOBILE: bottom nav ────────────────────────────────── */
+  const logo    = brand?.logo || ''
+  const name    = brand?.name || 'POLARTRONIC'
+  const primary = brand?.primary || '#ff3c3c'
+
+  /* ── Logo o texto reutilizable ── */
+  const BrandMark = ({ height = 28 }) => logo ? (
+    <img src={logo} alt={name} style={{ height, maxWidth: 160, objectFit: 'contain' }} />
+  ) : (
+    <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '1.6rem', color: '#ff3c3c', letterSpacing: 2 }}>
+      {name}
+    </span>
+  )
+
+  /* ── MOBILE: bottom nav ── */
   if (isMobile) {
     return (
       <>
-        {/* Overlay cuando el drawer está abierto */}
         {open && (
           <div
             onClick={onToggle}
@@ -35,27 +47,19 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle })
           />
         )}
 
-        {/* Drawer lateral (slide desde abajo en móvil) */}
+        {/* Drawer */}
         <div style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0,
-          zIndex: 1200,
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1200,
           background: '#090909',
           border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: open ? '20px 20px 0 0' : 0,
           transform: open ? 'translateY(0)' : 'translateY(100%)',
           transition: 'transform 0.35s cubic-bezier(0.23,1,0.32,1)',
-          maxHeight: '80vh',
-          display: 'flex', flexDirection: 'column',
+          maxHeight: '80vh', display: 'flex', flexDirection: 'column',
         }}>
           {/* Handle */}
-          <div style={{
-            display: 'flex', justifyContent: 'center', padding: '12px 0 4px',
-            flexShrink: 0,
-          }}>
-            <div style={{
-              width: 40, height: 4, borderRadius: 2,
-              background: 'rgba(255,255,255,0.2)',
-            }} />
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px', flexShrink: 0 }}>
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
           </div>
 
           {/* Título */}
@@ -66,10 +70,8 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle })
             flexShrink: 0,
           }}>
             <div>
-              <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '1.4rem', color: '#ff3c3c', letterSpacing: 2 }}>
-                POLARTRONIC
-              </div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>Admin Panel</div>
+              <BrandMark height={28} />
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>Admin Panel</div>
             </div>
             <button onClick={onToggle} style={{
               background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
@@ -78,8 +80,8 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle })
             }}>✕</button>
           </div>
 
-          {/* Lista scrollable */}
-          <nav style={{ overflowY: 'auto', padding: '8px 0 8px', flex: 1 }}>
+          {/* Lista */}
+          <nav style={{ overflowY: 'auto', padding: '8px 0', flex: 1 }}>
             {TABS.map(tab => (
               <button
                 key={tab.id}
@@ -103,12 +105,7 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle })
             ))}
           </nav>
 
-          {/* Ver sitio */}
-          <div style={{
-            padding: '12px 20px',
-            borderTop: '1px solid rgba(255,255,255,0.07)',
-            flexShrink: 0,
-          }}>
+          <div style={{ padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
             <a href="/" target="_blank" style={{
               fontSize: 13, color: 'rgba(255,255,255,0.4)',
               textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8,
@@ -118,15 +115,14 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle })
           </div>
         </div>
 
-        {/* Bottom bar fija (siempre visible en móvil) — primeras 5 tabs */}
+        {/* Bottom bar fija */}
         <nav style={{
           position: 'fixed', bottom: 0, left: 0, right: 0,
           zIndex: open ? 0 : 1050,
           background: 'rgba(8,8,8,0.97)',
           borderTop: '1px solid rgba(255,255,255,0.08)',
           display: 'flex', alignItems: 'stretch',
-          height: 60,
-          backdropFilter: 'blur(20px)',
+          height: 60, backdropFilter: 'blur(20px)',
           visibility: open ? 'hidden' : 'visible',
         }}>
           {TABS.slice(0, 4).map(tab => (
@@ -136,45 +132,38 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle })
               style={{
                 flex: 1, display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center', gap: 2,
-                border: 'none', background: 'transparent',
-                cursor: 'pointer', padding: '6px 2px',
+                border: 'none', background: 'transparent', cursor: 'pointer', padding: '6px 2px',
                 borderTop: activeTab === tab.id ? '2px solid #ff3c3c' : '2px solid transparent',
                 transition: 'all 0.15s',
               }}
             >
               <span style={{ fontSize: 18 }}>{tab.icon}</span>
               <span style={{
-                fontSize: 9, fontWeight: 600,
-                textTransform: 'uppercase', letterSpacing: 0.5,
+                fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5,
                 color: activeTab === tab.id ? '#ff3c3c' : 'rgba(255,255,255,0.35)',
               }}>
                 {tab.label.split(' ')[0]}
               </span>
             </button>
           ))}
-          {/* Botón "Más" */}
           <button
             onClick={onToggle}
             style={{
               flex: 1, display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center', gap: 2,
-              border: 'none', background: 'transparent',
-              cursor: 'pointer', padding: '6px 2px',
+              border: 'none', background: 'transparent', cursor: 'pointer', padding: '6px 2px',
               borderTop: '2px solid transparent',
             }}
           >
             <span style={{ fontSize: 18 }}>☰</span>
-            <span style={{
-              fontSize: 9, fontWeight: 600, textTransform: 'uppercase',
-              letterSpacing: 0.5, color: 'rgba(255,255,255,0.35)',
-            }}>Más</span>
+            <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: 'rgba(255,255,255,0.35)' }}>Más</span>
           </button>
         </nav>
       </>
     )
   }
 
-  /* ── DESKTOP: sidebar clásico ─────────────────────────── */
+  /* ── DESKTOP: sidebar clásico ── */
   if (!open) return null
 
   return (
@@ -182,14 +171,11 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle })
       width: 240, flexShrink: 0, background: '#080808',
       borderRight: '1px solid rgba(255,255,255,0.07)',
       height: '100vh', overflowY: 'auto',
-      display: 'flex', flexDirection: 'column',
-      padding: '1.5rem 0',
+      display: 'flex', flexDirection: 'column', padding: '1.5rem 0',
     }}>
       <div style={{ padding: '0 1.5rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-        <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '1.6rem', color: '#ff3c3c', letterSpacing: 2 }}>
-          POLARTRONIC
-        </div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>Admin Panel</div>
+        <BrandMark height={32} />
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>Admin Panel</div>
       </div>
 
       <nav style={{ padding: '1rem 0', flex: 1 }}>

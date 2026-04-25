@@ -35,6 +35,24 @@ export const DEFAULT_SITE = {
     copy:      '© 2026 Polartronic Studio. Todos los derechos reservados.',
     sub:       'Diseño Web & Branding de Alto Impacto.',
   },
+  // Configuración del formulario de contacto
+  contact: {
+    title:       '¿Listo para el siguiente nivel?',
+    subtitle:    'Cuéntanos tu proyecto. Si buscas lo ordinario, no somos tu agencia.',
+    fields: JSON.stringify([
+      { id: 'name',    label: 'Nombre',              type: 'text',     required: true,  placeholder: 'Tu nombre' },
+      { id: 'email',   label: 'Email',                type: 'email',    required: true,  placeholder: 'tu@email.com' },
+      { id: 'company', label: 'Empresa / Proyecto',   type: 'text',     required: false, placeholder: 'Nombre de tu empresa' },
+      { id: 'service', label: 'Servicio de interés',  type: 'select',   required: false, options: 'Diseño Web,Desarrollo,Branding Digital,Marketing Digital,Otro' },
+      { id: 'message', label: 'Cuéntanos tu proyecto',type: 'textarea', required: true,  placeholder: 'Describe brevemente qué necesitas...' },
+    ]),
+    emailjsServiceId:  '',
+    emailjsTemplateId: '',
+    emailjsPublicKey:  '',
+    successTitle:   '¡Mensaje enviado!',
+    successMessage: 'Nos pondremos en contacto contigo en menos de 24 horas.',
+    ctaLabel:       'ENVIAR MENSAJE',
+  },
 }
 
 export const DEFAULT_ECOSYSTEMS = [
@@ -47,10 +65,50 @@ export const DEFAULT_ECOSYSTEMS = [
 ]
 
 export const DEFAULT_PROJECTS = [
-  { id: 'p1', title: 'Maison Noir',  category: 'Restaurante', image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80', link: '#', order: 0 },
-  { id: 'p2', title: 'VitaCare',     category: 'Salud',       image: 'https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=800&q=80', link: '#', order: 1 },
-  { id: 'p3', title: 'Urban Cuts',   category: 'Barbería',    image: 'https://images.unsplash.com/photo-1596728325488-58c87691e9af?auto=format&fit=crop&w=800&q=80', link: '#', order: 2 },
-  { id: 'p4', title: 'Luxe Fashion', category: 'Moda',        image: 'https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=800&q=80', link: '#', order: 3 },
+  {
+    id: 'p1',
+    client:      'Maison Noir',
+    industry:    'Restaurante',
+    title:       'Rediseño Digital Completo',
+    description: 'Sitio web inmersivo con sistema de reservas integrado y menú interactivo.',
+    results:     '+300% reservas online · +45% ticket promedio',
+    image:       'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80',
+    url:         '#',
+    order:       0,
+  },
+  {
+    id: 'p2',
+    client:      'VitaCare',
+    industry:    'Salud',
+    title:       'Plataforma de Citas Médicas',
+    description: 'Portal completo con agenda online, historial de pacientes y telemedicina.',
+    results:     '+220% pacientes nuevos · 0 llamadas de agendamiento',
+    image:       'https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=800&q=80',
+    url:         '#',
+    order:       1,
+  },
+  {
+    id: 'p3',
+    client:      'Urban Cuts',
+    industry:    'Barbería',
+    title:       'Sistema de Reservas + Branding',
+    description: 'Identidad visual urbana y agenda digital con recordatorios automáticos.',
+    results:     'Agenda llena en 2 semanas · +150% clientes recurrentes',
+    image:       'https://images.unsplash.com/photo-1596728325488-58c87691e9af?auto=format&fit=crop&w=800&q=80',
+    url:         '#',
+    order:       2,
+  },
+  {
+    id: 'p4',
+    client:      'Luxe Fashion',
+    industry:    'Moda',
+    title:       'E-commerce de Lujo',
+    description: 'Showroom digital con experiencia premium y checkout optimizado.',
+    results:     '+180% conversión · Tasa de rebote -60%',
+    image:       'https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=800&q=80',
+    url:         '#',
+    order:       3,
+  },
 ]
 
 export const DEFAULT_TESTIMONIALS = [
@@ -75,7 +133,7 @@ function readCache() {
     const raw = localStorage.getItem(CACHE_KEY)
     if (!raw) return null
     const { ts, data } = JSON.parse(raw)
-    if (Date.now() - ts > CACHE_TTL) return null   // expiró
+    if (Date.now() - ts > CACHE_TTL) return null
     return data
   } catch { return null }
 }
@@ -91,8 +149,9 @@ export function invalidateCache() {
 }
 
 // ─── Hook principal ───────────────────────────────────────────────────
+// Sin loading gate: render síncrono con caché o defaults.
+// Firebase hidrata en background sin bloquear UI.
 export function useSiteData() {
-  // Inicializar con caché si existe, sino con defaults
   const cached = readCache()
 
   const [site,         setSite]         = useState(cached?.site         ?? DEFAULT_SITE)
@@ -101,11 +160,15 @@ export function useSiteData() {
   const [testimonials, setTestimonials] = useState(cached?.testimonials ?? DEFAULT_TESTIMONIALS)
   const [services,     setServices]     = useState(cached?.services     ?? DEFAULT_SERVICES)
 
-  // loading = false desde el inicio si hay caché → render inmediato
-  const [loading, setLoading] = useState(!cached)
+  // loading solo expuesto para usos internos opcionales (p.ej. admin spinner)
+  // PublicSite NO lo usa para bloquear el render
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    async function load() {
+    let cancelled = false
+
+    async function hydrate() {
+      setLoading(true)
       try {
         const [cfg, eco, proj, test, svc] = await Promise.all([
           getSiteConfig(),
@@ -115,11 +178,15 @@ export function useSiteData() {
           getServices(),
         ])
 
-        const freshSite = cfg ? { ...DEFAULT_SITE, ...cfg } : DEFAULT_SITE
-        const freshEco  = eco.length  ? eco.sort((a,b)  => (a.order||0)-(b.order||0))  : DEFAULT_ECOSYSTEMS
-        const freshProj = proj.length ? proj.sort((a,b) => (a.order||0)-(b.order||0))  : DEFAULT_PROJECTS
-        const freshTest = test.length ? test.sort((a,b) => (a.order||0)-(b.order||0))  : DEFAULT_TESTIMONIALS
-        const freshSvc  = svc.length  ? svc.sort((a,b)  => (a.order||0)-(b.order||0))  : DEFAULT_SERVICES
+        if (cancelled) return
+
+        const freshSite = cfg
+          ? { ...DEFAULT_SITE, ...cfg, contact: { ...DEFAULT_SITE.contact, ...(cfg.contact || {}) } }
+          : DEFAULT_SITE
+        const freshEco  = eco.length  ? eco.sort((a, b)  => (a.order || 0) - (b.order || 0))  : DEFAULT_ECOSYSTEMS
+        const freshProj = proj.length ? proj.sort((a, b) => (a.order || 0) - (b.order || 0))  : DEFAULT_PROJECTS
+        const freshTest = test.length ? test.sort((a, b) => (a.order || 0) - (b.order || 0))  : DEFAULT_TESTIMONIALS
+        const freshSvc  = svc.length  ? svc.sort((a, b)  => (a.order || 0) - (b.order || 0))  : DEFAULT_SERVICES
 
         setSite(freshSite)
         setEcosystems(freshEco)
@@ -127,23 +194,22 @@ export function useSiteData() {
         setTestimonials(freshTest)
         setServices(freshSvc)
 
-        // Guardar en caché para la próxima visita
         writeCache({
-          site: freshSite,
-          ecosystems: freshEco,
-          projects: freshProj,
+          site:         freshSite,
+          ecosystems:   freshEco,
+          projects:     freshProj,
           testimonials: freshTest,
-          services: freshSvc,
+          services:     freshSvc,
         })
       } catch (e) {
-        console.warn('Firebase load error — using cached/default data:', e.message)
+        console.warn('Firebase hydration error — keeping cached/default data:', e.message)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
-    // Si ya hay caché, cargar Firebase en background sin bloquear UI
-    load()
+    hydrate()
+    return () => { cancelled = true }
   }, [])
 
   return {
