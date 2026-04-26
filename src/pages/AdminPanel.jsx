@@ -5,6 +5,7 @@
  * 1. El objeto de tabs se llamaba `tabs_aggiornato` pero se renderizaba
  *    con `{tabs[activeTab]}` → variable indefinida → pantalla negra.
  * 2. Los tabs leads/agents/notifications tenían strings en vez de JSX.
+ * 3. Eliminado `git` suelto al final del archivo que causaba ReferenceError.
  */
 
 import { useState, useEffect } from 'react'
@@ -30,7 +31,6 @@ export default function AdminPanel() {
   const { logout } = useAuth()
   const data = useSiteData()
 
-  // Apply brand colours + language
   useEffect(() => {
     if (data.site?.brand?.primary) {
       document.documentElement.style.setProperty('--primary', data.site.brand.primary)
@@ -44,8 +44,6 @@ export default function AdminPanel() {
     }
   }, [data.site?.brand?.primary, data.site?.brand?.bg, data.site?.brand?.language])
 
-  // FIX 1: nombre correcto (era tabs_aggiornato, referenciado como tabs)
-  // FIX 2: leads/agents/notifications son JSX, no strings
   const tabs = {
     site:          <SiteConfigTab    data={data} />,
     hero:          <HeroTab          data={data} />,
@@ -93,4 +91,4 @@ export default function AdminPanel() {
       </div>
     </>
   )
-}git
+}
