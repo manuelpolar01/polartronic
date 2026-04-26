@@ -7,6 +7,66 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&family=Bebas+Neue&family=Cinzel:wght@700&display=swap" rel="stylesheet" />
+
+    <!--
+      ANTI-FOUC SCRIPT
+      Aplica colores desde caché ANTES del primer render de React.
+      NO usa opacity ni visibility — nunca bloquea nada.
+      Si la ruta es /admin o /proposal → skip (no necesitan anti-FOUC).
+    -->
+    <script>
+      (function () {
+        try {
+          /* Saltar en rutas que no son el sitio público */
+          var path = window.location.pathname;
+          if (path.indexOf('/admin') === 0 || path.indexOf('/proposal') === 0) return;
+
+          var raw = localStorage.getItem('polartronic_cache');
+          if (!raw) return;
+
+          var parsed = JSON.parse(raw);
+          if (Date.now() - parsed.ts > 300000) return; /* TTL 5 min */
+
+          var site  = parsed.data && parsed.data.site;
+          var brand = site && site.brand;
+          if (!brand) return;
+
+          var root = document.documentElement;
+
+          if (brand.primary) root.style.setProperty('--primary', brand.primary);
+
+          if (brand.bg) {
+            root.style.setProperty('--bg', brand.bg);
+
+            var hex = brand.bg.replace('#', '');
+            if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+            var r = parseInt(hex.slice(0,2),16);
+            var g = parseInt(hex.slice(2,4),16);
+            var b = parseInt(hex.slice(4,6),16);
+            var light = (0.299*r + 0.587*g + 0.114*b)/255 > 0.5;
+
+            if (light) {
+              root.style.setProperty('--text-main',  '#0a0a0a');
+              root.style.setProperty('--text-dim',   'rgba(0,0,0,0.6)');
+              root.style.setProperty('--text-muted', 'rgba(0,0,0,0.4)');
+              root.style.setProperty('--border',     'rgba(0,0,0,0.1)');
+              root.style.setProperty('--card-bg',    '#f5f5f5');
+              root.setAttribute('data-theme', 'light');
+            } else {
+              root.style.setProperty('--text-main',  '#ffffff');
+              root.style.setProperty('--text-dim',   'rgba(255,255,255,0.55)');
+              root.style.setProperty('--text-muted', 'rgba(255,255,255,0.35)');
+              root.style.setProperty('--border',     'rgba(255,255,255,0.08)');
+              root.style.setProperty('--card-bg',    '#0d0d0d');
+              root.setAttribute('data-theme', 'dark');
+            }
+          }
+
+          if (brand.language) window.__SITE_LANGUAGE__ = brand.language;
+
+        } catch(e) { /* nunca romper la página */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

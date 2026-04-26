@@ -1,9 +1,9 @@
-// src/App.jsx — FIX RUTA /admin
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { useAuth } from './lib/useAuth'
-import PublicSite  from './pages/PublicSite'
-import AdminLogin  from './pages/AdminLogin'
-import AdminPanel  from './pages/AdminPanel'
+import { useAuth }     from './lib/useAuth'
+import PublicSite      from './pages/PublicSite'
+import AdminLogin      from './pages/AdminLogin'
+import AdminPanel      from './pages/AdminPanel'
+import ProposalPage    from './pages/ProposalPage'
 
 function AuthSpinner() {
   return (
@@ -40,14 +40,12 @@ function AdminLoginPage() {
 export default function App() {
   return (
     <Routes>
-      <Route path="/"            element={<PublicSite />} />
-      
-      {/* ── FIX: rutas /admin ── */}
-      <Route path="/admin/login" element={<AdminLoginPage />} />
-      <Route path="/admin"       element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
-      <Route path="/admin/*"     element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
-      
-      <Route path="*"            element={<Navigate to="/" replace />} />
+      <Route path="/"                element={<PublicSite />} />
+      <Route path="/proposal/:slug"  element={<ProposalPage />} />
+      <Route path="/admin/login"     element={<AdminLoginPage />} />
+      <Route path="/admin"           element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
+      <Route path="/admin/*"         element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
+      <Route path="*"                element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

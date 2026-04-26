@@ -160,11 +160,11 @@ body[data-theme="light"] {
     padding: 0 1rem !important;
   }
   .admin-main-content {
-    padding-bottom: 120px !important;
+    padding-bottom: 40px !important;
   }
   .save-btn-wrap {
     position: sticky;
-    bottom: 70px;
+    bottom: 16px;
     z-index: 50;
     background: rgba(3, 3, 3, 0.95);
     backdrop-filter: blur(12px);
@@ -177,6 +177,13 @@ body[data-theme="light"] {
   .section-card [style*="grid-template-columns: 1fr 1fr"],
   .section-card [style*="grid-template-columns: 80px 1fr"] {
     grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 640px) {
+  footer [style*="grid-template-columns: 2fr repeat(3, 1fr)"] {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
   }
 }
 
