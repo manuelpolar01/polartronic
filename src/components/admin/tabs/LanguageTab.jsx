@@ -1,11 +1,10 @@
 /**
- * LanguageTab.jsx — FIXED
+ * LanguageTab.jsx — FIXED v2
  *
- * BUG FIXES:
- * 1. Rimosso `await import()` dinamico a top-level (non funziona in moduli non-async).
- *    saveSiteConfig viene importato staticamente come tutti gli altri tab.
- * 2. setSite ora mergia correttamente invece di sostituire l'intero oggetto.
- * 3. window.__SITE_LANGUAGE__ aggiornato prima del toast per evitare race condition.
+ * FIX IDIOMA (Problema 3):
+ * Después de guardar, dispara el custom event 'sitelang' con el código
+ * del idioma seleccionado. useUIStrings lo escucha y fuerza re-render
+ * en todos los componentes del árbol sin necesidad de recargar la página.
  */
 
 import { useState, useCallback } from 'react'
@@ -30,7 +29,6 @@ export default function LanguageTab({ data = {}, onSave }) {
       if (typeof onSave === 'function') {
         await onSave(selected)
       } else {
-        // FIX: mergia solo brand.language, non sovrascrive tutto il site
         await saveSiteConfig({ brand: { language: selected } })
         setter?.(prev => ({
           ...prev,
@@ -38,9 +36,11 @@ export default function LanguageTab({ data = {}, onSave }) {
         }))
       }
 
-      // FIX: aggiorna window PRIMA del toast
+      // FIX: actualiza window ANTES de disparar el evento
       if (typeof window !== 'undefined') {
         window.__SITE_LANGUAGE__ = selected
+        // Dispara custom event — useUIStrings lo escucha y fuerza re-render global
+        window.dispatchEvent(new CustomEvent('sitelang', { detail: selected }))
       }
 
       setSaved(selected)

@@ -1,12 +1,8 @@
 /**
- * SiteConfigTab.jsx — FIXED
- *
- * BUG FIXES:
- * 1. setSite ora mergia correttamente il nuovo stato con quello precedente
- *    invece di sovrascrivere l'intero oggetto site.
- * 2. Lo stato locale `local` viene inizializzato con un deep clone di `site`
- *    per evitare mutazioni accidentali dell'oggetto originale.
- * 3. Dopo il salvataggio, sia setSite che local vengono sincronizzati.
+ * SiteConfigTab.jsx — v4 COMPLETO
+ * ✅ CRUD imágenes: logo, favicon — con botón eliminar
+ * ✅ Posición logo: solo-logo / logo+nombre-lado / logo-arriba-nombre / solo-nombre
+ * ✅ Fix colores texto con var(--text-main)
  */
 
 import { useState } from 'react'
@@ -15,10 +11,66 @@ import FieldGroup from '../FieldGroup'
 import ImageUploadField from '../ImageUploadField'
 import toast from 'react-hot-toast'
 
+const LOGO_LAYOUTS = [
+  {
+    id: 'logo-only',
+    label: 'Solo Logo',
+    icon: '🖼',
+    desc: 'Solo la imagen, sin texto',
+    preview: (logo, name, primary) => (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: 'rgba(0,0,0,0.8)', borderRadius: 8 }}>
+        {logo
+          ? <img src={logo} alt={name} style={{ height: 32, maxWidth: 140, objectFit: 'contain' }} />
+          : <div style={{ height: 32, width: 80, background: 'rgba(255,255,255,0.1)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>LOGO</div>
+        }
+      </div>
+    ),
+  },
+  {
+    id: 'logo-name-side',
+    label: 'Logo + Nombre (lado)',
+    icon: '↔️',
+    desc: 'Logo a la izquierda, nombre a la derecha',
+    preview: (logo, name, primary) => (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', background: 'rgba(0,0,0,0.8)', borderRadius: 8 }}>
+        {logo
+          ? <img src={logo} alt={name} style={{ height: 28, maxWidth: 60, objectFit: 'contain' }} />
+          : <div style={{ height: 28, width: 40, background: 'rgba(255,255,255,0.1)', borderRadius: 4 }} />
+        }
+        <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '1.4rem', color: primary, letterSpacing: 2 }}>{name}</span>
+      </div>
+    ),
+  },
+  {
+    id: 'logo-name-stack',
+    label: 'Logo + Nombre (apilado)',
+    icon: '↕️',
+    desc: 'Logo arriba, nombre debajo',
+    preview: (logo, name, primary) => (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 20px', background: 'rgba(0,0,0,0.8)', borderRadius: 8 }}>
+        {logo
+          ? <img src={logo} alt={name} style={{ height: 24, maxWidth: 80, objectFit: 'contain' }} />
+          : <div style={{ height: 24, width: 60, background: 'rgba(255,255,255,0.1)', borderRadius: 4 }} />
+        }
+        <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '0.9rem', color: primary, letterSpacing: 2 }}>{name}</span>
+      </div>
+    ),
+  },
+  {
+    id: 'name-only',
+    label: 'Solo Nombre',
+    icon: '✏️',
+    desc: 'Solo el texto, sin imagen',
+    preview: (logo, name, primary) => (
+      <div style={{ padding: '8px 16px', background: 'rgba(0,0,0,0.8)', borderRadius: 8 }}>
+        <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '1.6rem', color: primary, letterSpacing: 2 }}>{name}</span>
+      </div>
+    ),
+  },
+]
+
 export default function SiteConfigTab({ data }) {
   const { site, setSite } = data
-
-  // FIX: deep clone per non mutare l'originale
   const [saving, setSaving] = useState(false)
   const [local, setLocal]   = useState(() => JSON.parse(JSON.stringify(site)))
 
@@ -28,21 +80,16 @@ export default function SiteConfigTab({ data }) {
   const handleSave = async () => {
     setSaving(true)
     try {
-      // FIX: salva solo le sezioni gestite da questo tab
       const payload = {
         brand: local.brand || {},
         about: local.about || {},
       }
       await saveSiteConfig(payload)
-
-      // FIX: merge con lo stato globale, non sovrascrittura
       setSite(prev => ({
         ...prev,
         brand: { ...(prev.brand || {}), ...payload.brand },
         about: { ...(prev.about || {}), ...payload.about },
       }))
-
-      // Applica colori immediatamente
       if (local.brand?.primary) {
         document.documentElement.style.setProperty('--primary', local.brand.primary)
       }
@@ -50,7 +97,6 @@ export default function SiteConfigTab({ data }) {
         document.documentElement.style.setProperty('--bg', local.brand.bg)
         document.body.style.backgroundColor = local.brand.bg
       }
-
       toast.success('Configurazione salvata ✓')
     } catch (err) {
       console.error('[SiteConfigTab] save error:', err)
@@ -60,6 +106,11 @@ export default function SiteConfigTab({ data }) {
     }
   }
 
+  const selectedLayout = local.brand?.logoLayout || 'logo-only'
+  const logo  = local.brand?.logo  || ''
+  const name  = local.brand?.name  || 'POLARTRONIC'
+  const primary = local.brand?.primary || '#ff3c3c'
+
   return (
     <div>
       <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 6 }}>Marca & Colores</h2>
@@ -67,44 +118,104 @@ export default function SiteConfigTab({ data }) {
         Configura la identidad visual de tu sitio.
       </p>
 
-      {/* ── Logo ── */}
+      {/* ── LOGO ── */}
       <div className="section-card">
-        <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, color: 'rgba(255,255,255,0.6)',
+        <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 20, color: 'rgba(255,255,255,0.6)',
           textTransform: 'uppercase', letterSpacing: 1 }}>Logo</h3>
 
+        {/* Upload + eliminar */}
         <ImageUploadField
-          label="Logo del sitio (reemplaza el texto del nombre)"
+          label="Imagen del logo"
           folder="brand"
-          value={local.brand?.logo || ''}
+          value={logo}
           onChange={url => set('brand', 'logo', url)}
         />
 
-        {local.brand?.logo && (
-          <div style={{
-            marginTop: 16, padding: '16px 20px',
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 12,
-          }}>
-            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: 1, margin: 0 }}>
-              Preview en navbar
-            </p>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 20,
-              background: 'rgba(3,3,3,0.8)', borderRadius: 8, padding: '10px 20px',
-            }}>
-              <img src={local.brand.logo} alt="Logo preview"
-                style={{ height: 36, maxWidth: 160, objectFit: 'contain' }} />
-              <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>← navbar</span>
-            </div>
-            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', margin: 0, lineHeight: 1.6 }}>
-              Per rimuovere il logo, clicca il pulsante ✕ sull'immagine qui sopra.
-            </p>
-          </div>
+        {/* Botón eliminar logo */}
+        {logo && (
+          <button
+            onClick={() => set('brand', 'logo', '')}
+            style={{
+              marginTop: 10, background: 'rgba(255,60,60,0.08)',
+              border: '1px solid rgba(255,60,60,0.25)',
+              color: '#ff3c3c', padding: '8px 16px',
+              borderRadius: 8, cursor: 'pointer', fontSize: 12,
+              fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            🗑 Eliminar logo
+          </button>
         )}
+
+        {/* ── Selección de layout ── */}
+        <div style={{ marginTop: 24 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
+            letterSpacing: 1, color: 'rgba(255,255,255,0.4)', marginBottom: 12 }}>
+            Posición del logo en la navbar
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
+            {LOGO_LAYOUTS.map(layout => {
+              const isActive = selectedLayout === layout.id
+              const canShow  = layout.id !== 'logo-only' && layout.id !== 'logo-name-side' && layout.id !== 'logo-name-stack' || logo || layout.id === 'name-only'
+              return (
+                <button
+                  key={layout.id}
+                  onClick={() => set('brand', 'logoLayout', layout.id)}
+                  style={{
+                    border: isActive ? '2px solid var(--primary)' : '2px solid rgba(255,255,255,0.07)',
+                    borderRadius: 12, padding: '12px',
+                    background: isActive ? 'rgba(255,60,60,0.06)' : 'rgba(255,255,255,0.02)',
+                    cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s',
+                    opacity: (!logo && layout.id !== 'name-only') ? 0.5 : 1,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{ fontSize: 18 }}>{layout.icon}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: isActive ? 'white' : 'rgba(255,255,255,0.6)' }}>
+                      {layout.label}
+                    </span>
+                    {isActive && (
+                      <span style={{ marginLeft: 'auto', width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)' }} />
+                    )}
+                  </div>
+                  {/* Preview visual */}
+                  <div style={{ marginBottom: 8 }}>
+                    {layout.preview(logo, name, primary)}
+                  </div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>
+                    {layout.desc}
+                    {!logo && layout.id !== 'name-only' && (
+                      <span style={{ color: 'rgba(255,60,60,0.6)', display: 'block', marginTop: 2 }}>
+                        ↑ Sube un logo primero
+                      </span>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Preview navbar en tiempo real */}
+        <div style={{ marginTop: 20, padding: '16px 20px',
+          background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)',
+          borderRadius: 10 }}>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase',
+            letterSpacing: 1, marginBottom: 10 }}>Preview navbar en tiempo real</div>
+          <div style={{ background: 'rgba(3,3,3,0.9)', borderRadius: 8, padding: '12px 24px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <NavbarLogoPreview layout={selectedLayout} logo={logo} name={name} primary={primary} />
+            <div style={{ display: 'flex', gap: 20 }}>
+              {['Home', 'Servicios', 'Contacto'].map(l => (
+                <span key={l} style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 600,
+                  textTransform: 'uppercase', letterSpacing: 1 }}>{l}</span>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* ── Identidad ── */}
+      {/* ── IDENTIDAD ── */}
       <div className="section-card">
         <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, color: 'rgba(255,255,255,0.6)',
           textTransform: 'uppercase', letterSpacing: 1 }}>Identidad de Marca</h3>
@@ -118,7 +229,7 @@ export default function SiteConfigTab({ data }) {
         </FieldGroup>
       </div>
 
-      {/* ── Colores ── */}
+      {/* ── COLORES ── */}
       <div className="section-card">
         <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, color: 'rgba(255,255,255,0.6)',
           textTransform: 'uppercase', letterSpacing: 1 }}>Colores</h3>
@@ -148,7 +259,7 @@ export default function SiteConfigTab({ data }) {
         </div>
       </div>
 
-      {/* ── About ── */}
+      {/* ── ABOUT ── */}
       <div className="section-card">
         <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, color: 'rgba(255,255,255,0.6)',
           textTransform: 'uppercase', letterSpacing: 1 }}>Sección About</h3>
@@ -167,4 +278,31 @@ export default function SiteConfigTab({ data }) {
       </button>
     </div>
   )
+}
+
+// Componente de preview del logo según layout
+function NavbarLogoPreview({ layout, logo, name, primary }) {
+  if (layout === 'logo-only') {
+    return logo
+      ? <img src={logo} alt={name} style={{ height: 32, maxWidth: 160, objectFit: 'contain' }} />
+      : <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '1.6rem', color: primary, letterSpacing: 2 }}>{name}</span>
+  }
+  if (layout === 'logo-name-side') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {logo && <img src={logo} alt={name} style={{ height: 28, maxWidth: 60, objectFit: 'contain' }} />}
+        <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '1.5rem', color: primary, letterSpacing: 2 }}>{name}</span>
+      </div>
+    )
+  }
+  if (layout === 'logo-name-stack') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+        {logo && <img src={logo} alt={name} style={{ height: 22, maxWidth: 80, objectFit: 'contain' }} />}
+        <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '1rem', color: primary, letterSpacing: 2 }}>{name}</span>
+      </div>
+    )
+  }
+  // name-only
+  return <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '1.6rem', color: primary, letterSpacing: 2 }}>{name}</span>
 }

@@ -40,10 +40,14 @@ The content is organized as follows:
 </file_summary>
 
 <directory_structure>
+.firebaserc
 .gitignore
+cors.json
+firebase.json
 index.html
 package.json
 postcss.config.js
+public/index.html
 README.md
 src/App.jsx
 src/components/admin/AdminHeader.jsx
@@ -91,6 +95,136 @@ vite.config.js
 <files>
 This section contains the contents of the repository's files.
 
+<file path=".firebaserc">
+{
+  "projects": {
+    "default": "polartronic-27bf7"
+  }
+}
+</file>
+
+<file path="cors.json">
+[
+  {
+    "origin": ["http://localhost:5173", "http://localhost:3000", "https://polartronic.com"],
+    "method": ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"],
+    "maxAgeSeconds": 3600,
+    "responseHeader": ["Content-Type", "Authorization", "Content-Length", "x-goog-resumable"]
+  }
+]
+</file>
+
+<file path="firebase.json">
+{
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
+</file>
+
+<file path="public/index.html">
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Welcome to Firebase Hosting</title>
+
+    <!-- update the version number as needed -->
+    <script defer src="/__/firebase/12.12.1/firebase-app-compat.js"></script>
+    <!-- include only the Firebase features as you need -->
+    <script defer src="/__/firebase/12.12.1/firebase-auth-compat.js"></script>
+    <script defer src="/__/firebase/12.12.1/firebase-database-compat.js"></script>
+    <script defer src="/__/firebase/12.12.1/firebase-firestore-compat.js"></script>
+    <script defer src="/__/firebase/12.12.1/firebase-functions-compat.js"></script>
+    <script defer src="/__/firebase/12.12.1/firebase-messaging-compat.js"></script>
+    <script defer src="/__/firebase/12.12.1/firebase-storage-compat.js"></script>
+    <script defer src="/__/firebase/12.12.1/firebase-analytics-compat.js"></script>
+    <script defer src="/__/firebase/12.12.1/firebase-remote-config-compat.js"></script>
+    <script defer src="/__/firebase/12.12.1/firebase-performance-compat.js"></script>
+    <!-- 
+      initialize the SDK after all desired features are loaded, set useEmulator to false
+      to avoid connecting the SDK to running emulators.
+    -->
+    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+
+    <style media="screen">
+      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
+      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
+      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
+      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
+      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
+      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
+      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
+      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
+      @media (max-width: 600px) {
+        body, #message { margin-top: 0; background: white; box-shadow: none; }
+        body { border-top: 16px solid #ffa100; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="message">
+      <h2>Welcome</h2>
+      <h1>Firebase Hosting Setup Complete</h1>
+      <p>You're seeing this because you've successfully setup Firebase Hosting. Now it's time to go build something extraordinary!</p>
+      <a target="_blank" href="https://firebase.google.com/docs/hosting/">Open Hosting Documentation</a>
+    </div>
+    <p id="load">Firebase SDK Loading&hellip;</p>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const loadEl = document.querySelector('#load');
+        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+        // // The Firebase SDK is initialized and available here!
+        //
+        // firebase.auth().onAuthStateChanged(user => { });
+        // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
+        // firebase.firestore().doc('/foo/bar').get().then(() => { });
+        // firebase.functions().httpsCallable('yourFunction')().then(() => { });
+        // firebase.messaging().requestPermission().then(() => { });
+        // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
+        // firebase.analytics(); // call to activate
+        // firebase.analytics().logEvent('tutorial_completed');
+        // firebase.performance(); // call to activate
+        //
+        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+
+        try {
+          let app = firebase.app();
+          let features = [
+            'auth', 
+            'database', 
+            'firestore',
+            'functions',
+            'messaging', 
+            'storage', 
+            'analytics', 
+            'remoteConfig',
+            'performance',
+          ].filter(feature => typeof app[feature] === 'function');
+          loadEl.textContent = `Firebase SDK loaded with ${features.join(', ')}`;
+        } catch (e) {
+          console.error(e);
+          loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
+        }
+      });
+    </script>
+  </body>
+</html>
+</file>
+
 <file path=".gitignore">
 node_modules
 </file>
@@ -126,10 +260,11 @@ node_modules
   },
   "dependencies": {
     "firebase": "^10.12.0",
+    "firebase-admin": "^13.8.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.23.1",
-    "react-hot-toast": "^2.4.1"
+    "react-hot-toast": "^2.4.1",
+    "react-router-dom": "^6.23.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
@@ -2281,26 +2416,31 @@ export default function Hero({ hero, brand }) {
 </file>
 
 <file path="src/components/site/ServicesSection.jsx">
-export default function ServicesSection({ services }) {
+import { useUIStrings } from '../../hooks/useUIStrings'
+
+export default function ServicesSection({ services, brand }) {
   if (!services?.length) return null
-  const primary = 'var(--primary)'
+  const primary = brand?.primary || 'var(--primary)'
+  const t = useUIStrings(brand)
 
   return (
-    <section id="servicios" style={{ padding:'100px 6%', background:'var(--bg)' }}>
-      <div style={{ textAlign:'center', marginBottom:60 }}>
-        <p style={{ color: primary, fontSize:'0.75rem', fontWeight:800,
-          textTransform:'uppercase', letterSpacing:4, marginBottom:12 }}>Lo que hacemos</p>
-        <h2 style={{ fontSize:'clamp(2rem,5vw,3rem)', fontWeight:800, lineHeight:1.1 }}>
-          Nuestros <span style={{ color: primary }}>Servicios</span>
+    <section id="servicios" style={{ padding: '100px 6%', background: 'var(--bg)' }}>
+      <div style={{ textAlign: 'center', marginBottom: 60 }}>
+        <p style={{ color: primary, fontSize: '0.75rem', fontWeight: 800,
+          textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12 }}>
+          {t.services.eyebrow}
+        </p>
+        <h2 style={{ fontSize: 'clamp(2rem,5vw,3rem)', fontWeight: 800, lineHeight: 1.1 }}>
+          {t.services.heading} <span style={{ color: primary }}>{t.services.headingAccent}</span>
         </h2>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 20 }}>
         {services.map((svc, i) => (
-          <div key={svc.id||i}
-            style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)',
-              borderRadius:16, padding:'32px 28px', transition:'all 0.4s',
-              cursor:'default', position:'relative', overflow:'hidden' }}
+          <div key={svc.id || i}
+            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+              borderRadius: 16, padding: '32px 28px', transition: 'all 0.4s',
+              cursor: 'default', position: 'relative', overflow: 'hidden' }}
             onMouseEnter={e => {
               e.currentTarget.style.borderColor = 'rgba(255,60,60,0.4)'
               e.currentTarget.style.transform   = 'translateY(-8px)'
@@ -2311,12 +2451,12 @@ export default function ServicesSection({ services }) {
               e.currentTarget.style.transform   = 'translateY(0)'
               e.currentTarget.style.background  = 'rgba(255,255,255,0.03)'
             }}>
-            <div style={{ fontSize:36, marginBottom:18 }}>{svc.icon}</div>
-            <h3 style={{ fontSize:'1.15rem', fontWeight:800, marginBottom:10 }}>{svc.title}</h3>
-            <p style={{ color:'rgba(255,255,255,0.45)', fontSize:14, lineHeight:1.7, marginBottom:16 }}>
+            <div style={{ fontSize: 36, marginBottom: 18 }}>{svc.icon}</div>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: 10 }}>{svc.title}</h3>
+            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14, lineHeight: 1.7, marginBottom: 16 }}>
               {svc.desc}
             </p>
-            <div style={{ color: primary, fontWeight:700, fontSize:13, letterSpacing:0.5 }}>
+            <div style={{ color: primary, fontWeight: 700, fontSize: 13, letterSpacing: 0.5 }}>
               {svc.price}
             </div>
           </div>
@@ -2328,24 +2468,30 @@ export default function ServicesSection({ services }) {
 </file>
 
 <file path="src/components/site/TestimonialsSection.jsx">
-export default function TestimonialsSection({ testimonials }) {
+import { useUIStrings } from '../../hooks/useUIStrings'
+
+export default function TestimonialsSection({ testimonials, brand }) {
   if (!testimonials?.length) return null
+  const primary = brand?.primary || 'var(--primary)'
+  const t = useUIStrings(brand)
 
   return (
-    <section id="testimonios" style={{ padding:'100px 6%' }}>
-      <div style={{ textAlign:'center', marginBottom:60 }}>
-        <p style={{ color:'var(--primary)', fontSize:'0.75rem', fontWeight:800,
-          textTransform:'uppercase', letterSpacing:4, marginBottom:12 }}>Social Proof</p>
-        <h2 style={{ fontSize:'clamp(2rem,5vw,3rem)', fontWeight:800 }}>
-          Lo que dicen <span style={{ color:'var(--primary)' }}>nuestros clientes</span>
+    <section id="testimonios" style={{ padding: '100px 6%' }}>
+      <div style={{ textAlign: 'center', marginBottom: 60 }}>
+        <p style={{ color: primary, fontSize: '0.75rem', fontWeight: 800,
+          textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12 }}>
+          {t.testimonials.eyebrow}
+        </p>
+        <h2 style={{ fontSize: 'clamp(2rem,5vw,3rem)', fontWeight: 800 }}>
+          {t.testimonials.heading} <span style={{ color: primary }}>{t.testimonials.headingAccent}</span>
         </h2>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))', gap:20 }}>
-        {testimonials.map((t, i) => (
-          <div key={t.id||i} style={{ background:'rgba(255,255,255,0.03)',
-            border:'1px solid rgba(255,255,255,0.08)', borderRadius:16, padding:'28px 24px',
-            transition:'all 0.3s' }}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))', gap: 20 }}>
+        {testimonials.map((item, i) => (
+          <div key={item.id || i} style={{ background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '28px 24px',
+            transition: 'all 0.3s' }}
             onMouseEnter={e => {
               e.currentTarget.style.borderColor = 'rgba(255,60,60,0.3)'
               e.currentTarget.style.background  = 'rgba(255,60,60,0.04)'
@@ -2354,21 +2500,21 @@ export default function TestimonialsSection({ testimonials }) {
               e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
               e.currentTarget.style.background  = 'rgba(255,255,255,0.03)'
             }}>
-            <div style={{ color:'var(--primary)', fontSize:32, marginBottom:16, lineHeight:1 }}>"</div>
-            <p style={{ color:'rgba(255,255,255,0.65)', fontSize:15, lineHeight:1.8,
-              fontStyle:'italic', marginBottom:20 }}>{t.text}</p>
-            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-              <div style={{ width:44, height:44, borderRadius:'50%',
-                background:'rgba(255,60,60,0.15)', overflow:'hidden',
-                display:'flex', alignItems:'center', justifyContent:'center',
-                fontSize:18, flexShrink:0 }}>
-                {t.avatar
-                  ? <img src={t.avatar} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+            <div style={{ color: primary, fontSize: 32, marginBottom: 16, lineHeight: 1 }}>"</div>
+            <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 15, lineHeight: 1.8,
+              fontStyle: 'italic', marginBottom: 20 }}>{item.text}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 44, height: 44, borderRadius: '50%',
+                background: 'rgba(255,60,60,0.15)', overflow: 'hidden',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 18, flexShrink: 0 }}>
+                {item.avatar
+                  ? <img src={item.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : '👤'}
               </div>
               <div>
-                <div style={{ fontWeight:700, fontSize:14 }}>{t.name}</div>
-                <div style={{ color:'var(--primary)', fontSize:12 }}>{t.role}</div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>{item.name}</div>
+                <div style={{ color: primary, fontSize: 12 }}>{item.role}</div>
               </div>
             </div>
           </div>
@@ -2381,64 +2527,54 @@ export default function TestimonialsSection({ testimonials }) {
 
 <file path="src/hooks/useUIStrings.js">
 /**
- * useUIStrings.js
- * ─────────────────────────────────────────────────────────────────────────
- * React hook that resolves UI strings for the currently configured language.
+ * useUIStrings.js — FIXED v2
  *
- * Priority order:
- *   1. theme_config.language  (set by admin → saved in Firestore site/config)
- *   2. navigator.language     (browser locale, best-effort fallback)
- *   3. 'it'                   (hard default)
- *
- * Usage — site components:
- *   const t = useUIStrings(brand)      // brand = site.brand from useSiteData
- *   <h2>{t.services.heading}</h2>
- *
- * Usage — booking flow (receives language prop or falls back to hook):
- *   const t = useUIStrings(null, 'fr')
- *
- * Usage — no args (reads window.__SITE_LANGUAGE__ set by PublicSite):
- *   const t = useUIStrings()
+ * FIX IDIOMA (Problema 3):
+ * useMemo no detecta cambios en window.__SITE_LANGUAGE__ porque es una
+ * variable global, no estado React. Fix: useState + listener del custom
+ * event 'sitelang' que LanguageTab dispara al guardar. Cuando el evento
+ * llega, el hook re-calcula el idioma y todos los componentes que lo usan
+ * se re-renderizan automáticamente con los strings correctos.
  */
 
-import { useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { getStrings, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from '../lib/uiStrings'
 
-/**
- * Resolve the best-match language code from various input sources.
- * @param {string|null} themeLang   - from brand.language or explicit prop
- * @returns {string}                - validated language code
- */
 function resolveLang(themeLang) {
   const supported = SUPPORTED_LANGUAGES.map(l => l.code)
 
-  // 1. Explicit theme language (admin-configured)
   if (themeLang && supported.includes(themeLang)) return themeLang
 
-  // 2. Window-level flag set by PublicSite/AdminPanel (avoids prop drilling)
   if (typeof window !== 'undefined' && window.__SITE_LANGUAGE__) {
     const wl = window.__SITE_LANGUAGE__
     if (supported.includes(wl)) return wl
   }
 
-  // 3. Browser language (first two chars: 'it-IT' → 'it')
   if (typeof navigator !== 'undefined' && navigator.language) {
     const bl = navigator.language.slice(0, 2).toLowerCase()
     if (supported.includes(bl)) return bl
   }
 
-  // 4. Hard default
   return DEFAULT_LANGUAGE
 }
 
-/**
- * @param {object|null} brand    - site.brand object (may contain brand.language)
- * @param {string|null} langOverride - explicit language code (e.g. from BookingFlow prop)
- */
 export function useUIStrings(brand = null, langOverride = null) {
+  // FIX: estado local que se actualiza cuando llega el custom event 'sitelang'
+  const [globalLang, setGlobalLang] = useState(
+    () => (typeof window !== 'undefined' ? window.__SITE_LANGUAGE__ : null)
+  )
+
+  useEffect(() => {
+    const handler = (e) => {
+      setGlobalLang(e.detail ?? window.__SITE_LANGUAGE__ ?? null)
+    }
+    window.addEventListener('sitelang', handler)
+    return () => window.removeEventListener('sitelang', handler)
+  }, [])
+
   const lang = useMemo(
-    () => resolveLang(langOverride ?? brand?.language ?? null),
-    [brand?.language, langOverride]
+    () => resolveLang(langOverride ?? brand?.language ?? globalLang ?? null),
+    [brand?.language, langOverride, globalLang]
   )
 
   const t = useMemo(() => getStrings(lang), [lang])
@@ -2446,9 +2582,6 @@ export function useUIStrings(brand = null, langOverride = null) {
   return t
 }
 
-/**
- * Non-hook version for use outside React (e.g. utility files, email templates).
- */
 export function resolveStrings(langOrBrand) {
   const lang = typeof langOrBrand === 'string'
     ? langOrBrand
@@ -3123,6 +3256,13 @@ export default function AdminHeader({ onLogout, onToggleSidebar, activeTab }) {
 </file>
 
 <file path="src/components/admin/ImageUploadField.jsx">
+/**
+ * ImageUploadField.jsx — FIXED v3
+ *
+ * Usa uploadImage() de firebaseHelpers que internamente
+ * usa la API REST de Firebase Storage — sin CORS issues.
+ */
+
 import { useState } from 'react'
 import { uploadImage } from '../../lib/firebaseHelpers'
 import toast from 'react-hot-toast'
@@ -3133,12 +3273,13 @@ export default function ImageUploadField({
   label = 'Imagen',
   folder = 'images',
 }) {
-  const [uploading, setUploading]   = useState(false)
-  const [progress, setProgress]     = useState(0)
-  const [dragOver, setDragOver]     = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [progress,  setProgress]  = useState(0)
+  const [dragOver,  setDragOver]  = useState(false)
 
   const handleFile = async (file) => {
     if (!file) return
+
     if (!file.type.startsWith('image/')) {
       toast.error('Solo se permiten imágenes')
       return
@@ -3158,23 +3299,33 @@ export default function ImageUploadField({
         setProgress(pct)
         toast.loading(`Subiendo… ${pct}%`, { id: toastId })
       })
+
+      // FIX: forzar 100% antes del toast.success
+      setProgress(100)
       onChange(url)
       toast.success('Imagen subida ✓', { id: toastId })
     } catch (err) {
-      toast.error(err.message || 'Error al subir imagen', { id: toastId })
       console.error('[ImageUploadField]', err)
+      let msg = 'Error al subir imagen'
+      if (err.message?.includes('autenticado')) msg = 'Debes estar autenticado para subir imágenes'
+      else if (err.message?.includes('10 MB'))   msg = 'La imagen supera los 10 MB'
+      toast.error(msg, { id: toastId })
     } finally {
       setUploading(false)
       setProgress(0)
     }
   }
 
-  const handleInputChange = (e) => handleFile(e.target.files[0])
+  const handleInputChange = (e) => {
+    const file = e.target.files?.[0]
+    if (file) handleFile(file)
+    e.target.value = ''
+  }
 
   const handleDrop = (e) => {
     e.preventDefault()
     setDragOver(false)
-    const file = e.dataTransfer.files[0]
+    const file = e.dataTransfer.files?.[0]
     if (file) handleFile(file)
   }
 
@@ -3191,15 +3342,11 @@ export default function ImageUploadField({
         {label}
       </label>
 
-      {/* Preview */}
       {value && (
         <div style={{
-          marginBottom: 10,
-          borderRadius: 10,
-          overflow: 'hidden',
+          marginBottom: 10, borderRadius: 10, overflow: 'hidden',
           border: '1px solid rgba(255,255,255,0.1)',
-          position: 'relative',
-          height: 140,
+          position: 'relative', height: 140,
         }}>
           <img
             src={value}
@@ -3218,27 +3365,20 @@ export default function ImageUploadField({
               alignItems: 'center', justifyContent: 'center',
               lineHeight: 1,
             }}
-            title="Quitar imagen"
-          >
-            ✕
-          </button>
+          >✕</button>
         </div>
       )}
 
-      {/* Drag & drop zone */}
       <div
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         style={{
           border: `2px dashed ${dragOver ? 'var(--primary)' : 'rgba(255,255,255,0.15)'}`,
-          borderRadius: 10,
-          padding: '14px 16px',
+          borderRadius: 10, padding: '14px 16px',
           background: dragOver ? 'rgba(255,60,60,0.05)' : 'rgba(255,255,255,0.02)',
           transition: 'all 0.2s',
-          display: 'flex',
-          gap: 10,
-          alignItems: 'center',
+          display: 'flex', gap: 10, alignItems: 'center',
         }}
       >
         <input
@@ -3251,22 +3391,28 @@ export default function ImageUploadField({
         />
 
         <label style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
+          display: 'flex', alignItems: 'center', gap: 6,
           background: uploading ? 'rgba(255,60,60,0.05)' : 'rgba(255,60,60,0.12)',
           border: '1px solid rgba(255,60,60,0.3)',
-          padding: '9px 16px',
-          borderRadius: 8,
+          padding: '9px 16px', borderRadius: 8,
           cursor: uploading ? 'not-allowed' : 'pointer',
           fontSize: 12,
           color: uploading ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.8)',
           whiteSpace: 'nowrap',
-          opacity: uploading ? 0.6 : 1,
-          transition: 'all 0.2s',
-          flexShrink: 0,
+          opacity: uploading ? 0.7 : 1,
+          transition: 'all 0.2s', flexShrink: 0,
+          userSelect: 'none',
         }}>
-          {uploading ? `${progress}%` : '📁 Subir'}
+          {uploading ? (
+            <>
+              <span style={{
+                width: 12, height: 12, border: '2px solid rgba(255,255,255,0.3)',
+                borderTopColor: 'white', borderRadius: '50%',
+                display: 'inline-block', animation: 'imgSpin 0.7s linear infinite',
+              }} />
+              {progress}%
+            </>
+          ) : '📁 Subir'}
           <input
             type="file"
             accept="image/*"
@@ -3277,32 +3423,24 @@ export default function ImageUploadField({
         </label>
       </div>
 
-      {/* Barra de progreso */}
       {uploading && (
         <div style={{
-          marginTop: 8,
-          height: 3,
-          borderRadius: 2,
-          background: 'rgba(255,255,255,0.08)',
-          overflow: 'hidden',
+          marginTop: 8, height: 3, borderRadius: 2,
+          background: 'rgba(255,255,255,0.08)', overflow: 'hidden',
         }}>
           <div style={{
-            height: '100%',
-            width: `${progress}%`,
-            background: 'var(--primary)',
-            borderRadius: 2,
-            transition: 'width 0.3s ease',
+            height: '100%', width: `${progress}%`,
+            background: 'var(--primary)', borderRadius: 2,
+            transition: 'width 0.25s ease',
           }} />
         </div>
       )}
 
-      <p style={{
-        fontSize: 11,
-        color: 'rgba(255,255,255,0.2)',
-        marginTop: 6,
-      }}>
-        Arrastra una imagen aquí o haz clic en "Subir". Máx 10 MB.
+      <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', marginTop: 6 }}>
+        Arrastra una imagen aquí o haz clic en "Subir". Máx 10 MB · JPG, PNG, WebP
       </p>
+
+      <style>{`@keyframes imgSpin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }
@@ -3684,13 +3822,12 @@ export default function HeroTab({ data }) {
 
 <file path="src/components/admin/tabs/LanguageTab.jsx">
 /**
- * LanguageTab.jsx — FIXED
+ * LanguageTab.jsx — FIXED v2
  *
- * BUG FIXES:
- * 1. Rimosso `await import()` dinamico a top-level (non funziona in moduli non-async).
- *    saveSiteConfig viene importato staticamente come tutti gli altri tab.
- * 2. setSite ora mergia correttamente invece di sostituire l'intero oggetto.
- * 3. window.__SITE_LANGUAGE__ aggiornato prima del toast per evitare race condition.
+ * FIX IDIOMA (Problema 3):
+ * Después de guardar, dispara el custom event 'sitelang' con el código
+ * del idioma seleccionado. useUIStrings lo escucha y fuerza re-render
+ * en todos los componentes del árbol sin necesidad de recargar la página.
  */
 
 import { useState, useCallback } from 'react'
@@ -3715,7 +3852,6 @@ export default function LanguageTab({ data = {}, onSave }) {
       if (typeof onSave === 'function') {
         await onSave(selected)
       } else {
-        // FIX: mergia solo brand.language, non sovrascrive tutto il site
         await saveSiteConfig({ brand: { language: selected } })
         setter?.(prev => ({
           ...prev,
@@ -3723,9 +3859,11 @@ export default function LanguageTab({ data = {}, onSave }) {
         }))
       }
 
-      // FIX: aggiorna window PRIMA del toast
+      // FIX: actualiza window ANTES de disparar el evento
       if (typeof window !== 'undefined') {
         window.__SITE_LANGUAGE__ = selected
+        // Dispara custom event — useUIStrings lo escucha y fuerza re-render global
+        window.dispatchEvent(new CustomEvent('sitelang', { detail: selected }))
       }
 
       setSaved(selected)
@@ -4421,11 +4559,14 @@ export default function TestimonialsTab({ data }) {
 </file>
 
 <file path="src/components/site/Footer.jsx">
+import { useUIStrings } from '../../hooks/useUIStrings'
+
 export default function Footer({ site }) {
   const { brand, footer } = site
   const primary = brand?.primary || '#ff3c3c'
   const name    = brand?.name    || 'POLARTRONIC'
   const logo    = brand?.logo    || ''
+  const t = useUIStrings(brand)
 
   return (
     <footer style={{ background: '#060606', padding: '80px 6% 40px',
@@ -4434,7 +4575,6 @@ export default function Footer({ site }) {
 
         {/* Brand */}
         <div>
-          {/* Logo: imagen si existe, sino texto */}
           <div style={{ marginBottom: 16 }}>
             {logo ? (
               <img
@@ -4460,22 +4600,24 @@ export default function Footer({ site }) {
         <div>
           <h4 style={{ fontSize: 13, fontWeight: 700, marginBottom: 20,
             textTransform: 'uppercase', letterSpacing: 1.5, color: 'rgba(255,255,255,0.6)' }}>
-            Navegación
+            {t.footer.navigation}
           </h4>
           <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {['#home|Home', '#servicios|Servicios', '#ecosistemas|Áreas', '#proyectos|Proyectos'].map(l => {
-              const [href, label] = l.split('|')
-              return (
-                <li key={href}>
-                  <a href={href} style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none',
-                    fontSize: 14, transition: '0.2s' }}
-                    onMouseEnter={e => { e.currentTarget.style.color = primary; e.currentTarget.style.paddingLeft = '5px' }}
-                    onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; e.currentTarget.style.paddingLeft = '0' }}>
-                    {label}
-                  </a>
-                </li>
-              )
-            })}
+            {[
+              { href: '#home',        label: t.nav.home       },
+              { href: '#servicios',   label: t.nav.services   },
+              { href: '#ecosistemas', label: t.nav.memberships },
+              { href: '#proyectos',   label: t.nav.projects   },
+            ].map(l => (
+              <li key={l.href}>
+                <a href={l.href} style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none',
+                  fontSize: 14, transition: '0.2s' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = primary; e.currentTarget.style.paddingLeft = '5px' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; e.currentTarget.style.paddingLeft = '0' }}>
+                  {l.label}
+                </a>
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -4483,7 +4625,7 @@ export default function Footer({ site }) {
         <div>
           <h4 style={{ fontSize: 13, fontWeight: 700, marginBottom: 20,
             textTransform: 'uppercase', letterSpacing: 1.5, color: 'rgba(255,255,255,0.6)' }}>
-            Servicios
+            {t.footer.services}
           </h4>
           <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {['Diseño Web', 'Desarrollo', 'Branding', 'Marketing'].map(s => (
@@ -4499,7 +4641,7 @@ export default function Footer({ site }) {
         <div>
           <h4 style={{ fontSize: 13, fontWeight: 700, marginBottom: 20,
             textTransform: 'uppercase', letterSpacing: 1.5, color: 'rgba(255,255,255,0.6)' }}>
-            Contacto
+            {t.footer.contact}
           </h4>
           <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
             {footer?.email && (
@@ -4510,12 +4652,12 @@ export default function Footer({ site }) {
             {footer?.whatsapp && footer.whatsapp !== '#' && (
               <li><a href={footer.whatsapp} target="_blank" rel="noreferrer"
                 style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none', fontSize: 14 }}>
-                WhatsApp Business</a></li>
+                {t.footer.whatsapp}</a></li>
             )}
             {footer?.instagram && footer.instagram !== '#' && (
               <li><a href={footer.instagram} target="_blank" rel="noreferrer"
                 style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none', fontSize: 14 }}>
-                Instagram Studio</a></li>
+                {t.footer.instagram}</a></li>
             )}
           </ul>
         </div>
@@ -4534,24 +4676,27 @@ export default function Footer({ site }) {
 
 <file path="src/components/site/ProjectsSection.jsx">
 import { useState } from 'react'
+import { useUIStrings } from '../../hooks/useUIStrings'
 
-export default function ProjectsSection({ projects }) {
+export default function ProjectsSection({ projects, brand }) {
   if (!projects?.length) return null
+  const primary = brand?.primary || 'var(--primary)'
+  const t = useUIStrings(brand)
 
   return (
     <section id="proyectos" style={{ padding: '100px 6%', background: 'rgba(255,255,255,0.01)' }}>
       <div style={{ textAlign: 'center', marginBottom: 64 }}>
         <p style={{
-          color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 800,
+          color: primary, fontSize: '0.75rem', fontWeight: 800,
           textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12,
         }}>
-          Casos de Éxito
+          {t.projects.eyebrow}
         </p>
         <h2 style={{ fontSize: 'clamp(2rem,5vw,3rem)', fontWeight: 800 }}>
-          Nuestro <span style={{ color: 'var(--primary)' }}>Portafolio</span>
+          {t.projects.heading} <span style={{ color: primary }}>{t.projects.headingAccent}</span>
         </h2>
         <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 15, marginTop: 12, maxWidth: 500, margin: '12px auto 0' }}>
-          Resultados reales para clientes reales. Cada proyecto es una historia de transformación digital.
+          {t.projects.sub}
         </p>
       </div>
 
@@ -4561,17 +4706,16 @@ export default function ProjectsSection({ projects }) {
         gap: 24,
       }}>
         {projects.map((proj, i) => (
-          <ProjectCard key={proj.id || i} proj={proj} />
+          <ProjectCard key={proj.id || i} proj={proj} primary={primary} t={t} />
         ))}
       </div>
     </section>
   )
 }
 
-function ProjectCard({ proj }) {
+function ProjectCard({ proj, primary, t }) {
   const [hovered, setHovered] = useState(false)
 
-  // Compatibilidad hacia atrás: si el proyecto solo tiene `title` sin `client`
   const client      = proj.client      || proj.title    || ''
   const industry    = proj.industry    || proj.category || ''
   const title       = proj.title       || ''
@@ -4579,7 +4723,6 @@ function ProjectCard({ proj }) {
   const results     = proj.results     || ''
   const url         = proj.url         || proj.link     || '#'
 
-  // Parsear resultados (puede venir como "texto · texto" o texto libre)
   const resultItems = results
     ? results.split('·').map(r => r.trim()).filter(Boolean)
     : []
@@ -4592,11 +4735,9 @@ function ProjectCard({ proj }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        display: 'flex',
-        flexDirection: 'column',
-        borderRadius: 20,
-        overflow: 'hidden',
-        border: hovered ? '1px solid var(--primary)' : '1px solid rgba(255,255,255,0.07)',
+        display: 'flex', flexDirection: 'column',
+        borderRadius: 20, overflow: 'hidden',
+        border: hovered ? `1px solid ${primary}` : '1px solid rgba(255,255,255,0.07)',
         textDecoration: 'none',
         background: hovered ? 'rgba(255,60,60,0.03)' : 'rgba(255,255,255,0.02)',
         transition: 'all 0.4s cubic-bezier(0.23,1,0.32,1)',
@@ -4612,14 +4753,12 @@ function ProjectCard({ proj }) {
             src={proj.image}
             alt={client}
             style={{
-              width: '100%', height: '100%', objectFit: 'cover',
-              display: 'block',
+              width: '100%', height: '100%', objectFit: 'cover', display: 'block',
               filter: hovered ? 'brightness(0.65)' : 'brightness(0.5)',
               transform: hovered ? 'scale(1.06)' : 'scale(1)',
               transition: 'all 0.5s cubic-bezier(0.23,1,0.32,1)',
             }}
           />
-          {/* Industry badge */}
           {industry && (
             <div style={{
               position: 'absolute', top: 14, left: 14,
@@ -4633,7 +4772,6 @@ function ProjectCard({ proj }) {
               {industry}
             </div>
           )}
-          {/* External link indicator */}
           {url !== '#' && (
             <div style={{
               position: 'absolute', top: 14, right: 14,
@@ -4641,9 +4779,8 @@ function ProjectCard({ proj }) {
               background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
               border: '1px solid rgba(255,255,255,0.15)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--primary)', fontSize: 14,
-              opacity: hovered ? 1 : 0,
-              transition: 'opacity 0.3s',
+              color: primary, fontSize: 14,
+              opacity: hovered ? 1 : 0, transition: 'opacity 0.3s',
             }}>
               ↗
             </div>
@@ -4653,10 +4790,9 @@ function ProjectCard({ proj }) {
 
       {/* Content */}
       <div style={{ padding: '22px 24px 24px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-        {/* Client + title */}
         <div style={{ marginBottom: 10 }}>
           <div style={{
-            color: 'var(--primary)', fontWeight: 800, fontSize: '0.72rem',
+            color: primary, fontWeight: 800, fontSize: '0.72rem',
             textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4,
           }}>
             {client}
@@ -4668,7 +4804,6 @@ function ProjectCard({ proj }) {
           )}
         </div>
 
-        {/* Description */}
         {description && (
           <p style={{
             color: 'rgba(255,255,255,0.45)', fontSize: 13, lineHeight: 1.7,
@@ -4678,7 +4813,6 @@ function ProjectCard({ proj }) {
           </p>
         )}
 
-        {/* Results */}
         {resultItems.length > 0 && (
           <div style={{
             borderTop: '1px solid rgba(255,255,255,0.06)',
@@ -4689,7 +4823,7 @@ function ProjectCard({ proj }) {
               fontSize: 9, fontWeight: 800, textTransform: 'uppercase',
               letterSpacing: 2, color: 'rgba(255,255,255,0.25)', marginBottom: 4,
             }}>
-              Resultados
+              {t.projects.results}
             </div>
             {resultItems.map((r, i) => (
               <div key={i} style={{
@@ -4698,9 +4832,9 @@ function ProjectCard({ proj }) {
               }}>
                 <span style={{
                   width: 16, height: 16, borderRadius: '50%',
-                  background: 'rgba(255,60,60,0.12)', border: '1px solid rgba(255,60,60,0.25)',
+                  background: 'rgba(255,60,60,0.12)', border: `1px solid ${primary}40`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 8, color: 'var(--primary)', flexShrink: 0,
+                  fontSize: 8, color: primary, flexShrink: 0,
                 }}>▲</span>
                 {r}
               </div>
@@ -4735,7 +4869,6 @@ function ProjectCard({ proj }) {
 html, body {
   margin: 0;
   padding: 0;
-  /* Elimina el scroll horizontal que causaba espacio a la derecha */
   overflow-x: hidden;
   max-width: 100vw;
 }
@@ -4801,6 +4934,7 @@ body {
 }
 .admin-textarea:focus { border-color: var(--primary); }
 
+/* ─── Save button — siempre visible ─────────────────────────────── */
 .save-btn {
   background: var(--primary);
   color: white;
@@ -4814,6 +4948,9 @@ body {
   text-transform: uppercase;
   letter-spacing: 1px;
   white-space: nowrap;
+  /* Garantiza que el botón sea clicable aunque esté cerca del fondo */
+  position: relative;
+  z-index: 1;
 }
 .save-btn:hover:not(:disabled) { background: #ff5555; transform: translateY(-1px); }
 .save-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
@@ -4826,6 +4963,21 @@ body {
   margin-bottom: 20px;
 }
 
+/* ─── Admin main content — padding inferior para que el botón guardar
+       no quede tapado por la barra mobile ─────────────────────────── */
+.admin-main-content {
+  padding-bottom: 100px !important; /* ← era 80px, aumentado a 100 para mayor margen */
+}
+
+/* ─── Botón guardar sticky en mobile ─────────────────────────────── */
+.save-btn-wrap {
+  /* En desktop: inline normal */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
 /* ─── Responsive admin ───────────────────────────────────────────── */
 @media (max-width: 767px) {
   .admin-main-wrap {
@@ -4835,9 +4987,27 @@ body {
   .admin-header-wrap {
     padding: 0 1rem !important;
   }
+
+  /* FIX CRÍTICO: padding inferior en mobile para no quedar tapado
+     por la bottom nav de 60px + margen extra de seguridad */
   .admin-main-content {
-    padding-bottom: 80px !important;
+    padding-bottom: 120px !important;
   }
+
+  /* Botón guardar sticky en la parte inferior en mobile */
+  .save-btn-wrap {
+    position: sticky;
+    bottom: 70px;          /* justo encima de la bottom nav (60px) */
+    z-index: 50;
+    background: rgba(3, 3, 3, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255,255,255,0.07);
+    margin: 24px -1rem 0; /* sangra hasta los bordes del padding del main */
+    padding: 12px 1rem;
+    border-radius: 0;
+  }
+
   /* Grids de 2 columnas → 1 columna en móvil */
   .section-card [style*="grid-template-columns: 1fr 1fr"],
   .section-card [style*="grid-template-columns: 80px 1fr"] {
@@ -4847,7 +5017,6 @@ body {
 
 /* ─── Responsive site sections ───────────────────────────────────── */
 @media (max-width: 640px) {
-  /* Footer grid → columna única */
   footer [style*="grid-template-columns: 2fr repeat(3, 1fr)"] {
     grid-template-columns: 1fr !important;
     gap: 32px !important;
@@ -6213,227 +6382,6 @@ export default function App() {
 }
 </file>
 
-<file path="src/components/admin/AdminSidebar.jsx">
-/**
- * AdminSidebar.jsx — updated
- * Adds the 🌐 Lingua tab to the navigation.
- */
-
-import { useEffect, useState } from 'react'
-
-const TABS_AGGIORNATO = [
-  { id: 'site',          icon: '⚙️', label: 'Marca & Colores'      },
-  { id: 'hero',          icon: '🖼',  label: 'Hero / Portada'       },
-  { id: 'services',      icon: '💼', label: 'Servicios'            },
-  { id: 'ecosystems',    icon: '🎟',  label: 'Membresías'           },
-  { id: 'projects',      icon: '🗂',  label: 'Proyectos'            },
-  { id: 'testimonials',  icon: '💬', label: 'Testimonios'          },
-  { id: 'contact',       icon: '📬', label: 'Contacto & Footer'    },
-  { id: 'language',      icon: '🌐', label: 'Lingua del Sito'      },
-  // ── NUOVI ──────────────────────────────────────────────────────────
-  { id: 'leads',         icon: '📥', label: 'Inbox Lead'           },  // ← NUOVO
-  { id: 'agents',        icon: '👥', label: 'Agenti Commerciali'   },  // ← NUOVO
-  { id: 'notifications', icon: '🔔', label: 'Notifiche & Canali'   },  // ← NUOVO
-]
-
-export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, brand }) {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
-
-  const logo    = brand?.logo || ''
-  const name    = brand?.name || 'POLARTRONIC'
-
-  const BrandMark = ({ height = 28 }) => logo ? (
-    <img src={logo} alt={name} style={{ height, maxWidth: 160, objectFit: 'contain' }} />
-  ) : (
-    <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '1.6rem', color: '#ff3c3c', letterSpacing: 2 }}>
-      {name}
-    </span>
-  )
-
-  /* ── MOBILE: bottom nav ── */
-  if (isMobile) {
-    return (
-      <>
-        {open && (
-          <div
-            onClick={onToggle}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 1100,
-              background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
-            }}
-          />
-        )}
-
-        <div style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1200,
-          background: '#090909',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: open ? '20px 20px 0 0' : 0,
-          transform: open ? 'translateY(0)' : 'translateY(100%)',
-          transition: 'transform 0.35s cubic-bezier(0.23,1,0.32,1)',
-          maxHeight: '80vh', display: 'flex', flexDirection: 'column',
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px', flexShrink: 0 }}>
-            <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
-          </div>
-
-          <div style={{
-            padding: '4px 20px 12px',
-            borderBottom: '1px solid rgba(255,255,255,0.07)',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            flexShrink: 0,
-          }}>
-            <div>
-              <BrandMark height={28} />
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>Admin Panel</div>
-            </div>
-            <button onClick={onToggle} style={{
-              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-              color: 'rgba(255,255,255,0.6)', width: 34, height: 34, borderRadius: '50%',
-              cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>✕</button>
-          </div>
-
-          <nav style={{ overflowY: 'auto', padding: '8px 0', flex: 1 }}>
-            {TABS.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => { onTabChange(tab.id); onToggle() }}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: 14,
-                  padding: '13px 20px', border: 'none', cursor: 'pointer', textAlign: 'left',
-                  borderLeft: activeTab === tab.id ? '3px solid #ff3c3c' : '3px solid transparent',
-                  background: activeTab === tab.id ? 'rgba(255,60,60,0.08)' : 'transparent',
-                  color:      activeTab === tab.id ? '#fff' : 'rgba(255,255,255,0.55)',
-                  fontSize: 14, fontWeight: activeTab === tab.id ? 700 : 400,
-                  transition: 'all 0.15s',
-                }}
-              >
-                <span style={{ fontSize: 20, width: 28, textAlign: 'center' }}>{tab.icon}</span>
-                <span>{tab.label}</span>
-                {activeTab === tab.id && (
-                  <span style={{ marginLeft: 'auto', color: '#ff3c3c', fontSize: 10 }}>●</span>
-                )}
-              </button>
-            ))}
-          </nav>
-
-          <div style={{ padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
-            <a href="/" target="_blank" style={{
-              fontSize: 13, color: 'rgba(255,255,255,0.4)',
-              textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8,
-            }}>
-              🌐 Ver sitio público ↗
-            </a>
-          </div>
-        </div>
-
-        {/* Bottom bar fissa */}
-        <nav style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0,
-          zIndex: open ? 0 : 1050,
-          background: 'rgba(8,8,8,0.97)',
-          borderTop: '1px solid rgba(255,255,255,0.08)',
-          display: 'flex', alignItems: 'stretch',
-          height: 60, backdropFilter: 'blur(20px)',
-          visibility: open ? 'hidden' : 'visible',
-        }}>
-          {TABS.slice(0, 4).map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => onTabChange(tab.id)}
-              style={{
-                flex: 1, display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', gap: 2,
-                border: 'none', background: 'transparent', cursor: 'pointer', padding: '6px 2px',
-                borderTop: activeTab === tab.id ? '2px solid #ff3c3c' : '2px solid transparent',
-                transition: 'all 0.15s',
-              }}
-            >
-              <span style={{ fontSize: 18 }}>{tab.icon}</span>
-              <span style={{
-                fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5,
-                color: activeTab === tab.id ? '#ff3c3c' : 'rgba(255,255,255,0.35)',
-              }}>
-                {tab.label.split(' ')[0]}
-              </span>
-            </button>
-          ))}
-          <button
-            onClick={onToggle}
-            style={{
-              flex: 1, display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center', gap: 2,
-              border: 'none', background: 'transparent', cursor: 'pointer', padding: '6px 2px',
-              borderTop: '2px solid transparent',
-            }}
-          >
-            <span style={{ fontSize: 18 }}>☰</span>
-            <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: 'rgba(255,255,255,0.35)' }}>Più</span>
-          </button>
-        </nav>
-      </>
-    )
-  }
-
-  /* ── DESKTOP: sidebar classico ── */
-  if (!open) return null
-
-  return (
-    <aside style={{
-      width: 240, flexShrink: 0, background: '#080808',
-      borderRight: '1px solid rgba(255,255,255,0.07)',
-      height: '100vh', overflowY: 'auto',
-      display: 'flex', flexDirection: 'column', padding: '1.5rem 0',
-    }}>
-      <div style={{ padding: '0 1.5rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-        <BrandMark height={32} />
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>Admin Panel</div>
-      </div>
-
-      <nav style={{ padding: '1rem 0', flex: 1 }}>
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => onTabChange(tab.id)}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-              padding: '11px 1.5rem', border: 'none',
-              cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
-              borderLeft:  activeTab === tab.id ? '2px solid #ff3c3c' : '2px solid transparent',
-              background:  activeTab === tab.id ? 'rgba(255,60,60,0.06)' : 'transparent',
-              color:       activeTab === tab.id ? '#fff' : 'rgba(255,255,255,0.45)',
-              fontSize: 13, fontWeight: activeTab === tab.id ? 600 : 400,
-            }}
-            onMouseEnter={e => { if (activeTab !== tab.id) e.currentTarget.style.color = 'rgba(255,255,255,0.8)' }}
-            onMouseLeave={e => { if (activeTab !== tab.id) e.currentTarget.style.color = 'rgba(255,255,255,0.45)' }}
-          >
-            <span style={{ fontSize: 16 }}>{tab.icon}</span>
-            {tab.label}
-          </button>
-        ))}
-      </nav>
-
-      <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-        <a href="/" target="_blank" style={{
-          fontSize: 12, color: 'rgba(255,255,255,0.35)',
-          textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6,
-        }}>
-          🌐 Ver sitio público ↗
-        </a>
-      </div>
-    </aside>
-  )
-}
-</file>
-
 <file path="src/components/site/EcosystemSection.jsx">
 import { useState } from 'react'
 
@@ -6962,39 +6910,20 @@ export function useSiteData() {
 </file>
 
 <file path="src/lib/firebaseHelpers.js">
-/**
- * firebaseHelpers.js — FIXED
- *
- * BUG FIXES:
- * 1. invalidateCache() non lancia mai eccezioni (era silenziosamente swallowed
- *    ma poteva causare comportamenti strani in Safari con storage pieno).
- * 2. Tutti i metodi save* ora ritornano sempre { id } per consistenza.
- * 3. saveSiteConfig usa merge:true in modo esplicito e documenta il comportamento.
- * 4. Aggiunto try/catch con re-throw in ogni helper per stack trace chiari.
- */
-
 import {
   doc, getDoc, setDoc, updateDoc,
   collection, getDocs, addDoc, deleteDoc,
 } from 'firebase/firestore'
-import {
-  ref,
-  uploadBytesResumable,
-  getDownloadURL,
-} from 'firebase/storage'
-import { db, storage } from './firebase'
+import { db, auth } from './firebase'
 
-// ─── Cache invalidation — mai lancia eccezioni ────────────────────────
 function invalidateCache() {
   try {
     localStorage.removeItem('polartronic_cache')
   } catch (e) {
-    // Storage pieno o non disponibile — ignora silenziosamente
     console.warn('[cache] invalidation skipped:', e.message)
   }
 }
 
-// ─── SITE CONFIG ──────────────────────────────────────────────────────
 export async function getSiteConfig() {
   try {
     const snap = await getDoc(doc(db, 'site', 'config'))
@@ -7005,10 +6934,6 @@ export async function getSiteConfig() {
   }
 }
 
-/**
- * FIX: merge:true garantisce che campi non inclusi nel payload non vengano
- * cancellati. Ogni tab può salvare solo la propria sezione senza toccare le altre.
- */
 export async function saveSiteConfig(data) {
   try {
     await setDoc(doc(db, 'site', 'config'), data, { merge: true })
@@ -7020,7 +6945,6 @@ export async function saveSiteConfig(data) {
   }
 }
 
-// ─── ECOSYSTEMS ───────────────────────────────────────────────────────
 export async function getEcosystems() {
   try {
     const snap = await getDocs(collection(db, 'ecosystems'))
@@ -7058,7 +6982,6 @@ export async function deleteEcosystem(id) {
   }
 }
 
-// ─── PROJECTS ─────────────────────────────────────────────────────────
 export async function getProjects() {
   try {
     const snap = await getDocs(collection(db, 'projects'))
@@ -7096,7 +7019,6 @@ export async function deleteProject(id) {
   }
 }
 
-// ─── TESTIMONIALS ─────────────────────────────────────────────────────
 export async function getTestimonials() {
   try {
     const snap = await getDocs(collection(db, 'testimonials'))
@@ -7134,7 +7056,6 @@ export async function deleteTestimonial(id) {
   }
 }
 
-// ─── SERVICES ─────────────────────────────────────────────────────────
 export async function getServices() {
   try {
     const snap = await getDocs(collection(db, 'services'))
@@ -7172,62 +7093,308 @@ export async function deleteService(id) {
   }
 }
 
-// ─── IMAGE UPLOAD ─────────────────────────────────────────────────────
-export async function uploadImage(file, folder = 'images', onProgress = null) {
-  if (!file) throw new Error('Nessun file fornito')
-  if (!file.type.startsWith('image/')) throw new Error('Il file non è un\'immagine valida')
-  if (file.size > 10 * 1024 * 1024) throw new Error('L\'immagine supera i 10 MB consentiti')
-
-  const ext      = file.name.split('.').pop()
-  const safeName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
-  const path     = `${folder}/${safeName}`
-
-  const storageRef = ref(storage, path)
-
+// ─── Comprime imagen con canvas → base64 WebP ────────────────────────
+function compressImage(file, maxWidth = 1200, quality = 0.85) {
   return new Promise((resolve, reject) => {
-    const uploadTask = uploadBytesResumable(storageRef, file, {
-      contentType:  file.type,
-      cacheControl: 'public, max-age=31536000',
-    })
+    const img = new Image()
+    const objectUrl = URL.createObjectURL(file)
 
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const progress = Math.round(
-          (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-        )
-        if (typeof onProgress === 'function') onProgress(progress)
-      },
-      (error) => {
-        const msgs = {
-          'storage/unauthorized':    'Permessi mancanti: verifica le regole Storage su Firebase Console',
-          'storage/canceled':        'Upload annullato',
-          'storage/bucket-not-found':'Bucket non trovato. Verifica storageBucket in firebase.js',
-          'storage/unknown':         'Errore sconosciuto. Controlla la console Firebase.',
-        }
-        reject(new Error(msgs[error.code] || 'Errore durante l\'upload'))
-      },
-      async () => {
-        try {
-          const url = await getDownloadURL(uploadTask.snapshot.ref)
-          resolve(url)
-        } catch {
-          reject(new Error('Immagine caricata ma URL non recuperabile'))
-        }
+    img.onload = () => {
+      let { width, height } = img
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width)
+        width = maxWidth
       }
-    )
+
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, width, height)
+
+      URL.revokeObjectURL(objectUrl)
+      resolve(canvas.toDataURL('image/webp', quality))
+    }
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('Error cargando imagen'))
+    }
+
+    img.src = objectUrl
   })
+}
+
+// ─── Upload imagen → Firestore (base64) — sin Firebase Storage, sin CORS ──
+export async function uploadImage(file, folder = 'images', onProgress = null) {
+  if (!file) throw new Error('No file provided')
+  if (!file.type.startsWith('image/')) throw new Error('Not a valid image')
+  if (file.size > 10 * 1024 * 1024) throw new Error('Image exceeds 10 MB')
+
+  const user = auth.currentUser
+  if (!user) throw new Error('Usuario no autenticado')
+
+  if (typeof onProgress === 'function') onProgress(10)
+
+  // Comprimir imagen a WebP máx 1200px
+  const base64 = await compressImage(file, 1200, 0.85)
+
+  if (typeof onProgress === 'function') onProgress(60)
+
+  // Guardar en Firestore — colección 'images'
+  // Añade la regla en Firestore:
+  // match /images/{doc} { allow read: if true; allow write: if request.auth != null; }
+  await addDoc(collection(db, 'images'), {
+    data: base64,
+    folder,
+    name: file.name,
+    type: 'image/webp',
+    createdAt: new Date().toISOString(),
+    uid: user.uid,
+  })
+
+  if (typeof onProgress === 'function') onProgress(100)
+
+  // Devuelve el base64 directamente — funciona como src en cualquier <img>
+  return base64
+}
+</file>
+
+<file path="src/components/admin/AdminSidebar.jsx">
+/**
+ * AdminSidebar.jsx — FIXED
+ * FIX 1: TABS_AGGIORNATO → TABS (ReferenceError causaba pantalla negra)
+ * FIX 2: BrandMark movido fuera del render condicional
+ */
+
+import { useEffect, useState } from 'react'
+
+const TABS = [
+  { id: 'site',          icon: '⚙️', label: 'Marca & Colores'    },
+  { id: 'hero',          icon: '🖼',  label: 'Hero / Portada'     },
+  { id: 'services',      icon: '💼', label: 'Servicios'          },
+  { id: 'ecosystems',    icon: '🎟',  label: 'Membresías'         },
+  { id: 'projects',      icon: '🗂',  label: 'Proyectos'          },
+  { id: 'testimonials',  icon: '💬', label: 'Testimonios'        },
+  { id: 'contact',       icon: '📬', label: 'Contacto & Footer'  },
+  { id: 'language',      icon: '🌐', label: 'Lingua del Sito'    },
+  { id: 'leads',         icon: '📥', label: 'Inbox Lead'         },
+  { id: 'agents',        icon: '👥', label: 'Agenti Commerciali' },
+  { id: 'notifications', icon: '🔔', label: 'Notifiche & Canali' },
+]
+
+function BrandMark({ logo, name, height = 28 }) {
+  return logo ? (
+    <img src={logo} alt={name} style={{ height, maxWidth: 160, objectFit: 'contain' }} />
+  ) : (
+    <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '1.6rem', color: '#ff3c3c', letterSpacing: 2 }}>
+      {name}
+    </span>
+  )
+}
+
+export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, brand }) {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  const logo = brand?.logo || ''
+  const name = brand?.name || 'POLARTRONIC'
+
+  /* ── MOBILE: bottom sheet ── */
+  if (isMobile) {
+    return (
+      <>
+        {open && (
+          <div
+            onClick={onToggle}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 1100,
+              background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+            }}
+          />
+        )}
+
+        <div style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1200,
+          background: '#090909',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: open ? '20px 20px 0 0' : 0,
+          transform: open ? 'translateY(0)' : 'translateY(100%)',
+          transition: 'transform 0.35s cubic-bezier(0.23,1,0.32,1)',
+          maxHeight: '80vh', display: 'flex', flexDirection: 'column',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px', flexShrink: 0 }}>
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
+          </div>
+
+          <div style={{
+            padding: '4px 20px 12px',
+            borderBottom: '1px solid rgba(255,255,255,0.07)',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            flexShrink: 0,
+          }}>
+            <div>
+              <BrandMark logo={logo} name={name} height={28} />
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>Admin Panel</div>
+            </div>
+            <button onClick={onToggle} style={{
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+              color: 'rgba(255,255,255,0.6)', width: 34, height: 34, borderRadius: '50%',
+              cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>✕</button>
+          </div>
+
+          <nav style={{ overflowY: 'auto', padding: '8px 0', flex: 1 }}>
+            {TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => { onTabChange(tab.id); onToggle() }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 14,
+                  padding: '13px 20px', border: 'none', cursor: 'pointer', textAlign: 'left',
+                  borderLeft: activeTab === tab.id ? '3px solid #ff3c3c' : '3px solid transparent',
+                  background: activeTab === tab.id ? 'rgba(255,60,60,0.08)' : 'transparent',
+                  color:      activeTab === tab.id ? '#fff' : 'rgba(255,255,255,0.55)',
+                  fontSize: 14, fontWeight: activeTab === tab.id ? 700 : 400,
+                  transition: 'all 0.15s',
+                }}
+              >
+                <span style={{ fontSize: 20, width: 28, textAlign: 'center' }}>{tab.icon}</span>
+                <span>{tab.label}</span>
+                {activeTab === tab.id && (
+                  <span style={{ marginLeft: 'auto', color: '#ff3c3c', fontSize: 10 }}>●</span>
+                )}
+              </button>
+            ))}
+          </nav>
+
+          <div style={{ padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
+            <a href="/" target="_blank" rel="noreferrer" style={{
+              fontSize: 13, color: 'rgba(255,255,255,0.4)',
+              textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              🌐 Ver sitio público ↗
+            </a>
+          </div>
+        </div>
+
+        {/* Bottom bar fija */}
+        <nav style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0,
+          zIndex: open ? 0 : 1050,
+          background: 'rgba(8,8,8,0.97)',
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+          display: 'flex', alignItems: 'stretch',
+          height: 60, backdropFilter: 'blur(20px)',
+          visibility: open ? 'hidden' : 'visible',
+        }}>
+          {TABS.slice(0, 4).map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => onTabChange(tab.id)}
+              style={{
+                flex: 1, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: 2,
+                border: 'none', background: 'transparent', cursor: 'pointer', padding: '6px 2px',
+                borderTop: activeTab === tab.id ? '2px solid #ff3c3c' : '2px solid transparent',
+                transition: 'all 0.15s',
+              }}
+            >
+              <span style={{ fontSize: 18 }}>{tab.icon}</span>
+              <span style={{
+                fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5,
+                color: activeTab === tab.id ? '#ff3c3c' : 'rgba(255,255,255,0.35)',
+              }}>
+                {tab.label.split(' ')[0]}
+              </span>
+            </button>
+          ))}
+          <button
+            onClick={onToggle}
+            style={{
+              flex: 1, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', gap: 2,
+              border: 'none', background: 'transparent', cursor: 'pointer', padding: '6px 2px',
+              borderTop: '2px solid transparent',
+            }}
+          >
+            <span style={{ fontSize: 18 }}>☰</span>
+            <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: 'rgba(255,255,255,0.35)' }}>Más</span>
+          </button>
+        </nav>
+      </>
+    )
+  }
+
+  /* ── DESKTOP: sidebar clásico ── */
+  if (!open) return null
+
+  return (
+    <aside style={{
+      width: 240, flexShrink: 0, background: '#080808',
+      borderRight: '1px solid rgba(255,255,255,0.07)',
+      height: '100vh', overflowY: 'auto',
+      display: 'flex', flexDirection: 'column', padding: '1.5rem 0',
+    }}>
+      <div style={{ padding: '0 1.5rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <BrandMark logo={logo} name={name} height={32} />
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>Admin Panel</div>
+      </div>
+
+      <nav style={{ padding: '1rem 0', flex: 1 }}>
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => onTabChange(tab.id)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+              padding: '11px 1.5rem', border: 'none',
+              cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
+              borderLeft:  activeTab === tab.id ? '2px solid #ff3c3c' : '2px solid transparent',
+              background:  activeTab === tab.id ? 'rgba(255,60,60,0.06)' : 'transparent',
+              color:       activeTab === tab.id ? '#fff' : 'rgba(255,255,255,0.45)',
+              fontSize: 13, fontWeight: activeTab === tab.id ? 600 : 400,
+            }}
+            onMouseEnter={e => { if (activeTab !== tab.id) e.currentTarget.style.color = 'rgba(255,255,255,0.8)' }}
+            onMouseLeave={e => { if (activeTab !== tab.id) e.currentTarget.style.color = 'rgba(255,255,255,0.45)' }}
+          >
+            <span style={{ fontSize: 16 }}>{tab.icon}</span>
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
+      <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+        <a href="/" target="_blank" rel="noreferrer" style={{
+          fontSize: 12, color: 'rgba(255,255,255,0.35)',
+          textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          🌐 Ver sitio público ↗
+        </a>
+      </div>
+    </aside>
+  )
 }
 </file>
 
 <file path="src/pages/AdminPanel.jsx">
 /**
- * AdminPanel.jsx — FIXED
+ * AdminPanel.jsx — FIXED v2
  *
- * BUG FIXES:
- * 1. El objeto de tabs se llamaba `tabs_aggiornato` pero se renderizaba
- *    con `{tabs[activeTab]}` → variable indefinida → pantalla negra.
- * 2. Los tabs leads/agents/notifications tenían strings en vez de JSX.
+ * FIX BOTÓN GUARDAR TAPADO:
+ *   Aggiunta classe `admin-main-content` al <main> per applicare il
+ *   padding-bottom corretto (120px mobile, 100px desktop) che garantisce
+ *   che il bottone "Guardar" non venga coperto dalla bottom nav mobile.
+ *
+ *   Combinato con .save-btn-wrap sticky in index.css → il bottone è
+ *   sempre visibile e cliccabile su qualsiasi dimensione schermo.
  */
 
 import { useState, useEffect } from 'react'
@@ -7253,7 +7420,6 @@ export default function AdminPanel() {
   const { logout } = useAuth()
   const data = useSiteData()
 
-  // Apply brand colours + language
   useEffect(() => {
     if (data.site?.brand?.primary) {
       document.documentElement.style.setProperty('--primary', data.site.brand.primary)
@@ -7267,8 +7433,6 @@ export default function AdminPanel() {
     }
   }, [data.site?.brand?.primary, data.site?.brand?.bg, data.site?.brand?.language])
 
-  // FIX 1: nombre correcto (era tabs_aggiornato, referenciado como tabs)
-  // FIX 2: leads/agents/notifications son JSX, no strings
   const tabs = {
     site:          <SiteConfigTab    data={data} />,
     hero:          <HeroTab          data={data} />,
@@ -7287,9 +7451,8 @@ export default function AdminPanel() {
     <>
       <style>{`
         @media (max-width: 767px) {
-          .admin-main-content { padding-bottom: 80px !important; }
-          .admin-header-wrap  { padding: 0 1rem !important; }
-          .admin-main-wrap    { padding: 1rem !important; }
+          .admin-header-wrap { padding: 0 1rem !important; }
+          .admin-main-wrap   { padding: 1rem !important; }
         }
       `}</style>
 
@@ -7309,7 +7472,11 @@ export default function AdminPanel() {
             activeTab={activeTab}
           />
 
-          <main className="admin-main-wrap" style={{ flex: 1, padding: '2rem', maxWidth: 900 }}>
+          {/* FIX: clase admin-main-content añadida para el padding-bottom correcto */}
+          <main
+            className="admin-main-wrap admin-main-content"
+            style={{ flex: 1, padding: '2rem', maxWidth: 900 }}
+          >
             {tabs[activeTab]}
           </main>
         </div>

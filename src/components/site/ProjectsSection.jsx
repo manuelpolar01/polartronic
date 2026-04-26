@@ -1,22 +1,25 @@
 import { useState } from 'react'
+import { useUIStrings } from '../../hooks/useUIStrings'
 
-export default function ProjectsSection({ projects }) {
+export default function ProjectsSection({ projects, brand }) {
   if (!projects?.length) return null
+  const primary = brand?.primary || 'var(--primary)'
+  const t = useUIStrings(brand)
 
   return (
     <section id="proyectos" style={{ padding: '100px 6%', background: 'rgba(255,255,255,0.01)' }}>
       <div style={{ textAlign: 'center', marginBottom: 64 }}>
         <p style={{
-          color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 800,
+          color: primary, fontSize: '0.75rem', fontWeight: 800,
           textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12,
         }}>
-          Casos de Éxito
+          {t.projects.eyebrow}
         </p>
         <h2 style={{ fontSize: 'clamp(2rem,5vw,3rem)', fontWeight: 800 }}>
-          Nuestro <span style={{ color: 'var(--primary)' }}>Portafolio</span>
+          {t.projects.heading} <span style={{ color: primary }}>{t.projects.headingAccent}</span>
         </h2>
         <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 15, marginTop: 12, maxWidth: 500, margin: '12px auto 0' }}>
-          Resultados reales para clientes reales. Cada proyecto es una historia de transformación digital.
+          {t.projects.sub}
         </p>
       </div>
 
@@ -26,17 +29,16 @@ export default function ProjectsSection({ projects }) {
         gap: 24,
       }}>
         {projects.map((proj, i) => (
-          <ProjectCard key={proj.id || i} proj={proj} />
+          <ProjectCard key={proj.id || i} proj={proj} primary={primary} t={t} />
         ))}
       </div>
     </section>
   )
 }
 
-function ProjectCard({ proj }) {
+function ProjectCard({ proj, primary, t }) {
   const [hovered, setHovered] = useState(false)
 
-  // Compatibilidad hacia atrás: si el proyecto solo tiene `title` sin `client`
   const client      = proj.client      || proj.title    || ''
   const industry    = proj.industry    || proj.category || ''
   const title       = proj.title       || ''
@@ -44,7 +46,6 @@ function ProjectCard({ proj }) {
   const results     = proj.results     || ''
   const url         = proj.url         || proj.link     || '#'
 
-  // Parsear resultados (puede venir como "texto · texto" o texto libre)
   const resultItems = results
     ? results.split('·').map(r => r.trim()).filter(Boolean)
     : []
@@ -57,11 +58,9 @@ function ProjectCard({ proj }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        display: 'flex',
-        flexDirection: 'column',
-        borderRadius: 20,
-        overflow: 'hidden',
-        border: hovered ? '1px solid var(--primary)' : '1px solid rgba(255,255,255,0.07)',
+        display: 'flex', flexDirection: 'column',
+        borderRadius: 20, overflow: 'hidden',
+        border: hovered ? `1px solid ${primary}` : '1px solid rgba(255,255,255,0.07)',
         textDecoration: 'none',
         background: hovered ? 'rgba(255,60,60,0.03)' : 'rgba(255,255,255,0.02)',
         transition: 'all 0.4s cubic-bezier(0.23,1,0.32,1)',
@@ -77,14 +76,12 @@ function ProjectCard({ proj }) {
             src={proj.image}
             alt={client}
             style={{
-              width: '100%', height: '100%', objectFit: 'cover',
-              display: 'block',
+              width: '100%', height: '100%', objectFit: 'cover', display: 'block',
               filter: hovered ? 'brightness(0.65)' : 'brightness(0.5)',
               transform: hovered ? 'scale(1.06)' : 'scale(1)',
               transition: 'all 0.5s cubic-bezier(0.23,1,0.32,1)',
             }}
           />
-          {/* Industry badge */}
           {industry && (
             <div style={{
               position: 'absolute', top: 14, left: 14,
@@ -98,7 +95,6 @@ function ProjectCard({ proj }) {
               {industry}
             </div>
           )}
-          {/* External link indicator */}
           {url !== '#' && (
             <div style={{
               position: 'absolute', top: 14, right: 14,
@@ -106,9 +102,8 @@ function ProjectCard({ proj }) {
               background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
               border: '1px solid rgba(255,255,255,0.15)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--primary)', fontSize: 14,
-              opacity: hovered ? 1 : 0,
-              transition: 'opacity 0.3s',
+              color: primary, fontSize: 14,
+              opacity: hovered ? 1 : 0, transition: 'opacity 0.3s',
             }}>
               ↗
             </div>
@@ -118,10 +113,9 @@ function ProjectCard({ proj }) {
 
       {/* Content */}
       <div style={{ padding: '22px 24px 24px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-        {/* Client + title */}
         <div style={{ marginBottom: 10 }}>
           <div style={{
-            color: 'var(--primary)', fontWeight: 800, fontSize: '0.72rem',
+            color: primary, fontWeight: 800, fontSize: '0.72rem',
             textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4,
           }}>
             {client}
@@ -133,7 +127,6 @@ function ProjectCard({ proj }) {
           )}
         </div>
 
-        {/* Description */}
         {description && (
           <p style={{
             color: 'rgba(255,255,255,0.45)', fontSize: 13, lineHeight: 1.7,
@@ -143,7 +136,6 @@ function ProjectCard({ proj }) {
           </p>
         )}
 
-        {/* Results */}
         {resultItems.length > 0 && (
           <div style={{
             borderTop: '1px solid rgba(255,255,255,0.06)',
@@ -154,7 +146,7 @@ function ProjectCard({ proj }) {
               fontSize: 9, fontWeight: 800, textTransform: 'uppercase',
               letterSpacing: 2, color: 'rgba(255,255,255,0.25)', marginBottom: 4,
             }}>
-              Resultados
+              {t.projects.results}
             </div>
             {resultItems.map((r, i) => (
               <div key={i} style={{
@@ -163,9 +155,9 @@ function ProjectCard({ proj }) {
               }}>
                 <span style={{
                   width: 16, height: 16, borderRadius: '50%',
-                  background: 'rgba(255,60,60,0.12)', border: '1px solid rgba(255,60,60,0.25)',
+                  background: 'rgba(255,60,60,0.12)', border: `1px solid ${primary}40`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 8, color: 'var(--primary)', flexShrink: 0,
+                  fontSize: 8, color: primary, flexShrink: 0,
                 }}>▲</span>
                 {r}
               </div>

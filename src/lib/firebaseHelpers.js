@@ -1,36 +1,17 @@
-/**
- * firebaseHelpers.js — FIXED
- *
- * BUG FIXES:
- * 1. invalidateCache() non lancia mai eccezioni (era silenziosamente swallowed
- *    ma poteva causare comportamenti strani in Safari con storage pieno).
- * 2. Tutti i metodi save* ora ritornano sempre { id } per consistenza.
- * 3. saveSiteConfig usa merge:true in modo esplicito e documenta il comportamento.
- * 4. Aggiunto try/catch con re-throw in ogni helper per stack trace chiari.
- */
-
 import {
   doc, getDoc, setDoc, updateDoc,
   collection, getDocs, addDoc, deleteDoc,
 } from 'firebase/firestore'
-import {
-  ref,
-  uploadBytesResumable,
-  getDownloadURL,
-} from 'firebase/storage'
-import { db, storage } from './firebase'
+import { db, auth } from './firebase'
 
-// ─── Cache invalidation — mai lancia eccezioni ────────────────────────
 function invalidateCache() {
   try {
     localStorage.removeItem('polartronic_cache')
   } catch (e) {
-    // Storage pieno o non disponibile — ignora silenziosamente
     console.warn('[cache] invalidation skipped:', e.message)
   }
 }
 
-// ─── SITE CONFIG ──────────────────────────────────────────────────────
 export async function getSiteConfig() {
   try {
     const snap = await getDoc(doc(db, 'site', 'config'))
@@ -41,10 +22,6 @@ export async function getSiteConfig() {
   }
 }
 
-/**
- * FIX: merge:true garantisce che campi non inclusi nel payload non vengano
- * cancellati. Ogni tab può salvare solo la propria sezione senza toccare le altre.
- */
 export async function saveSiteConfig(data) {
   try {
     await setDoc(doc(db, 'site', 'config'), data, { merge: true })
@@ -56,7 +33,6 @@ export async function saveSiteConfig(data) {
   }
 }
 
-// ─── ECOSYSTEMS ───────────────────────────────────────────────────────
 export async function getEcosystems() {
   try {
     const snap = await getDocs(collection(db, 'ecosystems'))
@@ -94,7 +70,6 @@ export async function deleteEcosystem(id) {
   }
 }
 
-// ─── PROJECTS ─────────────────────────────────────────────────────────
 export async function getProjects() {
   try {
     const snap = await getDocs(collection(db, 'projects'))
@@ -132,7 +107,6 @@ export async function deleteProject(id) {
   }
 }
 
-// ─── TESTIMONIALS ─────────────────────────────────────────────────────
 export async function getTestimonials() {
   try {
     const snap = await getDocs(collection(db, 'testimonials'))
@@ -170,7 +144,6 @@ export async function deleteTestimonial(id) {
   }
 }
 
-// ─── SERVICES ─────────────────────────────────────────────────────────
 export async function getServices() {
   try {
     const snap = await getDocs(collection(db, 'services'))
@@ -208,49 +181,69 @@ export async function deleteService(id) {
   }
 }
 
-// ─── IMAGE UPLOAD ─────────────────────────────────────────────────────
-export async function uploadImage(file, folder = 'images', onProgress = null) {
-  if (!file) throw new Error('Nessun file fornito')
-  if (!file.type.startsWith('image/')) throw new Error('Il file non è un\'immagine valida')
-  if (file.size > 10 * 1024 * 1024) throw new Error('L\'immagine supera i 10 MB consentiti')
-
-  const ext      = file.name.split('.').pop()
-  const safeName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
-  const path     = `${folder}/${safeName}`
-
-  const storageRef = ref(storage, path)
-
+// ─── Comprime imagen con canvas → base64 WebP ────────────────────────
+function compressImage(file, maxWidth = 1200, quality = 0.85) {
   return new Promise((resolve, reject) => {
-    const uploadTask = uploadBytesResumable(storageRef, file, {
-      contentType:  file.type,
-      cacheControl: 'public, max-age=31536000',
-    })
+    const img = new Image()
+    const objectUrl = URL.createObjectURL(file)
 
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const progress = Math.round(
-          (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-        )
-        if (typeof onProgress === 'function') onProgress(progress)
-      },
-      (error) => {
-        const msgs = {
-          'storage/unauthorized':    'Permessi mancanti: verifica le regole Storage su Firebase Console',
-          'storage/canceled':        'Upload annullato',
-          'storage/bucket-not-found':'Bucket non trovato. Verifica storageBucket in firebase.js',
-          'storage/unknown':         'Errore sconosciuto. Controlla la console Firebase.',
-        }
-        reject(new Error(msgs[error.code] || 'Errore durante l\'upload'))
-      },
-      async () => {
-        try {
-          const url = await getDownloadURL(uploadTask.snapshot.ref)
-          resolve(url)
-        } catch {
-          reject(new Error('Immagine caricata ma URL non recuperabile'))
-        }
+    img.onload = () => {
+      let { width, height } = img
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width)
+        width = maxWidth
       }
-    )
+
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, width, height)
+
+      URL.revokeObjectURL(objectUrl)
+      resolve(canvas.toDataURL('image/webp', quality))
+    }
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('Error cargando imagen'))
+    }
+
+    img.src = objectUrl
   })
+}
+
+// ─── Upload imagen → Firestore (base64) — sin Firebase Storage, sin CORS ──
+export async function uploadImage(file, folder = 'images', onProgress = null) {
+  if (!file) throw new Error('No file provided')
+  if (!file.type.startsWith('image/')) throw new Error('Not a valid image')
+  if (file.size > 10 * 1024 * 1024) throw new Error('Image exceeds 10 MB')
+
+  const user = auth.currentUser
+  if (!user) throw new Error('Usuario no autenticado')
+
+  if (typeof onProgress === 'function') onProgress(10)
+
+  // Comprimir imagen a WebP máx 1200px
+  const base64 = await compressImage(file, 1200, 0.85)
+
+  if (typeof onProgress === 'function') onProgress(60)
+
+  // Guardar en Firestore — colección 'images'
+  // Añade la regla en Firestore:
+  // match /images/{doc} { allow read: if true; allow write: if request.auth != null; }
+  await addDoc(collection(db, 'images'), {
+    data: base64,
+    folder,
+    name: file.name,
+    type: 'image/webp',
+    createdAt: new Date().toISOString(),
+    uid: user.uid,
+  })
+
+  if (typeof onProgress === 'function') onProgress(100)
+
+  // Devuelve el base64 directamente — funciona como src en cualquier <img>
+  return base64
 }

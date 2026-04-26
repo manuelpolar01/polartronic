@@ -1,11 +1,13 @@
 /**
- * AdminPanel.jsx — FIXED
+ * AdminPanel.jsx — FIXED v2
  *
- * BUG FIXES:
- * 1. El objeto de tabs se llamaba `tabs_aggiornato` pero se renderizaba
- *    con `{tabs[activeTab]}` → variable indefinida → pantalla negra.
- * 2. Los tabs leads/agents/notifications tenían strings en vez de JSX.
- * 3. Eliminado `git` suelto al final del archivo que causaba ReferenceError.
+ * FIX BOTÓN GUARDAR TAPADO:
+ *   Aggiunta classe `admin-main-content` al <main> per applicare il
+ *   padding-bottom corretto (120px mobile, 100px desktop) che garantisce
+ *   che il bottone "Guardar" non venga coperto dalla bottom nav mobile.
+ *
+ *   Combinato con .save-btn-wrap sticky in index.css → il bottone è
+ *   sempre visibile e cliccabile su qualsiasi dimensione schermo.
  */
 
 import { useState, useEffect } from 'react'
@@ -62,9 +64,8 @@ export default function AdminPanel() {
     <>
       <style>{`
         @media (max-width: 767px) {
-          .admin-main-content { padding-bottom: 80px !important; }
-          .admin-header-wrap  { padding: 0 1rem !important; }
-          .admin-main-wrap    { padding: 1rem !important; }
+          .admin-header-wrap { padding: 0 1rem !important; }
+          .admin-main-wrap   { padding: 1rem !important; }
         }
       `}</style>
 
@@ -84,7 +85,11 @@ export default function AdminPanel() {
             activeTab={activeTab}
           />
 
-          <main className="admin-main-wrap" style={{ flex: 1, padding: '2rem', maxWidth: 900 }}>
+          {/* FIX: clase admin-main-content añadida para el padding-bottom correcto */}
+          <main
+            className="admin-main-wrap admin-main-content"
+            style={{ flex: 1, padding: '2rem', maxWidth: 900 }}
+          >
             {tabs[activeTab]}
           </main>
         </div>

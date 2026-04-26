@@ -1,3 +1,10 @@
+/**
+ * ImageUploadField.jsx — FIXED v3
+ *
+ * Usa uploadImage() de firebaseHelpers que internamente
+ * usa la API REST de Firebase Storage — sin CORS issues.
+ */
+
 import { useState } from 'react'
 import { uploadImage } from '../../lib/firebaseHelpers'
 import toast from 'react-hot-toast'
@@ -8,12 +15,13 @@ export default function ImageUploadField({
   label = 'Imagen',
   folder = 'images',
 }) {
-  const [uploading, setUploading]   = useState(false)
-  const [progress, setProgress]     = useState(0)
-  const [dragOver, setDragOver]     = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [progress,  setProgress]  = useState(0)
+  const [dragOver,  setDragOver]  = useState(false)
 
   const handleFile = async (file) => {
     if (!file) return
+
     if (!file.type.startsWith('image/')) {
       toast.error('Solo se permiten imágenes')
       return
@@ -33,23 +41,33 @@ export default function ImageUploadField({
         setProgress(pct)
         toast.loading(`Subiendo… ${pct}%`, { id: toastId })
       })
+
+      // FIX: forzar 100% antes del toast.success
+      setProgress(100)
       onChange(url)
       toast.success('Imagen subida ✓', { id: toastId })
     } catch (err) {
-      toast.error(err.message || 'Error al subir imagen', { id: toastId })
       console.error('[ImageUploadField]', err)
+      let msg = 'Error al subir imagen'
+      if (err.message?.includes('autenticado')) msg = 'Debes estar autenticado para subir imágenes'
+      else if (err.message?.includes('10 MB'))   msg = 'La imagen supera los 10 MB'
+      toast.error(msg, { id: toastId })
     } finally {
       setUploading(false)
       setProgress(0)
     }
   }
 
-  const handleInputChange = (e) => handleFile(e.target.files[0])
+  const handleInputChange = (e) => {
+    const file = e.target.files?.[0]
+    if (file) handleFile(file)
+    e.target.value = ''
+  }
 
   const handleDrop = (e) => {
     e.preventDefault()
     setDragOver(false)
-    const file = e.dataTransfer.files[0]
+    const file = e.dataTransfer.files?.[0]
     if (file) handleFile(file)
   }
 
@@ -66,15 +84,11 @@ export default function ImageUploadField({
         {label}
       </label>
 
-      {/* Preview */}
       {value && (
         <div style={{
-          marginBottom: 10,
-          borderRadius: 10,
-          overflow: 'hidden',
+          marginBottom: 10, borderRadius: 10, overflow: 'hidden',
           border: '1px solid rgba(255,255,255,0.1)',
-          position: 'relative',
-          height: 140,
+          position: 'relative', height: 140,
         }}>
           <img
             src={value}
@@ -93,27 +107,20 @@ export default function ImageUploadField({
               alignItems: 'center', justifyContent: 'center',
               lineHeight: 1,
             }}
-            title="Quitar imagen"
-          >
-            ✕
-          </button>
+          >✕</button>
         </div>
       )}
 
-      {/* Drag & drop zone */}
       <div
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         style={{
           border: `2px dashed ${dragOver ? 'var(--primary)' : 'rgba(255,255,255,0.15)'}`,
-          borderRadius: 10,
-          padding: '14px 16px',
+          borderRadius: 10, padding: '14px 16px',
           background: dragOver ? 'rgba(255,60,60,0.05)' : 'rgba(255,255,255,0.02)',
           transition: 'all 0.2s',
-          display: 'flex',
-          gap: 10,
-          alignItems: 'center',
+          display: 'flex', gap: 10, alignItems: 'center',
         }}
       >
         <input
@@ -126,22 +133,28 @@ export default function ImageUploadField({
         />
 
         <label style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
+          display: 'flex', alignItems: 'center', gap: 6,
           background: uploading ? 'rgba(255,60,60,0.05)' : 'rgba(255,60,60,0.12)',
           border: '1px solid rgba(255,60,60,0.3)',
-          padding: '9px 16px',
-          borderRadius: 8,
+          padding: '9px 16px', borderRadius: 8,
           cursor: uploading ? 'not-allowed' : 'pointer',
           fontSize: 12,
           color: uploading ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.8)',
           whiteSpace: 'nowrap',
-          opacity: uploading ? 0.6 : 1,
-          transition: 'all 0.2s',
-          flexShrink: 0,
+          opacity: uploading ? 0.7 : 1,
+          transition: 'all 0.2s', flexShrink: 0,
+          userSelect: 'none',
         }}>
-          {uploading ? `${progress}%` : '📁 Subir'}
+          {uploading ? (
+            <>
+              <span style={{
+                width: 12, height: 12, border: '2px solid rgba(255,255,255,0.3)',
+                borderTopColor: 'white', borderRadius: '50%',
+                display: 'inline-block', animation: 'imgSpin 0.7s linear infinite',
+              }} />
+              {progress}%
+            </>
+          ) : '📁 Subir'}
           <input
             type="file"
             accept="image/*"
@@ -152,32 +165,24 @@ export default function ImageUploadField({
         </label>
       </div>
 
-      {/* Barra de progreso */}
       {uploading && (
         <div style={{
-          marginTop: 8,
-          height: 3,
-          borderRadius: 2,
-          background: 'rgba(255,255,255,0.08)',
-          overflow: 'hidden',
+          marginTop: 8, height: 3, borderRadius: 2,
+          background: 'rgba(255,255,255,0.08)', overflow: 'hidden',
         }}>
           <div style={{
-            height: '100%',
-            width: `${progress}%`,
-            background: 'var(--primary)',
-            borderRadius: 2,
-            transition: 'width 0.3s ease',
+            height: '100%', width: `${progress}%`,
+            background: 'var(--primary)', borderRadius: 2,
+            transition: 'width 0.25s ease',
           }} />
         </div>
       )}
 
-      <p style={{
-        fontSize: 11,
-        color: 'rgba(255,255,255,0.2)',
-        marginTop: 6,
-      }}>
-        Arrastra una imagen aquí o haz clic en "Subir". Máx 10 MB.
+      <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', marginTop: 6 }}>
+        Arrastra una imagen aquí o haz clic en "Subir". Máx 10 MB · JPG, PNG, WebP
       </p>
+
+      <style>{`@keyframes imgSpin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }

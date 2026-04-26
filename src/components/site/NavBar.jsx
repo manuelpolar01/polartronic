@@ -1,22 +1,51 @@
-/**
- * NavBar.jsx — updated with useUIStrings
- * Nav link labels now come from the i18n dictionary instead of being hardcoded.
- */
-
 import { useState, useEffect } from 'react'
 import { useUIStrings }        from '../../hooks/useUIStrings'
+
+function BrandLogo({ brand, scrolled }) {
+  const logo    = brand?.logo    || ''
+  const name    = brand?.name    || 'POLARTRONIC'
+  const primary = brand?.primary || '#ff3c3c'
+  const layout  = brand?.logoLayout || (logo ? 'logo-only' : 'name-only')
+
+  const imgH = scrolled ? 28 : 36
+
+  if (layout === 'logo-only') {
+    return logo
+      ? <img src={logo} alt={name} style={{ height: imgH, maxWidth: 180, objectFit: 'contain', transition: 'height 0.4s' }} />
+      : <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '2rem', color: primary, letterSpacing: 2 }}>{name}</span>
+  }
+
+  if (layout === 'logo-name-side') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {logo && <img src={logo} alt={name} style={{ height: imgH - 4, maxWidth: 60, objectFit: 'contain', transition: 'height 0.4s' }} />}
+        <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: scrolled ? '1.5rem' : '1.8rem', color: primary, letterSpacing: 2, transition: 'font-size 0.4s' }}>{name}</span>
+      </div>
+    )
+  }
+
+  if (layout === 'logo-name-stack') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1 }}>
+        {logo && <img src={logo} alt={name} style={{ height: scrolled ? 18 : 22, maxWidth: 100, objectFit: 'contain', transition: 'height 0.4s' }} />}
+        <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: scrolled ? '0.85rem' : '1rem', color: primary, letterSpacing: 2, lineHeight: 1, transition: 'font-size 0.4s' }}>{name}</span>
+      </div>
+    )
+  }
+
+  // name-only
+  return <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '2rem', color: primary, letterSpacing: 2 }}>{name}</span>
+}
 
 export default function NavBar({ brand }) {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-
-  // ── i18n ──────────────────────────────────────────────────────────
   const t = useUIStrings(brand)
 
   const NAV_LINKS = [
     { href: '#home',        label: t.nav.home        },
     { href: '#servicios',   label: t.nav.services    },
-    { href: '#ecosistemas', label: t.nav.memberships  },
+    { href: '#ecosistemas', label: t.nav.memberships },
     { href: '#proyectos',   label: t.nav.projects    },
     { href: '#testimonios', label: t.nav.clients     },
     { href: '#contacto',    label: t.nav.contact     },
@@ -39,9 +68,9 @@ export default function NavBar({ brand }) {
     return () => { document.body.style.overflow = '' }
   }, [menuOpen])
 
-  const name    = brand?.name    || 'POLARTRONIC'
   const primary = brand?.primary || '#ff3c3c'
   const logo    = brand?.logo    || ''
+  const name    = brand?.name    || 'POLARTRONIC'
 
   return (
     <>
@@ -79,27 +108,7 @@ export default function NavBar({ brand }) {
         boxSizing: 'border-box',
       }}>
         <a href="#home" style={{ textDecoration: 'none', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-          {logo ? (
-            <img
-              src={logo}
-              alt={name}
-              style={{
-                height: scrolled ? 32 : 40,
-                maxWidth: 180,
-                objectFit: 'contain',
-                transition: 'height 0.4s cubic-bezier(0.23,1,0.32,1)',
-              }}
-            />
-          ) : (
-            <span style={{
-              fontFamily: 'Bebas Neue, sans-serif',
-              fontSize: '2rem',
-              color: primary,
-              letterSpacing: 2,
-            }}>
-              {name}
-            </span>
-          )}
+          <BrandLogo brand={brand} scrolled={scrolled} />
         </a>
 
         {/* Desktop nav */}
@@ -148,13 +157,7 @@ export default function NavBar({ brand }) {
           `}</style>
 
           <a href="#home" onClick={() => setMenuOpen(false)} style={{ textDecoration: 'none', marginBottom: 8 }}>
-            {logo ? (
-              <img src={logo} alt={name} style={{ height: 40, maxWidth: 160, objectFit: 'contain' }} />
-            ) : (
-              <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '1.8rem', color: primary, letterSpacing: 2 }}>
-                {name}
-              </span>
-            )}
+            <BrandLogo brand={brand} scrolled={false} />
           </a>
 
           {NAV_LINKS.map((l, i) => (
@@ -167,7 +170,6 @@ export default function NavBar({ brand }) {
                 fontSize: 'clamp(1.6rem, 8vw, 2.2rem)', fontWeight: 800,
                 textTransform: 'uppercase', letterSpacing: 3,
                 padding: '10px 24px', borderRadius: 8, transition: 'all 0.2s',
-                animationDelay: `${i * 0.04}s`,
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.color = primary
