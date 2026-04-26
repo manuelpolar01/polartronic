@@ -1,11 +1,11 @@
 /**
  * AdminSidebar.jsx — FIXED
- * BUG: TABS_AGGIORNATO was defined but the code referenced TABS (undefined) → crash → black screen.
- * FIX: renamed to TABS consistently throughout.
+ * BUG FIX: TABS_AGGIORNATO renombrado a TABS (era referenciado como TABS en todo el componente)
  */
 
 import { useEffect, useState } from 'react'
 
+// FIX: era TABS_AGGIORNATO — causaba ReferenceError → pantalla negra
 const TABS = [
   { id: 'site',          icon: '⚙️', label: 'Marca & Colores'      },
   { id: 'hero',          icon: '🖼',  label: 'Hero / Portada'       },
@@ -160,14 +160,14 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, b
             }}
           >
             <span style={{ fontSize: 18 }}>☰</span>
-            <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: 'rgba(255,255,255,0.35)' }}>Più</span>
+            <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: 'rgba(255,255,255,0.35)' }}>Más</span>
           </button>
         </nav>
       </>
     )
   }
 
-  /* ── DESKTOP: sidebar classico ── */
+  /* ── DESKTOP: sidebar clásico ── */
   if (!open) return null
 
   return (
