@@ -1,24 +1,34 @@
 /**
  * AdminSidebar.jsx — FIXED
- * BUG FIX: TABS_AGGIORNATO renombrado a TABS (era referenciado como TABS en todo el componente)
+ * FIX 1: TABS_AGGIORNATO → TABS (ReferenceError causaba pantalla negra)
+ * FIX 2: BrandMark movido fuera del render condicional
  */
 
 import { useEffect, useState } from 'react'
 
-// FIX: era TABS_AGGIORNATO — causaba ReferenceError → pantalla negra
 const TABS = [
-  { id: 'site',          icon: '⚙️', label: 'Marca & Colores'      },
-  { id: 'hero',          icon: '🖼',  label: 'Hero / Portada'       },
-  { id: 'services',      icon: '💼', label: 'Servicios'            },
-  { id: 'ecosystems',    icon: '🎟',  label: 'Membresías'           },
-  { id: 'projects',      icon: '🗂',  label: 'Proyectos'            },
-  { id: 'testimonials',  icon: '💬', label: 'Testimonios'          },
-  { id: 'contact',       icon: '📬', label: 'Contacto & Footer'    },
-  { id: 'language',      icon: '🌐', label: 'Lingua del Sito'      },
-  { id: 'leads',         icon: '📥', label: 'Inbox Lead'           },
-  { id: 'agents',        icon: '👥', label: 'Agenti Commerciali'   },
-  { id: 'notifications', icon: '🔔', label: 'Notifiche & Canali'   },
+  { id: 'site',          icon: '⚙️', label: 'Marca & Colores'    },
+  { id: 'hero',          icon: '🖼',  label: 'Hero / Portada'     },
+  { id: 'services',      icon: '💼', label: 'Servicios'          },
+  { id: 'ecosystems',    icon: '🎟',  label: 'Membresías'         },
+  { id: 'projects',      icon: '🗂',  label: 'Proyectos'          },
+  { id: 'testimonials',  icon: '💬', label: 'Testimonios'        },
+  { id: 'contact',       icon: '📬', label: 'Contacto & Footer'  },
+  { id: 'language',      icon: '🌐', label: 'Lingua del Sito'    },
+  { id: 'leads',         icon: '📥', label: 'Inbox Lead'         },
+  { id: 'agents',        icon: '👥', label: 'Agenti Commerciali' },
+  { id: 'notifications', icon: '🔔', label: 'Notifiche & Canali' },
 ]
+
+function BrandMark({ logo, name, height = 28 }) {
+  return logo ? (
+    <img src={logo} alt={name} style={{ height, maxWidth: 160, objectFit: 'contain' }} />
+  ) : (
+    <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '1.6rem', color: '#ff3c3c', letterSpacing: 2 }}>
+      {name}
+    </span>
+  )
+}
 
 export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, brand }) {
   const [isMobile, setIsMobile] = useState(false)
@@ -32,14 +42,6 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, b
 
   const logo = brand?.logo || ''
   const name = brand?.name || 'POLARTRONIC'
-
-  const BrandMark = ({ height = 28 }) => logo ? (
-    <img src={logo} alt={name} style={{ height, maxWidth: 160, objectFit: 'contain' }} />
-  ) : (
-    <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '1.6rem', color: '#ff3c3c', letterSpacing: 2 }}>
-      {name}
-    </span>
-  )
 
   /* ── MOBILE: bottom sheet ── */
   if (isMobile) {
@@ -75,7 +77,7 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, b
             flexShrink: 0,
           }}>
             <div>
-              <BrandMark height={28} />
+              <BrandMark logo={logo} name={name} height={28} />
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>Admin Panel</div>
             </div>
             <button onClick={onToggle} style={{
@@ -110,7 +112,7 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, b
           </nav>
 
           <div style={{ padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
-            <a href="/" target="_blank" style={{
+            <a href="/" target="_blank" rel="noreferrer" style={{
               fontSize: 13, color: 'rgba(255,255,255,0.4)',
               textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8,
             }}>
@@ -119,7 +121,7 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, b
           </div>
         </div>
 
-        {/* Bottom bar fissa */}
+        {/* Bottom bar fija */}
         <nav style={{
           position: 'fixed', bottom: 0, left: 0, right: 0,
           zIndex: open ? 0 : 1050,
@@ -178,7 +180,7 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, b
       display: 'flex', flexDirection: 'column', padding: '1.5rem 0',
     }}>
       <div style={{ padding: '0 1.5rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-        <BrandMark height={32} />
+        <BrandMark logo={logo} name={name} height={32} />
         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>Admin Panel</div>
       </div>
 
@@ -206,7 +208,7 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, b
       </nav>
 
       <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-        <a href="/" target="_blank" style={{
+        <a href="/" target="_blank" rel="noreferrer" style={{
           fontSize: 12, color: 'rgba(255,255,255,0.35)',
           textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6,
         }}>
