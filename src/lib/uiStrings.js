@@ -4,14 +4,13 @@
  * Central i18n dictionary for all UI-visible strings.
  * Supports: it, en, es, fr, de, pt
  *
- * Usage:
- *   import { getStrings } from '../lib/uiStrings'
- *   const t = getStrings('it')
- *   t.nav.home  // → 'Home'
+ * CAMBIOS v2 (quirúrgicos — sin romper nada):
+ *   ecosystems.eyebrow    → "Gruppi Partner" / "Partner Groups" / etc.
+ *   ecosystems.heading    → "Membresías" / "Memberships" / etc.
+ *   ecosystems.headingPrefix → "Nuestros" / "Our" etc. (para el h2)
+ *   ecosystems.viewDetail → "Ver detalle" / "See details" (localizado)
  *
- * Or via the hook:
- *   import { useUIStrings } from '../hooks/useUIStrings'
- *   const t = useUIStrings()   // reads theme.language automatically
+ * Todo lo demás idéntico a v1.
  */
 
 export const SUPPORTED_LANGUAGES = [
@@ -55,12 +54,28 @@ const strings = {
   },
 
   // ── ECOSYSTEMS / MEMBERSHIPS SECTION ──────────────────────────────────
+  // CAMBIO: eyebrow, heading y headingPrefix renombrados a "Membresías/Grupos"
   ecosystems: {
-    eyebrow:      { it: 'Le nostre aree',     en: 'Our areas',       es: 'Nuestras áreas',   fr: 'Nos domaines',         de: 'Unsere Bereiche',    pt: 'Nossas áreas'       },
-    heading:      { it: 'Ecosistemi',         en: 'Ecosystems',      es: 'Ecosistemas',      fr: 'Écosystèmes',          de: 'Ökosysteme',         pt: 'Ecossistemas'       },
-    featured:     { it: '★ In Evidenza',      en: '★ Featured',      es: '★ Destacado',      fr: '★ À la une',           de: '★ Empfohlen',        pt: '★ Destaque'         },
-    benefits:     { it: 'Vantaggi inclusi',   en: 'Included benefits', es: 'Beneficios incluidos', fr: 'Avantages inclus', de: 'Enthaltene Vorteile', pt: 'Benefícios incluídos' },
-    close:        { it: 'Chiudi',            en: 'Close',           es: 'Cerrar',           fr: 'Fermer',               de: 'Schließen',          pt: 'Fechar'             },
+    // Eyebrow — texto pequeño encima del título (etiqueta de sección)
+    eyebrow:       { it: 'Gruppi Partner',      en: 'Partner Groups',    es: 'Grupos Partners',   fr: 'Groupes Partenaires', de: 'Partner-Gruppen',    pt: 'Grupos Parceiros'    },
+
+    // Prefijo del h2 (texto normal antes del acento)
+    headingPrefix: { it: 'Le nostre',            en: 'Our',               es: 'Nuestras',          fr: 'Nos',                  de: 'Unsere',             pt: 'Nossas'              },
+
+    // Parte en color primario del h2
+    heading:       { it: 'Membresie',            en: 'Memberships',       es: 'Membresías',        fr: 'Memberships',          de: 'Mitgliedschaften',   pt: 'Memberships'         },
+
+    // Badge "Featured"
+    featured:      { it: '★ In Evidenza',        en: '★ Featured',        es: '★ Destacado',       fr: '★ À la une',           de: '★ Empfohlen',        pt: '★ Destaque'          },
+
+    // Label de lista de beneficios en modal
+    benefits:      { it: 'Vantaggi inclusi',     en: 'Included benefits', es: 'Beneficios incluidos', fr: 'Avantages inclus',  de: 'Enthaltene Vorteile', pt: 'Benefícios incluídos' },
+
+    // Botón cerrar modal
+    close:         { it: 'Chiudi',               en: 'Close',             es: 'Cerrar',            fr: 'Fermer',               de: 'Schließen',          pt: 'Fechar'              },
+
+    // Enlace "ver detalle" en la tarjeta — NUEVO
+    viewDetail:    { it: 'Vedi dettaglio',        en: 'See details',       es: 'Ver detalle',       fr: 'Voir le détail',       de: 'Details ansehen',    pt: 'Ver detalhe'         },
   },
 
   // ── PROJECTS SECTION ───────────────────────────────────────────────────
@@ -165,8 +180,7 @@ const strings = {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// RESOLVER
-// Builds a nested proxy where every leaf returns t[key][lang] ?? t[key]['en']
+// RESOLVER — sin cambios respecto a v1
 // ─────────────────────────────────────────────────────────────────────────
 
 /**

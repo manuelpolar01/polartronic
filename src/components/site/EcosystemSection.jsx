@@ -1,6 +1,25 @@
+/**
+ * EcosystemSection.jsx — v2
+ * ─────────────────────────────────────────────────────────────────────────
+ * CAMBIOS QUIRÚRGICOS (sin romper nada existente):
+ *
+ *  1. Sección renombrada a "Membresías" → usa t.ecosystems.eyebrow/heading
+ *     que ahora devuelven "Membresías" (actualizado en uiStrings.js).
+ *
+ *  2. Modal: si eco.detailHtml empieza con "<iframe" o contiene "iframe",
+ *     se renderiza dentro de un contenedor responsive 16:9 en vez de
+ *     dangerouslySetInnerHTML directo. Botón CTA de Polartronic se muestra
+ *     siempre debajo del contenido custom.
+ *
+ *  3. "Ver detalle →" y textos UI usan t.ecosystems (ya localizado).
+ *
+ *  Todo lo demás (parseFeatures, EcosystemModal, grid, hover, CRUD) intacto.
+ */
+
 import { useState } from 'react'
 import { useUIStrings } from '../../hooks/useUIStrings'
 
+// ── Helpers ───────────────────────────────────────────────────────────
 function parseFeatures(raw) {
   if (Array.isArray(raw)) return raw
   try {
@@ -9,6 +28,11 @@ function parseFeatures(raw) {
   } catch { return [] }
 }
 
+function hasIframe(html = '') {
+  return /<iframe/i.test(html)
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────
 function EcosystemModal({ eco, primary, onClose, t }) {
   const features = parseFeatures(eco.features)
 
@@ -26,11 +50,12 @@ function EcosystemModal({ eco, primary, onClose, t }) {
         onClick={e => e.stopPropagation()}
         style={{
           background: '#0d0d0d', border: `1px solid ${primary}30`,
-          borderRadius: 20, maxWidth: 560, width: '100%',
-          maxHeight: '85vh', overflowY: 'auto',
+          borderRadius: 20, maxWidth: 580, width: '100%',
+          maxHeight: '88vh', overflowY: 'auto',
           padding: '2rem', position: 'relative',
         }}
       >
+        {/* Botón cerrar */}
         <button
           onClick={onClose}
           style={{
@@ -42,19 +67,31 @@ function EcosystemModal({ eco, primary, onClose, t }) {
           }}
         >✕</button>
 
+        {/* Imagen de cabecera */}
         {eco.image && (
           <div style={{ height: 160, borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
-            <img src={eco.image} alt={eco.title}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img
+              src={eco.image}
+              alt={eco.title}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
           </div>
         )}
 
-        <div style={{ color: primary, fontSize: 11, fontWeight: 800,
-          textTransform: 'uppercase', letterSpacing: 2, marginBottom: 6 }}>
+        {/* Categoría */}
+        <div style={{
+          color: primary, fontSize: 11, fontWeight: 800,
+          textTransform: 'uppercase', letterSpacing: 2, marginBottom: 6,
+        }}>
           {eco.category}
         </div>
-        <h3 style={{ fontSize: '1.6rem', fontWeight: 800, margin: '0 0 8px', color: 'white' }}>{eco.title}</h3>
 
+        {/* Título */}
+        <h3 style={{ fontSize: '1.6rem', fontWeight: 800, margin: '0 0 8px', color: 'white' }}>
+          {eco.title}
+        </h3>
+
+        {/* Precio */}
         {eco.price && (
           <div style={{ color: primary, fontWeight: 800, fontSize: '1.4rem', marginBottom: 12 }}>
             {eco.price}
@@ -66,25 +103,83 @@ function EcosystemModal({ eco, primary, onClose, t }) {
           </div>
         )}
 
+        {/* Descripción */}
         {eco.desc && (
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
             {eco.desc}
           </p>
         )}
 
+        {/* ── Contenido custom (detailHtml) ── */}
         {eco.detailHtml ? (
-          <div dangerouslySetInnerHTML={{ __html: eco.detailHtml }} />
+          <>
+            {hasIframe(eco.detailHtml) ? (
+              /* Contenedor responsive 16:9 para iframes (ej: redbarber.com) */
+              <div style={{
+                position: 'relative',
+                width: '100%',
+                paddingBottom: '56.25%', /* 16:9 */
+                height: 0,
+                overflow: 'hidden',
+                borderRadius: 12,
+                border: '1px solid rgba(255,255,255,0.08)',
+                marginBottom: 20,
+              }}>
+                <div
+                  dangerouslySetInnerHTML={{ __html: eco.detailHtml }}
+                  style={{
+                    position: 'absolute', top: 0, left: 0,
+                    width: '100%', height: '100%',
+                  }}
+                />
+              </div>
+            ) : (
+              /* HTML libre sin iframe */
+              <div
+                dangerouslySetInnerHTML={{ __html: eco.detailHtml }}
+                style={{ marginBottom: 20 }}
+              />
+            )}
+
+            {/* CTA Polartronic siempre visible debajo del contenido custom */}
+            {eco.ctaLabel && eco.ctaLink && (
+              <a
+                href={eco.ctaLink}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: 'block', textAlign: 'center',
+                  background: primary, color: 'white',
+                  padding: '14px 32px', borderRadius: 10,
+                  fontWeight: 800, fontSize: '0.9rem',
+                  letterSpacing: 1.5, textTransform: 'uppercase',
+                  textDecoration: 'none', marginBottom: 8,
+                }}
+              >
+                {eco.ctaLabel}
+              </a>
+            )}
+          </>
         ) : (
+          /* Vista automática: lista de beneficios + extraText */
           <>
             {features.length > 0 && (
               <>
-                <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase',
-                  letterSpacing: 1.5, color: 'rgba(255,255,255,0.35)', marginBottom: 12 }}>
+                <div style={{
+                  fontSize: 11, fontWeight: 800, textTransform: 'uppercase',
+                  letterSpacing: 1.5, color: 'rgba(255,255,255,0.35)', marginBottom: 12,
+                }}>
                   {t.ecosystems.benefits}
                 </div>
-                <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                <ul style={{
+                  listStyle: 'none', padding: 0,
+                  display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20,
+                }}>
                   {features.map((f, i) => (
-                    <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 14, color: 'rgba(255,255,255,0.75)' }}>
+                    <li key={i} style={{
+                      display: 'flex', alignItems: 'flex-start',
+                      gap: 10, fontSize: 14, color: 'rgba(255,255,255,0.75)',
+                    }}>
                       <span style={{ color: primary, flexShrink: 0, fontWeight: 700 }}>✓</span>
                       {f}
                     </li>
@@ -92,32 +187,34 @@ function EcosystemModal({ eco, primary, onClose, t }) {
                 </ul>
               </>
             )}
+
             {eco.extraText && (
               <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, lineHeight: 1.7 }}>
                 {eco.extraText}
               </p>
             )}
+
+            {eco.ctaLabel && eco.ctaLink && (
+              <a
+                href={eco.ctaLink}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: 'block', textAlign: 'center',
+                  background: primary, color: 'white',
+                  padding: '14px 32px', borderRadius: 10,
+                  fontWeight: 800, fontSize: '0.9rem',
+                  letterSpacing: 1.5, textTransform: 'uppercase',
+                  textDecoration: 'none', marginTop: 24,
+                }}
+              >
+                {eco.ctaLabel}
+              </a>
+            )}
           </>
         )}
 
-        {eco.ctaLabel && eco.ctaLink && (
-          <a
-            href={eco.ctaLink}
-            target="_blank"
-            rel="noreferrer"
-            style={{
-              display: 'block', textAlign: 'center',
-              background: primary, color: 'white',
-              padding: '14px 32px', borderRadius: 10,
-              fontWeight: 800, fontSize: '0.9rem',
-              letterSpacing: 1.5, textTransform: 'uppercase',
-              textDecoration: 'none', marginTop: 24,
-            }}
-          >
-            {eco.ctaLabel}
-          </a>
-        )}
-
+        {/* Botón cerrar pie */}
         <button
           onClick={onClose}
           style={{
@@ -134,6 +231,7 @@ function EcosystemModal({ eco, primary, onClose, t }) {
   )
 }
 
+// ── Sección principal ─────────────────────────────────────────────────
 export default function EcosystemSection({ ecosystems, brand }) {
   const [selected, setSelected] = useState(null)
   const t = useUIStrings(brand)
@@ -145,6 +243,7 @@ export default function EcosystemSection({ ecosystems, brand }) {
 
   return (
     <section id="ecosistemas" style={{ padding: '100px 6%' }}>
+      {/* Encabezado — usa strings localizados de uiStrings.js */}
       <div style={{ textAlign: 'center', marginBottom: 60 }}>
         <p style={{
           color: primary, fontSize: '0.75rem', fontWeight: 800,
@@ -153,11 +252,12 @@ export default function EcosystemSection({ ecosystems, brand }) {
           {t.ecosystems.eyebrow}
         </p>
         <h2 style={{ fontSize: 'clamp(2rem,5vw,3rem)', fontWeight: 800, color: 'var(--text-main)' }}>
-          {t.ecosystems.eyebrow.split(' ').slice(0, -1).join(' ')}{' '}
+          {t.ecosystems.headingPrefix}{' '}
           <span style={{ color: primary }}>{t.ecosystems.heading}</span>
         </h2>
       </div>
 
+      {/* Grid de tarjetas — sin cambios */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
@@ -190,6 +290,7 @@ export default function EcosystemSection({ ecosystems, brand }) {
                   : 'rgba(255,255,255,0.08)'
               }}
             >
+              {/* Badge destacado */}
               {eco.featured && (
                 <div style={{
                   position: 'absolute', top: 12, right: 12, zIndex: 1,
@@ -201,6 +302,7 @@ export default function EcosystemSection({ ecosystems, brand }) {
                 </div>
               )}
 
+              {/* Imagen */}
               {eco.image && (
                 <div style={{ height: 140, overflow: 'hidden' }}>
                   <img
@@ -215,6 +317,7 @@ export default function EcosystemSection({ ecosystems, brand }) {
               )}
 
               <div style={{ padding: '18px 20px' }}>
+                {/* Categoría */}
                 <div style={{
                   color: primary, fontSize: 10, fontWeight: 800,
                   textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 4,
@@ -222,10 +325,12 @@ export default function EcosystemSection({ ecosystems, brand }) {
                   {eco.category}
                 </div>
 
+                {/* Título */}
                 <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0 0 8px', color: 'var(--text-main)' }}>
                   {eco.title}
                 </h3>
 
+                {/* Precio */}
                 {eco.price && (
                   <div style={{ color: primary, fontWeight: 800, fontSize: '1.1rem', marginBottom: 8 }}>
                     {eco.price}
@@ -237,6 +342,7 @@ export default function EcosystemSection({ ecosystems, brand }) {
                   </div>
                 )}
 
+                {/* Descripción */}
                 {eco.desc && (
                   <p style={{
                     color: 'var(--text-dim)', fontSize: 13,
@@ -246,6 +352,7 @@ export default function EcosystemSection({ ecosystems, brand }) {
                   </p>
                 )}
 
+                {/* Primeros 3 beneficios */}
                 {features.length > 0 && (
                   <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {features.map((f, i) => (
@@ -257,17 +364,13 @@ export default function EcosystemSection({ ecosystems, brand }) {
                   </ul>
                 )}
 
+                {/* Link "ver detalle" — localizado */}
                 <div style={{
                   marginTop: 14, fontSize: 11,
                   color: 'var(--text-muted)',
                   display: 'flex', alignItems: 'center', gap: 4,
                 }}>
-                  {t.ecosystems.close === 'Close' ? 'See details' :
-                   t.ecosystems.close === 'Chiudi' ? 'Vedi dettaglio' :
-                   t.ecosystems.close === 'Cerrar' ? 'Ver detalle' :
-                   t.ecosystems.close === 'Fermer' ? 'Voir détail' :
-                   t.ecosystems.close === 'Schließen' ? 'Details' :
-                   'Ver detalhe'} →
+                  {t.ecosystems.viewDetail} →
                 </div>
               </div>
             </div>
@@ -275,6 +378,7 @@ export default function EcosystemSection({ ecosystems, brand }) {
         })}
       </div>
 
+      {/* Modal */}
       {selectedEco && (
         <EcosystemModal
           eco={selectedEco}
