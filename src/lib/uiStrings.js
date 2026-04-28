@@ -1,18 +1,9 @@
 /**
- * uiStrings.js — v3 (drawer + shell strings añadidos)
+ * uiStrings.js — v4 COMPLETE I18N
  * ─────────────────────────────────────────────────────────────────────────
- * CAMBIOS v3 (quirúrgicos — sin romper nada):
- *   ecosystems.drawerSubtitle  → "Cómo trabajamos este sector" / "How we work this sector"
- *   ecosystems.successCases    → "Casos de éxito" / "Success stories"
- *   ecosystems.typicalResults  → "Resultados típicos" / "Typical results"
- *   ecosystems.ctaContact      → "Hablemos" / "Let's talk"
- *   ecosystems.ctaProjects     → "Ver proyectos" / "See projects"
- *   projects.contractThis      → "Contratar esto" / "Hire this"
- *   projects.backBtn           → "Volver" / "Back"
- *   projects.openApp           → "Abrir demo" / "Open demo"
- *   projects.visitSite         → "Ver sitio" / "Visit site"
- *
- * Todo lo demás idéntico a v2.
+ * All UI strings fully translated for: it, en, es, fr, de, pt
+ * Added: hero carousel labels, service image alt, ecosystem shell strings,
+ * generic pagination/navigation strings.
  */
 
 export const SUPPORTED_LANGUAGES = [
@@ -26,9 +17,6 @@ export const SUPPORTED_LANGUAGES = [
 
 export const DEFAULT_LANGUAGE = 'it'
 
-// ─────────────────────────────────────────────────────────────────────
-// STRING DICTIONARY
-// ─────────────────────────────────────────────────────────────────────
 const strings = {
 
   // ── NAVIGATION ─────────────────────────────────────────────────────────
@@ -42,10 +30,14 @@ const strings = {
     booking:      { it: 'Prenota',      en: 'Book Now',     es: 'Reservar',     fr: 'Réserver',     de: 'Buchen',           pt: 'Reservar'      },
   },
 
-  // ── HERO SECTION ───────────────────────────────────────────────────────
+  // ── HERO SECTION + CAROUSEL ────────────────────────────────────────────
   hero: {
-    badge:      { it: 'Studio Digitale Creativo',  en: 'Digital Creative Studio', es: 'Estudio Digital Creativo', fr: 'Studio Créatif Digital', de: 'Digitales Kreativstudio', pt: 'Estúdio Digital Criativo' },
-    exploreCta: { it: 'ESPLORA LE AREE',           en: 'EXPLORE AREAS',           es: 'EXPLORAR ÁREAS',           fr: 'EXPLORER LES ZONES',     de: 'BEREICHE ENTDECKEN',       pt: 'EXPLORAR ÁREAS'           },
+    badge:        { it: 'Studio Digitale Creativo',  en: 'Digital Creative Studio', es: 'Estudio Digital Creativo', fr: 'Studio Créatif Digital', de: 'Digitales Kreativstudio', pt: 'Estúdio Digital Criativo' },
+    exploreCta:   { it: 'ESPLORA LE AREE',           en: 'EXPLORE AREAS',           es: 'EXPLORAR ÁREAS',           fr: 'EXPLORER LES ZONES',     de: 'BEREICHE ENTDECKEN',       pt: 'EXPLORAR ÁREAS'           },
+    // Carousel accessibility / labels
+    prevSlide:    { it: 'Slide precedente',           en: 'Previous slide',          es: 'Diapositiva anterior',     fr: 'Diapositive précédente',  de: 'Vorherige Folie',          pt: 'Slide anterior'           },
+    nextSlide:    { it: 'Slide successiva',           en: 'Next slide',              es: 'Diapositiva siguiente',    fr: 'Diapositive suivante',    de: 'Nächste Folie',            pt: 'Próximo slide'            },
+    slideOf:      { it: 'di',                         en: 'of',                      es: 'de',                       fr: 'sur',                     de: 'von',                      pt: 'de'                       },
   },
 
   // ── SERVICES SECTION ───────────────────────────────────────────────────
@@ -53,46 +45,26 @@ const strings = {
     eyebrow:       { it: 'Cosa facciamo',   en: 'What we do',      es: 'Lo que hacemos',  fr: 'Ce que nous faisons', de: 'Was wir machen',    pt: 'O que fazemos'     },
     heading:       { it: 'I nostri',        en: 'Our',             es: 'Nuestros',        fr: 'Nos',                  de: 'Unsere',            pt: 'Nossos'            },
     headingAccent: { it: 'Servizi',         en: 'Services',        es: 'Servicios',       fr: 'Services',             de: 'Leistungen',        pt: 'Serviços'          },
+    from:          { it: 'Da',              en: 'From',            es: 'Desde',           fr: 'À partir de',          de: 'Ab',                pt: 'A partir de'       },
   },
 
   // ── ECOSYSTEMS / MEMBERSHIPS SECTION ──────────────────────────────────
   ecosystems: {
-    // Eyebrow — texto pequeño encima del título (etiqueta de sección)
     eyebrow:        { it: 'Gruppi Partner',      en: 'Partner Groups',     es: 'Grupos Partners',    fr: 'Groupes Partenaires',  de: 'Partner-Gruppen',     pt: 'Grupos Parceiros'     },
-
-    // Prefijo del h2 (texto normal antes del acento)
     headingPrefix:  { it: 'Le nostre',            en: 'Our',                es: 'Nuestras',           fr: 'Nos',                   de: 'Unsere',              pt: 'Nossas'               },
-
-    // Parte en color primario del h2
     heading:        { it: 'Membresie',            en: 'Memberships',        es: 'Membresías',         fr: 'Memberships',           de: 'Mitgliedschaften',    pt: 'Memberships'          },
-
-    // Badge "Featured"
     featured:       { it: '★ In Evidenza',        en: '★ Featured',         es: '★ Destacado',        fr: '★ À la une',            de: '★ Empfohlen',         pt: '★ Destaque'           },
-
-    // Label de lista de beneficios en drawer/modal
     benefits:       { it: 'Vantaggi inclusi',     en: 'Included benefits',  es: 'Beneficios incluidos', fr: 'Avantages inclus',   de: 'Enthaltene Vorteile', pt: 'Benefícios incluídos' },
-
-    // Botón cerrar (fallback)
-    close:          { it: 'Chiudi',               en: 'Close',              es: 'Cerrar',             fr: 'Fermer',                de: 'Schließen',           pt: 'Fechar'               },
-
-    // Enlace "ver detalle" en la tarjeta
-    viewDetail:     { it: 'Vedi dettaglio',        en: 'See details',        es: 'Ver detalle',        fr: 'Voir le détail',        de: 'Details ansehen',     pt: 'Ver detalhe'          },
-
-    // ── NUEVOS v3 — Drawer ─────────────────────────────────────────────
-    // Subtítulo del header del drawer
+    close:          { it: 'Torna al sito',        en: 'Back to site',       es: 'Volver al sitio',    fr: 'Retour au site',        de: 'Zurück zur Website',  pt: 'Voltar ao site'       },
+    viewDetail:     { it: 'Vedi dettaglio',       en: 'See details',        es: 'Ver detalle',        fr: 'Voir le détail',        de: 'Details ansehen',     pt: 'Ver detalhe'          },
     drawerSubtitle: { it: 'Come lavoriamo in questo settore', en: 'How we work this sector', es: 'Cómo trabajamos este sector', fr: 'Comment nous travaillons ce secteur', de: 'Wie wir in diesem Bereich arbeiten', pt: 'Como trabalhamos este setor' },
-
-    // Sección casos de éxito dentro del drawer
     successCases:   { it: 'Casi di successo',     en: 'Success stories',    es: 'Casos de éxito',     fr: 'Cas de succès',         de: 'Erfolgsgeschichten',  pt: 'Casos de sucesso'     },
-
-    // Sección resultados típicos del sector
     typicalResults: { it: 'Risultati tipici',      en: 'Typical results',    es: 'Resultados típicos', fr: 'Résultats typiques',    de: 'Typische Ergebnisse', pt: 'Resultados típicos'   },
-
-    // CTA "Hablemos" → contacto
     ctaContact:     { it: 'Parliamo',              en: "Let's talk",         es: 'Hablemos',           fr: 'Parlons',               de: 'Sprechen wir',        pt: 'Vamos falar'          },
-
-    // CTA "Ver proyectos"
     ctaProjects:    { it: 'Vedi i progetti',       en: 'See projects',       es: 'Ver proyectos',      fr: 'Voir les projets',      de: 'Projekte ansehen',    pt: 'Ver projetos'         },
+    // Shell bar strings
+    shellDemo:      { it: 'Demo Commerciale',      en: 'Commercial Demo',    es: 'Demo Comercial',     fr: 'Démo Commerciale',      de: 'Kommerzielle Demo',   pt: 'Demo Comercial'       },
+    shellBack:      { it: '← Torna',               en: '← Back',             es: '← Volver',           fr: '← Retour',              de: '← Zurück',            pt: '← Voltar'             },
   },
 
   // ── PROJECTS SECTION ───────────────────────────────────────────────────
@@ -102,18 +74,9 @@ const strings = {
     headingAccent: { it: 'Portfolio',            en: 'Portfolio',         es: 'Portafolio',         fr: 'Portfolio',              de: 'Portfolio',           pt: 'Portfólio'          },
     sub:           { it: 'Risultati reali per clienti reali.', en: 'Real results for real clients.', es: 'Resultados reales para clientes reales.', fr: 'De vrais résultats pour de vrais clients.', de: 'Echte Ergebnisse für echte Kunden.', pt: 'Resultados reais para clientes reais.' },
     results:       { it: 'Risultati',            en: 'Results',           es: 'Resultados',         fr: 'Résultats',              de: 'Ergebnisse',          pt: 'Resultados'         },
-
-    // ── NUEVOS v3 — Shell Polartronic ─────────────────────────────────────
-    // Botón principal del shell
     contractThis:  { it: 'Voglio questo',        en: 'Hire this',         es: 'Contratar esto',     fr: 'Je veux ça',             de: 'Das beauftragen',     pt: 'Contratar isso'     },
-
-    // Botón volver del shell
     backBtn:       { it: '← Torna',             en: '← Back',            es: '← Volver',           fr: '← Retour',               de: '← Zurück',            pt: '← Voltar'           },
-
-    // CTA hover de card con landing
     openApp:       { it: 'Apri la demo',         en: 'Open demo',         es: 'Abrir demo',         fr: 'Ouvrir la démo',         de: 'Demo öffnen',         pt: 'Abrir demo'         },
-
-    // CTA hover de card con URL externa
     visitSite:     { it: 'Visita il sito',       en: 'Visit site',        es: 'Ver sitio',          fr: 'Visiter le site',        de: 'Website besuchen',    pt: 'Visitar site'       },
   },
 
@@ -206,35 +169,27 @@ const strings = {
     addNew:   { it: 'Aggiungi',            en: 'Add New',          es: 'Agregar',          fr: 'Ajouter',              de: 'Hinzufügen',         pt: 'Adicionar'          },
     viewSite: { it: 'Vedi il sito',        en: 'View site',        es: 'Ver sitio',        fr: 'Voir le site',         de: 'Seite anzeigen',     pt: 'Ver site'           },
     logout:   { it: 'Esci',               en: 'Logout',           es: 'Salir',            fr: 'Déconnexion',          de: 'Abmelden',           pt: 'Sair'               },
+    loading:  { it: 'Caricamento…',        en: 'Loading…',         es: 'Cargando…',        fr: 'Chargement…',          de: 'Wird geladen…',      pt: 'Carregando…'        },
+    close:    { it: 'Chiudi',              en: 'Close',            es: 'Cerrar',           fr: 'Fermer',               de: 'Schließen',          pt: 'Fechar'             },
+    back:     { it: 'Indietro',            en: 'Back',             es: 'Volver',           fr: 'Retour',               de: 'Zurück',             pt: 'Voltar'             },
+    prev:     { it: 'Precedente',          en: 'Previous',         es: 'Anterior',         fr: 'Précédent',            de: 'Vorherige',          pt: 'Anterior'           },
+    next:     { it: 'Successivo',          en: 'Next',             es: 'Siguiente',        fr: 'Suivant',              de: 'Weiter',             pt: 'Próximo'            },
+    of:       { it: 'di',                  en: 'of',               es: 'de',               fr: 'sur',                  de: 'von',                pt: 'de'                 },
   },
 }
 
 // ─────────────────────────────────────────────────────────────────────
 // RESOLVER
 // ─────────────────────────────────────────────────────────────────────
-
-/**
- * Returns a resolved flat-ish object for the given language.
- * Leaf values that are plain strings (like months/weekdays arrays)
- * are returned as-is for that language.
- *
- * @param {string} lang  ISO 639-1 code e.g. 'it', 'en', 'es'
- * @returns {object}     Nested object of translated strings
- */
 export function getStrings(lang = DEFAULT_LANGUAGE) {
   const l = SUPPORTED_LANGUAGES.find(x => x.code === lang)?.code ?? DEFAULT_LANGUAGE
 
   function resolve(node) {
     if (node === null || node === undefined) return ''
-
-    // Leaf: plain string values at language keys → translate
     if (typeof node === 'object' && typeof node[l] !== 'undefined') {
-      // Arrays (months, weekdays) — return the array for that language
       if (Array.isArray(node[l])) return node[l]
       return node[l]
     }
-
-    // Intermediate node → recurse
     const out = {}
     for (const [k, v] of Object.entries(node)) {
       out[k] = resolve(v)
