@@ -3426,569 +3426,6 @@ export default function AdminHeader({ onLogout, onToggleSidebar, activeTab }) {
 }
 </file>
 
-<file path="src/components/admin/tabs/EcosystemsTab.jsx">
-/**
- * EcosystemsTab.jsx — v2 (detailHtml mejorado)
- * ─────────────────────────────────────────────────────────────────────────
- * CAMBIOS QUIRÚRGICOS respecto a la versión anterior:
- *
- *  1. Campo "detailHtml" del tab CTA & HTML:
- *     - Texto de ayuda actualizado: explica que puede ser HTML completo
- *       (como el de King Barbes) o un fragmento, con ejemplos.
- *     - Indicador visual de tipo de contenido detectado:
- *       "Documento completo" / "Fragmento HTML" / "Vacío (modal automático)"
- *     - Botón de "Plantilla HTML completa" que inserta una estructura
- *       base tipo King Barbes para que el admin pueda editar.
- *
- *  TODO LO DEMÁS INTACTO:
- *  - CRUD completo (crear, editar, eliminar)
- *  - Tabs básico / contenido / cta
- *  - ImageUploadField (upload a Firestore)
- *  - features como textarea línea-por-línea
- *  - saveEcosystem / deleteEcosystem de firebaseHelpers
- *  - FieldGroup, toast
- */
-
-import { useState } from 'react'
-import { saveEcosystem, deleteEcosystem } from '../../../lib/firebaseHelpers'
-import FieldGroup from '../FieldGroup'
-import ImageUploadField from '../ImageUploadField'
-import toast from 'react-hot-toast'
-
-const EMPTY = {
-  category: '', title: '', desc: '', image: '',
-  price: '', period: '', featured: false,
-  features: '[]',
-  ctaLabel: '', ctaLink: '',
-  detailHtml: '',
-  extraText: '',
-  order: 0,
-}
-
-// Convierte array JS → string de textarea (una línea por ítem)
-const arrToStr = (val) => {
-  if (Array.isArray(val)) return val.join('\n')
-  try {
-    const parsed = JSON.parse(val || '[]')
-    return Array.isArray(parsed) ? parsed.join('\n') : val
-  } catch { return val || '' }
-}
-
-// Convierte string textarea → JSON array string para guardar
-const strToArr = (val) => JSON.stringify(
-  val.split('\n').map(s => s.trim()).filter(Boolean)
-)
-
-// Detecta qué tipo de HTML está en el campo
-function detectHtmlType(html) {
-  if (!html || !html.trim()) return 'empty'
-  if (/<!doctype\s+html/i.test(html) || /<html[\s>]/i.test(html)) return 'full'
-  return 'fragment'
-}
-
-// Plantilla HTML completa de ejemplo (estilo King Barbes)
-const HTML_TEMPLATE = `<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nombre del Plan</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; color: #333; background: #fff; }
-        h1, h2 { font-family: 'Playfair Display', serif; }
-        nav { background: #1a1a1a; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-        nav .logo { color: #d4af37; font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; }
-        .hero { background: linear-gradient(135deg, rgba(26,26,26,0.9), rgba(26,26,26,0.7)), url('TU_IMAGEN_URL') center/cover; min-height: 60vh; display: flex; align-items: center; justify-content: center; text-align: center; color: white; padding: 4rem 2rem; }
-        .hero h1 { font-size: clamp(2rem,5vw,3.5rem); margin-bottom: 1rem; }
-        .hero h2 { color: #d4af37; font-size: 1rem; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 1rem; }
-        .hero p { color: #e0e0e0; max-width: 600px; margin: 0 auto 2rem; }
-        .cta { display: inline-block; padding: 1rem 2.5rem; background: #d4af37; color: #1a1a1a; text-decoration: none; font-weight: 700; border-radius: 50px; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s; }
-        .cta:hover { background: #1a1a1a; color: #d4af37; }
-        section { padding: 4rem 2rem; max-width: 1200px; margin: 0 auto; }
-        .services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
-        .service-card { background: #f8f8f8; padding: 2rem; border-radius: 12px; text-align: center; border-bottom: 3px solid transparent; transition: all 0.3s; }
-        .service-card:hover { border-bottom-color: #d4af37; transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
-        .service-card h3 { margin: 1rem 0 0.5rem; }
-        .section-title { text-align: center; margin-bottom: 2.5rem; }
-        .section-title h2 { font-size: 2rem; }
-        .features-list { list-style: none; display: grid; gap: 1rem; margin-top: 1.5rem; }
-        .features-list li { display: flex; align-items: flex-start; gap: 0.8rem; }
-        .features-list li::before { content: '✓'; color: #d4af37; font-weight: 700; flex-shrink: 0; }
-        footer { background: #1a1a1a; color: white; text-align: center; padding: 2rem; }
-        footer .logo { color: #d4af37; font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; }
-    </style>
-</head>
-<body>
-
-<nav>
-    <div class="logo">NOMBRE DEL PLAN</div>
-</nav>
-
-<section class="hero" style="min-height:60vh; background: linear-gradient(135deg,rgba(26,26,26,0.9),rgba(26,26,26,0.7)); display:flex; align-items:center; justify-content:center; text-align:center; color:white; padding:4rem 2rem;">
-    <div>
-        <h2 style="color:#d4af37; text-transform:uppercase; letter-spacing:3px; font-size:1rem; margin-bottom:1rem;">Tu Categoría Aquí</h2>
-        <h1 style="font-family:'Playfair Display',serif; font-size:clamp(2rem,5vw,3.5rem); margin-bottom:1rem;">Título Principal del Plan</h1>
-        <p style="color:#e0e0e0; max-width:600px; margin:0 auto 2rem;">Descripción detallada de lo que ofrece este plan. Explica el valor único y los beneficios principales para el cliente.</p>
-        <a href="#contacto" class="cta">Solicitar Información</a>
-    </div>
-</section>
-
-<section>
-    <div class="section-title">
-        <h2>Qué Incluye</h2>
-        <p>Todo lo que necesitas en un solo plan</p>
-    </div>
-    <div class="services-grid">
-        <div class="service-card">
-            <div style="font-size:2.5rem">📱</div>
-            <h3>Beneficio 1</h3>
-            <p>Descripción breve del primer beneficio principal de este plan.</p>
-        </div>
-        <div class="service-card">
-            <div style="font-size:2.5rem">💼</div>
-            <h3>Beneficio 2</h3>
-            <p>Descripción breve del segundo beneficio principal de este plan.</p>
-        </div>
-        <div class="service-card">
-            <div style="font-size:2.5rem">🚀</div>
-            <h3>Beneficio 3</h3>
-            <p>Descripción breve del tercer beneficio principal de este plan.</p>
-        </div>
-    </div>
-</section>
-
-<section style="background:#f8f8f8; padding:4rem 2rem;">
-    <div style="max-width:700px; margin:0 auto;">
-        <h2 style="font-family:'Playfair Display',serif; text-align:center; margin-bottom:1.5rem;">Características Completas</h2>
-        <ul class="features-list">
-            <li>Característica completa número 1</li>
-            <li>Característica completa número 2</li>
-            <li>Característica completa número 3</li>
-            <li>Característica completa número 4</li>
-            <li>Característica completa número 5</li>
-        </ul>
-    </div>
-</section>
-
-<section id="contacto" style="text-align:center; padding:4rem 2rem;">
-    <h2 style="font-family:'Playfair Display',serif; margin-bottom:1rem;">¿Listo para Empezar?</h2>
-    <p style="color:#666; margin-bottom:2rem;">Contáctanos y te ayudaremos a elegir el mejor plan para tu negocio.</p>
-    <a href="TU_LINK_AQUI" class="cta">Contactar Ahora</a>
-</section>
-
-<footer>
-    <div class="logo">NOMBRE DEL PLAN</div>
-    <p style="color:#aaa; margin-top:1rem; font-size:0.9rem;">© 2024 — Todos los derechos reservados</p>
-</footer>
-
-</body>
-</html>`
-
-export default function EcosystemsTab({ data }) {
-  const { ecosystems, setEcosystems } = data
-  const [editing,   setEditing]  = useState(null)
-  const [form,      setForm]     = useState(EMPTY)
-  const [featText,  setFeatText] = useState('')
-  const [saving,    setSaving]   = useState(false)
-  const [deleting,  setDeleting] = useState(null)
-  const [tab,       setTab]      = useState('basic')
-
-  const startEdit = (item, idx) => {
-    setForm({ ...EMPTY, ...item })
-    setFeatText(arrToStr(item.features))
-    setEditing(idx)
-    setTab('basic')
-  }
-  const startNew = () => {
-    setForm({ ...EMPTY, order: ecosystems.length })
-    setFeatText('')
-    setEditing('new')
-    setTab('basic')
-  }
-  const cancel = () => setEditing(null)
-
-  const handleSave = async () => {
-    if (!form.title.trim()) { toast.error('El título es obligatorio'); return }
-    setSaving(true)
-    try {
-      const payload = { ...form, features: strToArr(featText) }
-      const id = editing !== 'new' ? ecosystems[editing]?.id : null
-      await saveEcosystem(id, payload)
-      if (editing === 'new') {
-        setEcosystems(prev => [...prev, { ...payload, id: Date.now().toString() }])
-      } else {
-        setEcosystems(prev => prev.map((s, i) => i === editing ? { ...s, ...payload } : s))
-      }
-      toast.success('Membresía guardada ✓')
-      setEditing(null)
-    } catch { toast.error('Error al guardar') }
-    finally  { setSaving(false) }
-  }
-
-  const handleDelete = async (item, idx) => {
-    setDeleting(idx)
-    try {
-      if (item.id && !item.id.startsWith('e')) await deleteEcosystem(item.id)
-      setEcosystems(prev => prev.filter((_, i) => i !== idx))
-      toast.success('Eliminado')
-    } catch { toast.error('Error') }
-    finally  { setDeleting(null) }
-  }
-
-  const tabStyle = (id) => ({
-    padding: '7px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
-    fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
-    background: tab === id ? 'var(--primary)' : 'rgba(255,255,255,0.06)',
-    color:      tab === id ? 'white' : 'rgba(255,255,255,0.5)',
-  })
-
-  // Para el indicador de tipo HTML
-  const htmlType = detectHtmlType(form.detailHtml)
-  const htmlTypeMeta = {
-    empty:    { label: 'Vacío — usa modal automático', color: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.04)' },
-    full:     { label: '✓ Documento HTML completo detectado', color: '#1D9E75', bg: 'rgba(29,158,117,0.08)' },
-    fragment: { label: '⚠ Fragmento HTML — se envolverá automáticamente', color: '#EF9F27', bg: 'rgba(239,159,39,0.08)' },
-  }[htmlType]
-
-  return (
-    <div>
-      {/* ─── Header ─── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 4 }}>Membresías & Grupos</h2>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>
-            Cada tarjeta puede abrir una landing page HTML completa o un modal automático.
-          </p>
-        </div>
-        {editing === null && <button className="save-btn" onClick={startNew}>+ NUEVA MEMBRESÍA</button>}
-      </div>
-
-      {/* ─── Formulario de edición ─── */}
-      {editing !== null && (
-        <div className="section-card" style={{ border: '1px solid rgba(255,60,60,0.3)', marginBottom: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#ff3c3c', margin: 0 }}>
-              {editing === 'new' ? '+ Nueva Membresía' : `Editando: ${form.title || '…'}`}
-            </h3>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              <button style={tabStyle('basic')}   onClick={() => setTab('basic')}>Básico</button>
-              <button style={tabStyle('content')} onClick={() => setTab('content')}>Contenido</button>
-              <button style={tabStyle('cta')}     onClick={() => setTab('cta')}>CTA & Landing</button>
-            </div>
-          </div>
-
-          {/* ── Tab: Básico ── */}
-          {tab === 'basic' && (
-            <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <FieldGroup label="Categoría / Nivel">
-                  <input className="admin-input" value={form.category}
-                    onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
-                    placeholder="Ej: Plan Básico / Grupo A" />
-                </FieldGroup>
-                <FieldGroup label="Nombre del Plan *">
-                  <input className="admin-input" value={form.title}
-                    onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
-                    placeholder="Starter, Pro, Elite…" />
-                </FieldGroup>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <FieldGroup label="Precio (ej: $99 / Gratis)">
-                  <input className="admin-input" value={form.price}
-                    onChange={e => setForm(p => ({ ...p, price: e.target.value }))}
-                    placeholder="$99" />
-                </FieldGroup>
-                <FieldGroup label="Período (ej: /mes)">
-                  <input className="admin-input" value={form.period}
-                    onChange={e => setForm(p => ({ ...p, period: e.target.value }))}
-                    placeholder="/mes" />
-                </FieldGroup>
-              </div>
-              <FieldGroup label="Descripción breve (aparece en la tarjeta)">
-                <textarea className="admin-textarea" value={form.desc}
-                  onChange={e => setForm(p => ({ ...p, desc: e.target.value }))}
-                  rows={2} placeholder="Resumen que aparece en la tarjeta…" />
-              </FieldGroup>
-              <FieldGroup label="¿Plan destacado?">
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-                  <input type="checkbox" checked={!!form.featured}
-                    onChange={e => setForm(p => ({ ...p, featured: e.target.checked }))}
-                    style={{ width: 16, height: 16, accentColor: 'var(--primary)' }} />
-                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>
-                    Mostrar badge "Destacado" en esta tarjeta
-                  </span>
-                </label>
-              </FieldGroup>
-              <ImageUploadField label="Imagen de la tarjeta" folder="ecosystems"
-                value={form.image} onChange={url => setForm(p => ({ ...p, image: url }))} />
-            </>
-          )}
-
-          {/* ── Tab: Contenido (fallback modal) ── */}
-          {tab === 'content' && (
-            <>
-              <div style={{
-                background: 'rgba(255,200,0,0.04)', border: '1px solid rgba(255,200,0,0.12)',
-                borderRadius: 8, padding: '10px 14px', marginBottom: 16,
-                fontSize: 12, color: 'rgba(255,200,0,0.7)', lineHeight: 1.7,
-              }}>
-                Este contenido se usa como <strong>fallback</strong> cuando no hay Landing HTML configurada.
-                Si hay HTML en la pestaña "CTA & Landing", este contenido se ignora.
-              </div>
-              <FieldGroup label="Beneficios incluidos (una línea por ítem)">
-                <textarea
-                  className="admin-textarea"
-                  value={featText}
-                  onChange={e => setFeatText(e.target.value)}
-                  rows={8}
-                  placeholder={"Acceso a canal privado\nSesión mensual 1:1\nMaterial exclusivo\nSoporte WhatsApp"}
-                />
-                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 5 }}>
-                  Cada línea es un ítem con ✓. En la tarjeta se muestran los primeros 3 y todos en el modal.
-                </p>
-              </FieldGroup>
-              <FieldGroup label="Texto adicional (aparece en el modal fallback)">
-                <textarea className="admin-textarea" value={form.extraText}
-                  onChange={e => setForm(p => ({ ...p, extraText: e.target.value }))}
-                  rows={3} placeholder="Texto descriptivo adicional…" />
-              </FieldGroup>
-            </>
-          )}
-
-          {/* ── Tab: CTA & Landing HTML ── */}
-          {tab === 'cta' && (
-            <>
-              {/* CTA buttons */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 4 }}>
-                <FieldGroup label="Texto del botón CTA">
-                  <input className="admin-input" value={form.ctaLabel}
-                    onChange={e => setForm(p => ({ ...p, ctaLabel: e.target.value }))}
-                    placeholder="UNIRSE AHORA" />
-                </FieldGroup>
-                <FieldGroup label="Link del botón CTA">
-                  <input className="admin-input" value={form.ctaLink}
-                    onChange={e => setForm(p => ({ ...p, ctaLink: e.target.value }))}
-                    placeholder="https://wa.me/... o https://..." />
-                </FieldGroup>
-              </div>
-
-              {/* Separador */}
-              <div style={{
-                borderTop: '1px solid rgba(255,255,255,0.07)',
-                margin: '20px 0 16px',
-              }} />
-
-              {/* Landing HTML */}
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>
-                      🌐 Landing Page HTML (abre fullscreen al clicar la tarjeta)
-                    </div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', lineHeight: 1.6 }}>
-                      Pega aquí un HTML completo (como el de King Barbes) o un fragmento.
-                      Se renderiza en un iframe aislado con su propio CSS y JS.
-                    </div>
-                  </div>
-                  {/* Botón insertar plantilla */}
-                  <button
-                    onClick={() => {
-                      if (!form.detailHtml.trim() || window.confirm('¿Reemplazar el contenido actual con la plantilla?')) {
-                        setForm(p => ({ ...p, detailHtml: HTML_TEMPLATE }))
-                      }
-                    }}
-                    style={{
-                      background: 'rgba(127,119,221,0.1)',
-                      border: '1px solid rgba(127,119,221,0.3)',
-                      color: '#AFA9EC',
-                      padding: '7px 14px',
-                      borderRadius: 7,
-                      cursor: 'pointer',
-                      fontSize: 11,
-                      fontWeight: 700,
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0,
-                    }}
-                  >
-                    📋 Insertar Plantilla
-                  </button>
-                </div>
-
-                {/* Indicador de tipo detectado */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  marginBottom: 10,
-                  padding: '7px 12px',
-                  borderRadius: 7,
-                  background: htmlTypeMeta.bg,
-                  border: `1px solid ${htmlTypeMeta.color}30`,
-                  fontSize: 11,
-                  color: htmlTypeMeta.color,
-                  fontWeight: 600,
-                }}>
-                  <span style={{ fontSize: 13 }}>
-                    {htmlType === 'empty' ? '⬜' : htmlType === 'full' ? '🟢' : '🟡'}
-                  </span>
-                  {htmlTypeMeta.label}
-                  {htmlType !== 'empty' && (
-                    <span style={{ marginLeft: 'auto', fontWeight: 400, opacity: 0.7 }}>
-                      {form.detailHtml.length.toLocaleString()} caracteres
-                    </span>
-                  )}
-                </div>
-
-                {/* Textarea del HTML */}
-                <textarea
-                  className="admin-textarea"
-                  value={form.detailHtml}
-                  onChange={e => setForm(p => ({ ...p, detailHtml: e.target.value }))}
-                  rows={14}
-                  placeholder={`<!DOCTYPE html>\n<html lang="es">\n<head>\n  <meta charset="UTF-8">\n  ...\n</head>\n<body>\n  <!-- Tu contenido aquí -->\n</body>\n</html>`}
-                  style={{ fontFamily: 'monospace', fontSize: 11, lineHeight: 1.5 }}
-                />
-
-                {/* Nota aclaratoria */}
-                <div style={{
-                  marginTop: 10,
-                  background: 'rgba(55,138,221,0.04)',
-                  border: '1px solid rgba(55,138,221,0.12)',
-                  borderRadius: 8,
-                  padding: '10px 14px',
-                  fontSize: 11,
-                  color: 'rgba(55,138,221,0.7)',
-                  lineHeight: 1.7,
-                }}>
-                  <strong>Cómo funciona:</strong>
-                  <ul style={{ margin: '6px 0 0', paddingLeft: 16 }}>
-                    <li>Si hay HTML → al clicar la tarjeta se abre una ventana fullscreen con tu página</li>
-                    <li>El HTML se renderiza en un iframe aislado: su CSS y JS no afectan al sitio principal</li>
-                    <li>Puedes incrustar cualquier página HTML (King Barbes, landings, catálogos, iframes, etc.)</li>
-                    <li>Si está vacío → se abre el modal clásico con la lista de beneficios</li>
-                    <li>Las tarjetas con Landing muestran el badge <strong style={{ color: '#378add' }}>🌐 Landing</strong></li>
-                  </ul>
-                </div>
-
-                {/* Botón limpiar */}
-                {form.detailHtml.trim() && (
-                  <button
-                    onClick={() => {
-                      if (window.confirm('¿Eliminar el HTML de la landing? La tarjeta volverá al modal automático.')) {
-                        setForm(p => ({ ...p, detailHtml: '' }))
-                      }
-                    }}
-                    style={{
-                      marginTop: 10,
-                      background: 'rgba(255,60,60,0.06)',
-                      border: '1px solid rgba(255,60,60,0.2)',
-                      color: '#ff6060',
-                      padding: '7px 14px',
-                      borderRadius: 7,
-                      cursor: 'pointer',
-                      fontSize: 11,
-                      fontWeight: 600,
-                    }}
-                  >
-                    🗑 Eliminar Landing HTML
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* Acciones */}
-          <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-            <button className="save-btn" onClick={handleSave} disabled={saving}>
-              {saving ? 'Guardando…' : '💾 Guardar Membresía'}
-            </button>
-            <button onClick={cancel} style={{
-              background: 'transparent', border: '1px solid rgba(255,255,255,0.15)',
-              color: 'rgba(255,255,255,0.5)', padding: '10px 20px',
-              borderRadius: 8, cursor: 'pointer', fontSize: 13,
-            }}>
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ─── Lista de membresías ─── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
-        {ecosystems.map((eco, idx) => {
-          let fCount = 0
-          try { fCount = (Array.isArray(eco.features) ? eco.features : JSON.parse(eco.features || '[]')).length } catch {}
-          const hasLanding = !!(eco.detailHtml && eco.detailHtml.trim())
-          return (
-            <div key={eco.id || idx} style={{
-              borderRadius: 14, overflow: 'hidden',
-              border: eco.featured ? '1px solid rgba(255,60,60,0.35)' : '1px solid rgba(255,255,255,0.08)',
-              background: eco.featured ? 'rgba(255,60,60,0.04)' : 'transparent',
-              position: 'relative',
-            }}>
-              {eco.featured && (
-                <div style={{
-                  position: 'absolute', top: 10, right: 10, zIndex: 1,
-                  background: 'var(--primary)', color: 'white',
-                  fontSize: 9, fontWeight: 800, letterSpacing: 1,
-                  textTransform: 'uppercase', padding: '3px 8px', borderRadius: 20,
-                }}>★ Destacado</div>
-              )}
-              {eco.image && (
-                <img src={eco.image} alt={eco.title}
-                  style={{ width: '100%', height: 100, objectFit: 'cover', display: 'block', filter: 'brightness(0.6)' }} />
-              )}
-              <div style={{ padding: 14, background: 'rgba(0,0,0,0.7)' }}>
-                <div style={{ color: '#ff3c3c', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1 }}>{eco.category}</div>
-                <div style={{ fontWeight: 700, fontSize: 15, marginTop: 2 }}>{eco.title}</div>
-                {eco.price && (
-                  <div style={{ color: 'var(--primary)', fontWeight: 800, fontSize: 14, marginTop: 2 }}>
-                    {eco.price}{eco.period && <span style={{ fontSize: 11, fontWeight: 400, color: 'rgba(255,255,255,0.4)' }}> {eco.period}</span>}
-                  </div>
-                )}
-                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 4, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {fCount > 0 && <span>{fCount} beneficio{fCount > 1 ? 's' : ''}</span>}
-                  {eco.ctaLink && <span>· Con CTA</span>}
-                  {hasLanding && (
-                    <span style={{
-                      color: '#378add',
-                      background: 'rgba(55,138,221,0.12)',
-                      border: '1px solid rgba(55,138,221,0.25)',
-                      borderRadius: 6,
-                      padding: '0 6px',
-                      fontSize: 10,
-                      fontWeight: 700,
-                    }}>
-                      🌐 Landing HTML
-                    </span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                  <button onClick={() => startEdit(eco, idx)} style={{
-                    flex: 1, background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: 'rgba(255,255,255,0.6)',
-                    padding: 6, borderRadius: 6, cursor: 'pointer', fontSize: 12,
-                  }}>✏️ Editar</button>
-                  <button onClick={() => handleDelete(eco, idx)} disabled={deleting === idx} style={{
-                    background: 'rgba(255,60,60,0.08)', border: '1px solid rgba(255,60,60,0.2)',
-                    color: '#ff3c3c', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 12,
-                  }}>
-                    {deleting === idx ? '…' : '🗑'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-</file>
-
 <file path="src/components/admin/tabs/HeroTab.jsx">
 /**
  * HeroTab.jsx — FIXED
@@ -5374,6 +4811,569 @@ export default function ContactTab({ data }) {
 }
 </file>
 
+<file path="src/components/admin/tabs/EcosystemsTab.jsx">
+/**
+ * EcosystemsTab.jsx — v2 (detailHtml mejorado)
+ * ─────────────────────────────────────────────────────────────────────────
+ * CAMBIOS QUIRÚRGICOS respecto a la versión anterior:
+ *
+ *  1. Campo "detailHtml" del tab CTA & HTML:
+ *     - Texto de ayuda actualizado: explica que puede ser HTML completo
+ *       (como el de King Barbes) o un fragmento, con ejemplos.
+ *     - Indicador visual de tipo de contenido detectado:
+ *       "Documento completo" / "Fragmento HTML" / "Vacío (modal automático)"
+ *     - Botón de "Plantilla HTML completa" que inserta una estructura
+ *       base tipo King Barbes para que el admin pueda editar.
+ *
+ *  TODO LO DEMÁS INTACTO:
+ *  - CRUD completo (crear, editar, eliminar)
+ *  - Tabs básico / contenido / cta
+ *  - ImageUploadField (upload a Firestore)
+ *  - features como textarea línea-por-línea
+ *  - saveEcosystem / deleteEcosystem de firebaseHelpers
+ *  - FieldGroup, toast
+ */
+
+import { useState } from 'react'
+import { saveEcosystem, deleteEcosystem } from '../../../lib/firebaseHelpers'
+import FieldGroup from '../FieldGroup'
+import ImageUploadField from '../ImageUploadField'
+import toast from 'react-hot-toast'
+
+const EMPTY = {
+  category: '', title: '', desc: '', image: '',
+  price: '', period: '', featured: false,
+  features: '[]',
+  ctaLabel: '', ctaLink: '',
+  detailHtml: '',
+  extraText: '',
+  order: 0,
+}
+
+// Convierte array JS → string de textarea (una línea por ítem)
+const arrToStr = (val) => {
+  if (Array.isArray(val)) return val.join('\n')
+  try {
+    const parsed = JSON.parse(val || '[]')
+    return Array.isArray(parsed) ? parsed.join('\n') : val
+  } catch { return val || '' }
+}
+
+// Convierte string textarea → JSON array string para guardar
+const strToArr = (val) => JSON.stringify(
+  val.split('\n').map(s => s.trim()).filter(Boolean)
+)
+
+// Detecta qué tipo de HTML está en el campo
+function detectHtmlType(html) {
+  if (!html || !html.trim()) return 'empty'
+  if (/<!doctype\s+html/i.test(html) || /<html[\s>]/i.test(html)) return 'full'
+  return 'fragment'
+}
+
+// Plantilla HTML completa de ejemplo (estilo King Barbes)
+const HTML_TEMPLATE = `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nombre del Plan</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; color: #333; background: #fff; }
+        h1, h2 { font-family: 'Playfair Display', serif; }
+        nav { background: #1a1a1a; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        nav .logo { color: #d4af37; font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; }
+        .hero { background: linear-gradient(135deg, rgba(26,26,26,0.9), rgba(26,26,26,0.7)), url('TU_IMAGEN_URL') center/cover; min-height: 60vh; display: flex; align-items: center; justify-content: center; text-align: center; color: white; padding: 4rem 2rem; }
+        .hero h1 { font-size: clamp(2rem,5vw,3.5rem); margin-bottom: 1rem; }
+        .hero h2 { color: #d4af37; font-size: 1rem; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 1rem; }
+        .hero p { color: #e0e0e0; max-width: 600px; margin: 0 auto 2rem; }
+        .cta { display: inline-block; padding: 1rem 2.5rem; background: #d4af37; color: #1a1a1a; text-decoration: none; font-weight: 700; border-radius: 50px; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s; }
+        .cta:hover { background: #1a1a1a; color: #d4af37; }
+        section { padding: 4rem 2rem; max-width: 1200px; margin: 0 auto; }
+        .services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+        .service-card { background: #f8f8f8; padding: 2rem; border-radius: 12px; text-align: center; border-bottom: 3px solid transparent; transition: all 0.3s; }
+        .service-card:hover { border-bottom-color: #d4af37; transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+        .service-card h3 { margin: 1rem 0 0.5rem; }
+        .section-title { text-align: center; margin-bottom: 2.5rem; }
+        .section-title h2 { font-size: 2rem; }
+        .features-list { list-style: none; display: grid; gap: 1rem; margin-top: 1.5rem; }
+        .features-list li { display: flex; align-items: flex-start; gap: 0.8rem; }
+        .features-list li::before { content: '✓'; color: #d4af37; font-weight: 700; flex-shrink: 0; }
+        footer { background: #1a1a1a; color: white; text-align: center; padding: 2rem; }
+        footer .logo { color: #d4af37; font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="logo">NOMBRE DEL PLAN</div>
+</nav>
+
+<section class="hero" style="min-height:60vh; background: linear-gradient(135deg,rgba(26,26,26,0.9),rgba(26,26,26,0.7)); display:flex; align-items:center; justify-content:center; text-align:center; color:white; padding:4rem 2rem;">
+    <div>
+        <h2 style="color:#d4af37; text-transform:uppercase; letter-spacing:3px; font-size:1rem; margin-bottom:1rem;">Tu Categoría Aquí</h2>
+        <h1 style="font-family:'Playfair Display',serif; font-size:clamp(2rem,5vw,3.5rem); margin-bottom:1rem;">Título Principal del Plan</h1>
+        <p style="color:#e0e0e0; max-width:600px; margin:0 auto 2rem;">Descripción detallada de lo que ofrece este plan. Explica el valor único y los beneficios principales para el cliente.</p>
+        <a href="#contacto" class="cta">Solicitar Información</a>
+    </div>
+</section>
+
+<section>
+    <div class="section-title">
+        <h2>Qué Incluye</h2>
+        <p>Todo lo que necesitas en un solo plan</p>
+    </div>
+    <div class="services-grid">
+        <div class="service-card">
+            <div style="font-size:2.5rem">📱</div>
+            <h3>Beneficio 1</h3>
+            <p>Descripción breve del primer beneficio principal de este plan.</p>
+        </div>
+        <div class="service-card">
+            <div style="font-size:2.5rem">💼</div>
+            <h3>Beneficio 2</h3>
+            <p>Descripción breve del segundo beneficio principal de este plan.</p>
+        </div>
+        <div class="service-card">
+            <div style="font-size:2.5rem">🚀</div>
+            <h3>Beneficio 3</h3>
+            <p>Descripción breve del tercer beneficio principal de este plan.</p>
+        </div>
+    </div>
+</section>
+
+<section style="background:#f8f8f8; padding:4rem 2rem;">
+    <div style="max-width:700px; margin:0 auto;">
+        <h2 style="font-family:'Playfair Display',serif; text-align:center; margin-bottom:1.5rem;">Características Completas</h2>
+        <ul class="features-list">
+            <li>Característica completa número 1</li>
+            <li>Característica completa número 2</li>
+            <li>Característica completa número 3</li>
+            <li>Característica completa número 4</li>
+            <li>Característica completa número 5</li>
+        </ul>
+    </div>
+</section>
+
+<section id="contacto" style="text-align:center; padding:4rem 2rem;">
+    <h2 style="font-family:'Playfair Display',serif; margin-bottom:1rem;">¿Listo para Empezar?</h2>
+    <p style="color:#666; margin-bottom:2rem;">Contáctanos y te ayudaremos a elegir el mejor plan para tu negocio.</p>
+    <a href="TU_LINK_AQUI" class="cta">Contactar Ahora</a>
+</section>
+
+<footer>
+    <div class="logo">NOMBRE DEL PLAN</div>
+    <p style="color:#aaa; margin-top:1rem; font-size:0.9rem;">© 2024 — Todos los derechos reservados</p>
+</footer>
+
+</body>
+</html>`
+
+export default function EcosystemsTab({ data }) {
+  const { ecosystems, setEcosystems } = data
+  const [editing,   setEditing]  = useState(null)
+  const [form,      setForm]     = useState(EMPTY)
+  const [featText,  setFeatText] = useState('')
+  const [saving,    setSaving]   = useState(false)
+  const [deleting,  setDeleting] = useState(null)
+  const [tab,       setTab]      = useState('basic')
+
+  const startEdit = (item, idx) => {
+    setForm({ ...EMPTY, ...item })
+    setFeatText(arrToStr(item.features))
+    setEditing(idx)
+    setTab('basic')
+  }
+  const startNew = () => {
+    setForm({ ...EMPTY, order: ecosystems.length })
+    setFeatText('')
+    setEditing('new')
+    setTab('basic')
+  }
+  const cancel = () => setEditing(null)
+
+  const handleSave = async () => {
+    if (!form.title.trim()) { toast.error('El título es obligatorio'); return }
+    setSaving(true)
+    try {
+      const payload = { ...form, features: strToArr(featText) }
+      const id = editing !== 'new' ? ecosystems[editing]?.id : null
+      await saveEcosystem(id, payload)
+      if (editing === 'new') {
+        setEcosystems(prev => [...prev, { ...payload, id: Date.now().toString() }])
+      } else {
+        setEcosystems(prev => prev.map((s, i) => i === editing ? { ...s, ...payload } : s))
+      }
+      toast.success('Membresía guardada ✓')
+      setEditing(null)
+    } catch { toast.error('Error al guardar') }
+    finally  { setSaving(false) }
+  }
+
+  const handleDelete = async (item, idx) => {
+    setDeleting(idx)
+    try {
+      if (item.id && !item.id.startsWith('e')) await deleteEcosystem(item.id)
+      setEcosystems(prev => prev.filter((_, i) => i !== idx))
+      toast.success('Eliminado')
+    } catch { toast.error('Error') }
+    finally  { setDeleting(null) }
+  }
+
+  const tabStyle = (id) => ({
+    padding: '7px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
+    fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
+    background: tab === id ? 'var(--primary)' : 'rgba(255,255,255,0.06)',
+    color:      tab === id ? 'white' : 'rgba(255,255,255,0.5)',
+  })
+
+  // Para el indicador de tipo HTML
+  const htmlType = detectHtmlType(form.detailHtml)
+  const htmlTypeMeta = {
+    empty:    { label: 'Vacío — usa modal automático', color: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.04)' },
+    full:     { label: '✓ Documento HTML completo detectado', color: '#1D9E75', bg: 'rgba(29,158,117,0.08)' },
+    fragment: { label: '⚠ Fragmento HTML — se envolverá automáticamente', color: '#EF9F27', bg: 'rgba(239,159,39,0.08)' },
+  }[htmlType]
+
+  return (
+    <div>
+      {/* ─── Header ─── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 4 }}>Membresías & Grupos</h2>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>
+            Cada tarjeta puede abrir una landing page HTML completa o un modal automático.
+          </p>
+        </div>
+        {editing === null && <button className="save-btn" onClick={startNew}>+ NUEVA MEMBRESÍA</button>}
+      </div>
+
+      {/* ─── Formulario de edición ─── */}
+      {editing !== null && (
+        <div className="section-card" style={{ border: '1px solid rgba(255,60,60,0.3)', marginBottom: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#ff3c3c', margin: 0 }}>
+              {editing === 'new' ? '+ Nueva Membresía' : `Editando: ${form.title || '…'}`}
+            </h3>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <button style={tabStyle('basic')}   onClick={() => setTab('basic')}>Básico</button>
+              <button style={tabStyle('content')} onClick={() => setTab('content')}>Contenido</button>
+              <button style={tabStyle('cta')}     onClick={() => setTab('cta')}>CTA & Landing</button>
+            </div>
+          </div>
+
+          {/* ── Tab: Básico ── */}
+          {tab === 'basic' && (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <FieldGroup label="Categoría / Nivel">
+                  <input className="admin-input" value={form.category}
+                    onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
+                    placeholder="Ej: Plan Básico / Grupo A" />
+                </FieldGroup>
+                <FieldGroup label="Nombre del Plan *">
+                  <input className="admin-input" value={form.title}
+                    onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+                    placeholder="Starter, Pro, Elite…" />
+                </FieldGroup>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <FieldGroup label="Precio (ej: $99 / Gratis)">
+                  <input className="admin-input" value={form.price}
+                    onChange={e => setForm(p => ({ ...p, price: e.target.value }))}
+                    placeholder="$99" />
+                </FieldGroup>
+                <FieldGroup label="Período (ej: /mes)">
+                  <input className="admin-input" value={form.period}
+                    onChange={e => setForm(p => ({ ...p, period: e.target.value }))}
+                    placeholder="/mes" />
+                </FieldGroup>
+              </div>
+              <FieldGroup label="Descripción breve (aparece en la tarjeta)">
+                <textarea className="admin-textarea" value={form.desc}
+                  onChange={e => setForm(p => ({ ...p, desc: e.target.value }))}
+                  rows={2} placeholder="Resumen que aparece en la tarjeta…" />
+              </FieldGroup>
+              <FieldGroup label="¿Plan destacado?">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={!!form.featured}
+                    onChange={e => setForm(p => ({ ...p, featured: e.target.checked }))}
+                    style={{ width: 16, height: 16, accentColor: 'var(--primary)' }} />
+                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>
+                    Mostrar badge "Destacado" en esta tarjeta
+                  </span>
+                </label>
+              </FieldGroup>
+              <ImageUploadField label="Imagen de la tarjeta" folder="ecosystems"
+                value={form.image} onChange={url => setForm(p => ({ ...p, image: url }))} />
+            </>
+          )}
+
+          {/* ── Tab: Contenido (fallback modal) ── */}
+          {tab === 'content' && (
+            <>
+              <div style={{
+                background: 'rgba(255,200,0,0.04)', border: '1px solid rgba(255,200,0,0.12)',
+                borderRadius: 8, padding: '10px 14px', marginBottom: 16,
+                fontSize: 12, color: 'rgba(255,200,0,0.7)', lineHeight: 1.7,
+              }}>
+                Este contenido se usa como <strong>fallback</strong> cuando no hay Landing HTML configurada.
+                Si hay HTML en la pestaña "CTA & Landing", este contenido se ignora.
+              </div>
+              <FieldGroup label="Beneficios incluidos (una línea por ítem)">
+                <textarea
+                  className="admin-textarea"
+                  value={featText}
+                  onChange={e => setFeatText(e.target.value)}
+                  rows={8}
+                  placeholder={"Acceso a canal privado\nSesión mensual 1:1\nMaterial exclusivo\nSoporte WhatsApp"}
+                />
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 5 }}>
+                  Cada línea es un ítem con ✓. En la tarjeta se muestran los primeros 3 y todos en el modal.
+                </p>
+              </FieldGroup>
+              <FieldGroup label="Texto adicional (aparece en el modal fallback)">
+                <textarea className="admin-textarea" value={form.extraText}
+                  onChange={e => setForm(p => ({ ...p, extraText: e.target.value }))}
+                  rows={3} placeholder="Texto descriptivo adicional…" />
+              </FieldGroup>
+            </>
+          )}
+
+          {/* ── Tab: CTA & Landing HTML ── */}
+          {tab === 'cta' && (
+            <>
+              {/* CTA buttons */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 4 }}>
+                <FieldGroup label="Texto del botón CTA">
+                  <input className="admin-input" value={form.ctaLabel}
+                    onChange={e => setForm(p => ({ ...p, ctaLabel: e.target.value }))}
+                    placeholder="UNIRSE AHORA" />
+                </FieldGroup>
+                <FieldGroup label="Link del botón CTA">
+                  <input className="admin-input" value={form.ctaLink}
+                    onChange={e => setForm(p => ({ ...p, ctaLink: e.target.value }))}
+                    placeholder="https://wa.me/... o https://..." />
+                </FieldGroup>
+              </div>
+
+              {/* Separador */}
+              <div style={{
+                borderTop: '1px solid rgba(255,255,255,0.07)',
+                margin: '20px 0 16px',
+              }} />
+
+              {/* Landing HTML */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>
+                      🌐 Landing Page HTML (abre fullscreen al clicar la tarjeta)
+                    </div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', lineHeight: 1.6 }}>
+                      Pega aquí un HTML completo (como el de King Barbes) o un fragmento.
+                      Se renderiza en un iframe aislado con su propio CSS y JS.
+                    </div>
+                  </div>
+                  {/* Botón insertar plantilla */}
+                  <button
+                    onClick={() => {
+                      if (!form.detailHtml.trim() || window.confirm('¿Reemplazar el contenido actual con la plantilla?')) {
+                        setForm(p => ({ ...p, detailHtml: HTML_TEMPLATE }))
+                      }
+                    }}
+                    style={{
+                      background: 'rgba(127,119,221,0.1)',
+                      border: '1px solid rgba(127,119,221,0.3)',
+                      color: '#AFA9EC',
+                      padding: '7px 14px',
+                      borderRadius: 7,
+                      cursor: 'pointer',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                    }}
+                  >
+                    📋 Insertar Plantilla
+                  </button>
+                </div>
+
+                {/* Indicador de tipo detectado */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginBottom: 10,
+                  padding: '7px 12px',
+                  borderRadius: 7,
+                  background: htmlTypeMeta.bg,
+                  border: `1px solid ${htmlTypeMeta.color}30`,
+                  fontSize: 11,
+                  color: htmlTypeMeta.color,
+                  fontWeight: 600,
+                }}>
+                  <span style={{ fontSize: 13 }}>
+                    {htmlType === 'empty' ? '⬜' : htmlType === 'full' ? '🟢' : '🟡'}
+                  </span>
+                  {htmlTypeMeta.label}
+                  {htmlType !== 'empty' && (
+                    <span style={{ marginLeft: 'auto', fontWeight: 400, opacity: 0.7 }}>
+                      {form.detailHtml.length.toLocaleString()} caracteres
+                    </span>
+                  )}
+                </div>
+
+                {/* Textarea del HTML */}
+                <textarea
+                  className="admin-textarea"
+                  value={form.detailHtml}
+                  onChange={e => setForm(p => ({ ...p, detailHtml: e.target.value }))}
+                  rows={14}
+                  placeholder={`<!DOCTYPE html>\n<html lang="es">\n<head>\n  <meta charset="UTF-8">\n  ...\n</head>\n<body>\n  <!-- Tu contenido aquí -->\n</body>\n</html>`}
+                  style={{ fontFamily: 'monospace', fontSize: 11, lineHeight: 1.5 }}
+                />
+
+                {/* Nota aclaratoria */}
+                <div style={{
+                  marginTop: 10,
+                  background: 'rgba(55,138,221,0.04)',
+                  border: '1px solid rgba(55,138,221,0.12)',
+                  borderRadius: 8,
+                  padding: '10px 14px',
+                  fontSize: 11,
+                  color: 'rgba(55,138,221,0.7)',
+                  lineHeight: 1.7,
+                }}>
+                  <strong>Cómo funciona:</strong>
+                  <ul style={{ margin: '6px 0 0', paddingLeft: 16 }}>
+                    <li>Si hay HTML → al clicar la tarjeta se abre una ventana fullscreen con tu página</li>
+                    <li>El HTML se renderiza en un iframe aislado: su CSS y JS no afectan al sitio principal</li>
+                    <li>Puedes incrustar cualquier página HTML (King Barbes, landings, catálogos, iframes, etc.)</li>
+                    <li>Si está vacío → se abre el modal clásico con la lista de beneficios</li>
+                    <li>Las tarjetas con Landing muestran el badge <strong style={{ color: '#378add' }}>🌐 Landing</strong></li>
+                  </ul>
+                </div>
+
+                {/* Botón limpiar */}
+                {form.detailHtml.trim() && (
+                  <button
+                    onClick={() => {
+                      if (window.confirm('¿Eliminar el HTML de la landing? La tarjeta volverá al modal automático.')) {
+                        setForm(p => ({ ...p, detailHtml: '' }))
+                      }
+                    }}
+                    style={{
+                      marginTop: 10,
+                      background: 'rgba(255,60,60,0.06)',
+                      border: '1px solid rgba(255,60,60,0.2)',
+                      color: '#ff6060',
+                      padding: '7px 14px',
+                      borderRadius: 7,
+                      cursor: 'pointer',
+                      fontSize: 11,
+                      fontWeight: 600,
+                    }}
+                  >
+                    🗑 Eliminar Landing HTML
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Acciones */}
+          <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+            <button className="save-btn" onClick={handleSave} disabled={saving}>
+              {saving ? 'Guardando…' : '💾 Guardar Membresía'}
+            </button>
+            <button onClick={cancel} style={{
+              background: 'transparent', border: '1px solid rgba(255,255,255,0.15)',
+              color: 'rgba(255,255,255,0.5)', padding: '10px 20px',
+              borderRadius: 8, cursor: 'pointer', fontSize: 13,
+            }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Lista de membresías ─── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
+        {ecosystems.map((eco, idx) => {
+          let fCount = 0
+          try { fCount = (Array.isArray(eco.features) ? eco.features : JSON.parse(eco.features || '[]')).length } catch {}
+          const hasLanding = !!(eco.detailHtml && eco.detailHtml.trim())
+          return (
+            <div key={eco.id || idx} style={{
+              borderRadius: 14, overflow: 'hidden',
+              border: eco.featured ? '1px solid rgba(255,60,60,0.35)' : '1px solid rgba(255,255,255,0.08)',
+              background: eco.featured ? 'rgba(255,60,60,0.04)' : 'transparent',
+              position: 'relative',
+            }}>
+              {eco.featured && (
+                <div style={{
+                  position: 'absolute', top: 10, right: 10, zIndex: 1,
+                  background: 'var(--primary)', color: 'white',
+                  fontSize: 9, fontWeight: 800, letterSpacing: 1,
+                  textTransform: 'uppercase', padding: '3px 8px', borderRadius: 20,
+                }}>★ Destacado</div>
+              )}
+              {eco.image && (
+                <img src={eco.image} alt={eco.title}
+                  style={{ width: '100%', height: 100, objectFit: 'cover', display: 'block', filter: 'brightness(0.6)' }} />
+              )}
+              <div style={{ padding: 14, background: 'rgba(0,0,0,0.7)' }}>
+                <div style={{ color: '#ff3c3c', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1 }}>{eco.category}</div>
+                <div style={{ fontWeight: 700, fontSize: 15, marginTop: 2 }}>{eco.title}</div>
+                {eco.price && (
+                  <div style={{ color: 'var(--primary)', fontWeight: 800, fontSize: 14, marginTop: 2 }}>
+                    {eco.price}{eco.period && <span style={{ fontSize: 11, fontWeight: 400, color: 'rgba(255,255,255,0.4)' }}> {eco.period}</span>}
+                  </div>
+                )}
+                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 4, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {fCount > 0 && <span>{fCount} beneficio{fCount > 1 ? 's' : ''}</span>}
+                  {eco.ctaLink && <span>· Con CTA</span>}
+                  {hasLanding && (
+                    <span style={{
+                      color: '#378add',
+                      background: 'rgba(55,138,221,0.12)',
+                      border: '1px solid rgba(55,138,221,0.25)',
+                      borderRadius: 6,
+                      padding: '0 6px',
+                      fontSize: 10,
+                      fontWeight: 700,
+                    }}>
+                      🌐 Landing HTML
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                  <button onClick={() => startEdit(eco, idx)} style={{
+                    flex: 1, background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: 'rgba(255,255,255,0.6)',
+                    padding: 6, borderRadius: 6, cursor: 'pointer', fontSize: 12,
+                  }}>✏️ Editar</button>
+                  <button onClick={() => handleDelete(eco, idx)} disabled={deleting === idx} style={{
+                    background: 'rgba(255,60,60,0.08)', border: '1px solid rgba(255,60,60,0.2)',
+                    color: '#ff3c3c', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 12,
+                  }}>
+                    {deleting === idx ? '…' : '🗑'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+</file>
+
 <file path="src/components/admin/tabs/LanguageTab.jsx">
 /**
  * LanguageTab.jsx — FIXED v2
@@ -5621,570 +5621,6 @@ function StringPreview({ lang }) {
 }
 </file>
 
-<file path="src/components/admin/tabs/ProjectsTab.jsx">
-import { useState } from 'react'
-import { saveProject, deleteProject } from '../../../lib/firebaseHelpers'
-import FieldGroup from '../FieldGroup'
-import ImageUploadField from '../ImageUploadField'
-import toast from 'react-hot-toast'
-
-const EMPTY = {
-  client:           '',
-  industry:         '',
-  title:            '',
-  description:      '',
-  results:          '',
-  image:            '',
-  url:              '#',
-  order:            0,
-  // ── Proposal fields ──
-  accentColor:      '#c5a059',
-  proposalBg:       '#080a0c',
-  proposalTagline:  '',
-  ctaLink:          '/#contacto',
-  ctaLabel:         'Solicitar Demo',
-  footerTitle:      '¿Listo para empezar?',
-  footerSub:        'Construyamos juntos la experiencia digital que tu negocio merece.',
-  proposalFeatures: '[]',
-}
-
-const EMPTY_FEATURE = {
-  title:       '',
-  description: '',
-  image:       '',
-  icon:        '✦',
-  badges:      [],
-}
-
-function toSlug(str = '') {
-  return str.toLowerCase().trim()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-}
-
-function parseFeatures(raw) {
-  if (Array.isArray(raw)) return raw
-  try { return JSON.parse(raw || '[]') } catch { return [] }
-}
-
-function serializeFeatures(arr) {
-  return JSON.stringify(arr)
-}
-
-export default function ProjectsTab({ data }) {
-  const { projects, setProjects } = data
-  const [editing,         setEditing]         = useState(null)
-  const [form,            setForm]             = useState(EMPTY)
-  const [saving,          setSaving]           = useState(false)
-  const [deleting,        setDeleting]         = useState(null)
-  const [tab,             setTab]              = useState('basic')
-  const [features,        setFeatures]         = useState([])
-  const [editingFeature,  setEditingFeature]   = useState(null)
-  const [featureForm,     setFeatureForm]      = useState(EMPTY_FEATURE)
-  const [featureBadgeInput, setFeatureBadgeInput] = useState('')
-
-  const startEdit = (item, idx) => {
-    setForm({ ...EMPTY, ...item })
-    setFeatures(parseFeatures(item.proposalFeatures))
-    setEditing(idx)
-    setTab('basic')
-    setEditingFeature(null)
-  }
-
-  const startNew = () => {
-    setForm({ ...EMPTY, order: projects.length })
-    setFeatures([])
-    setEditing('new')
-    setTab('basic')
-    setEditingFeature(null)
-  }
-
-  const cancel = () => {
-    setEditing(null)
-    setEditingFeature(null)
-  }
-
-  const set = (key, val) => setForm(p => ({ ...p, [key]: val }))
-
-  const handleSave = async () => {
-    if (!form.client.trim()) { toast.error('El nombre del cliente es obligatorio'); return }
-    setSaving(true)
-    try {
-      const payload = { ...form, proposalFeatures: serializeFeatures(features) }
-      const id = editing !== 'new' ? projects[editing]?.id : null
-      const result = await saveProject(id, payload)
-      if (editing === 'new') {
-        setProjects(prev => [...prev, { ...payload, id: result.id }])
-      } else {
-        setProjects(prev => prev.map((s, i) => i === editing ? { ...s, ...payload } : s))
-      }
-      toast.success('Proyecto guardado ✓')
-      setEditing(null)
-    } catch { toast.error('Error al guardar') }
-    finally  { setSaving(false) }
-  }
-
-  const handleDelete = async (item, idx) => {
-    setDeleting(idx)
-    try {
-      if (item.id) await deleteProject(item.id)
-      setProjects(prev => prev.filter((_, i) => i !== idx))
-      toast.success('Eliminado')
-    } catch { toast.error('Error al eliminar') }
-    finally  { setDeleting(null) }
-  }
-
-  // ── Feature CRUD ──────────────────────────────────────────────────
-  const startNewFeature = () => {
-    setFeatureForm({ ...EMPTY_FEATURE })
-    setFeatureBadgeInput('')
-    setEditingFeature('new')
-  }
-
-  const startEditFeature = (f, idx) => {
-    setFeatureForm({ ...EMPTY_FEATURE, ...f, badges: f.badges || [] })
-    setFeatureBadgeInput((f.badges || []).join(', '))
-    setEditingFeature(idx)
-  }
-
-  const cancelFeature = () => setEditingFeature(null)
-
-  const saveFeature = () => {
-    if (!featureForm.title.trim()) { toast.error('El título es obligatorio'); return }
-    const badges = featureBadgeInput.split(',').map(b => b.trim()).filter(Boolean)
-    const fData  = { ...featureForm, badges }
-    let updated
-    if (editingFeature === 'new') {
-      updated = [...features, fData]
-    } else {
-      updated = features.map((f, i) => i === editingFeature ? fData : f)
-    }
-    setFeatures(updated)
-    setEditingFeature(null)
-  }
-
-  const deleteFeature = (idx) => {
-    setFeatures(prev => prev.filter((_, i) => i !== idx))
-  }
-
-  const moveFeature = (idx, dir) => {
-    const arr = [...features]
-    const t   = idx + dir
-    if (t < 0 || t >= arr.length) return
-    ;[arr[idx], arr[t]] = [arr[t], arr[idx]]
-    setFeatures(arr)
-  }
-
-  // ── Tab styles ────────────────────────────────────────────────────
-  const tabStyle = (id) => ({
-    padding: '7px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
-    fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
-    background: tab === id ? 'var(--primary)' : 'rgba(255,255,255,0.06)',
-    color:      tab === id ? 'white' : 'rgba(255,255,255,0.5)',
-  })
-
-  const slug = toSlug(form.client)
-
-  return (
-    <div>
-      {/* ─── Header ─── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 4 }}>Proyectos & Propuestas</h2>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>
-            Cada proyecto genera automáticamente una página de propuesta visual en <code style={{ color: 'var(--primary)', fontSize: 12 }}>/proposal/:slug</code>
-          </p>
-        </div>
-        {editing === null && <button className="save-btn" onClick={startNew}>+ NUEVO PROYECTO</button>}
-      </div>
-
-      {/* ─── Formulario ─── */}
-      {editing !== null && (
-        <div className="section-card" style={{ border: '1px solid rgba(255,60,60,0.3)', marginBottom: 24 }}>
-          {/* Header form */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#ff3c3c', margin: 0 }}>
-              {editing === 'new' ? '+ Nuevo Proyecto' : `Editando: ${form.client || '…'}`}
-            </h3>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              <button style={tabStyle('basic')}    onClick={() => setTab('basic')}>📋 Básico</button>
-              <button style={tabStyle('proposal')} onClick={() => setTab('proposal')}>🎨 Propuesta</button>
-              <button style={tabStyle('features')} onClick={() => setTab('features')}>✦ Tarjetas</button>
-            </div>
-          </div>
-
-          {/* ── Tab: Básico ── */}
-          {tab === 'basic' && (
-            <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <FieldGroup label="Cliente / Empresa *">
-                  <input className="admin-input" value={form.client}
-                    onChange={e => set('client', e.target.value)}
-                    placeholder="King Barbers" />
-                </FieldGroup>
-                <FieldGroup label="Industria / Categoría">
-                  <input className="admin-input" value={form.industry}
-                    onChange={e => set('industry', e.target.value)}
-                    placeholder="Barbería · Restaurante · Moda…" />
-                </FieldGroup>
-              </div>
-
-              <FieldGroup label="Título del proyecto (opcional)">
-                <input className="admin-input" value={form.title}
-                  onChange={e => set('title', e.target.value)}
-                  placeholder="Rediseño Digital Completo" />
-              </FieldGroup>
-
-              <FieldGroup label="Descripción del trabajo realizado">
-                <textarea className="admin-textarea" value={form.description}
-                  onChange={e => set('description', e.target.value)} rows={3}
-                  placeholder="Sistema de reservas con panel admin, notificaciones WhatsApp y landing premium." />
-              </FieldGroup>
-
-              <FieldGroup
-                label="Resultados / Métricas"
-                hint='Separar con " · " para mostrar como pills. Ej: +300% reservas · -60% no-shows'
-              >
-                <input className="admin-input" value={form.results}
-                  onChange={e => set('results', e.target.value)}
-                  placeholder="+300% reservas · -60% no-shows" />
-              </FieldGroup>
-
-              <FieldGroup label="URL del proyecto (opcional)">
-                <input className="admin-input" value={form.url}
-                  onChange={e => set('url', e.target.value)}
-                  placeholder="https://..." />
-              </FieldGroup>
-
-              <ImageUploadField label="Imagen de portada" folder="projects"
-                value={form.image} onChange={url => set('image', url)} />
-
-              {/* Slug preview */}
-              {form.client && (
-                <div style={{
-                  marginTop: 12, background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, padding: '10px 14px',
-                  fontSize: 12, color: 'rgba(255,255,255,0.4)',
-                }}>
-                  🔗 URL de propuesta:{' '}
-                  <span style={{ color: 'var(--primary)', fontWeight: 700 }}>
-                    /proposal/{slug}
-                  </span>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* ── Tab: Propuesta ── */}
-          {tab === 'proposal' && (
-            <>
-              <div style={{
-                background: 'rgba(255,200,0,0.04)', border: '1px solid rgba(255,200,0,0.15)',
-                borderRadius: 8, padding: '10px 14px', marginBottom: 20,
-                fontSize: 12, color: 'rgba(255,200,0,0.7)', lineHeight: 1.7,
-              }}>
-                Configura el diseño visual de la página de propuesta que verá tu cliente en <strong>/proposal/{slug || 'slug'}</strong>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <FieldGroup label="Color de acento">
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <input type="color" value={form.accentColor || '#c5a059'}
-                      onChange={e => set('accentColor', e.target.value)}
-                      style={{ width: 48, height: 42, borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', padding: 2 }} />
-                    <input className="admin-input" style={{ flex: 1 }}
-                      value={form.accentColor || '#c5a059'}
-                      onChange={e => set('accentColor', e.target.value)}
-                      placeholder="#c5a059" />
-                  </div>
-                </FieldGroup>
-                <FieldGroup label="Color de fondo">
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <input type="color" value={form.proposalBg || '#080a0c'}
-                      onChange={e => set('proposalBg', e.target.value)}
-                      style={{ width: 48, height: 42, borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', padding: 2 }} />
-                    <input className="admin-input" style={{ flex: 1 }}
-                      value={form.proposalBg || '#080a0c'}
-                      onChange={e => set('proposalBg', e.target.value)}
-                      placeholder="#080a0c" />
-                  </div>
-                </FieldGroup>
-              </div>
-
-              <FieldGroup label="Tagline / Subtítulo del hero">
-                <textarea className="admin-textarea" value={form.proposalTagline}
-                  onChange={e => set('proposalTagline', e.target.value)} rows={2}
-                  placeholder="La experiencia digital que tu barbería merece." />
-              </FieldGroup>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <FieldGroup label="Texto del botón CTA">
-                  <input className="admin-input" value={form.ctaLabel}
-                    onChange={e => set('ctaLabel', e.target.value)}
-                    placeholder="Solicitar Demo" />
-                </FieldGroup>
-                <FieldGroup label="Link del botón CTA">
-                  <input className="admin-input" value={form.ctaLink}
-                    onChange={e => set('ctaLink', e.target.value)}
-                    placeholder="/#contacto" />
-                </FieldGroup>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <FieldGroup label="Título del footer">
-                  <input className="admin-input" value={form.footerTitle}
-                    onChange={e => set('footerTitle', e.target.value)}
-                    placeholder="¿Listo para empezar?" />
-                </FieldGroup>
-                <FieldGroup label="Subtítulo del footer">
-                  <input className="admin-input" value={form.footerSub}
-                    onChange={e => set('footerSub', e.target.value)}
-                    placeholder="Construyamos juntos…" />
-                </FieldGroup>
-              </div>
-            </>
-          )}
-
-          {/* ── Tab: Tarjetas ── */}
-          {tab === 'features' && (
-            <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', margin: 0 }}>
-                  Las tarjetas aparecen en la sección principal de la propuesta. Máximo 4 recomendado.
-                </p>
-                {editingFeature === null && (
-                  <button className="save-btn" onClick={startNewFeature} style={{ padding: '8px 16px', fontSize: 12 }}>
-                    + TARJETA
-                  </button>
-                )}
-              </div>
-
-              {/* Form tarjeta */}
-              {editingFeature !== null && (
-                <div style={{
-                  background: 'rgba(255,60,60,0.04)', border: '1px solid rgba(255,60,60,0.2)',
-                  borderRadius: 12, padding: 20, marginBottom: 16,
-                }}>
-                  <h4 style={{ fontSize: 13, color: '#ff3c3c', marginBottom: 16, fontWeight: 700 }}>
-                    {editingFeature === 'new' ? '+ Nueva tarjeta' : 'Editando tarjeta'}
-                  </h4>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr', gap: 12 }}>
-                    <FieldGroup label="Icono">
-                      <input className="admin-input" value={featureForm.icon}
-                        onChange={e => setFeatureForm(p => ({ ...p, icon: e.target.value }))}
-                        style={{ textAlign: 'center', fontSize: 22 }} />
-                    </FieldGroup>
-                    <FieldGroup label="Título *">
-                      <input className="admin-input" value={featureForm.title}
-                        onChange={e => setFeatureForm(p => ({ ...p, title: e.target.value }))}
-                        placeholder="El Trono Virtual" />
-                    </FieldGroup>
-                  </div>
-
-                  <FieldGroup label="Descripción">
-                    <textarea className="admin-textarea" value={featureForm.description}
-                      onChange={e => setFeatureForm(p => ({ ...p, description: e.target.value }))}
-                      rows={3}
-                      placeholder="Agendamiento inteligente en tiempo real. Permite al cliente reservar en menos de 30 segundos." />
-                  </FieldGroup>
-
-                  <ImageUploadField label="Imagen de la tarjeta" folder="proposals"
-                    value={featureForm.image}
-                    onChange={url => setFeatureForm(p => ({ ...p, image: url }))} />
-
-                  <FieldGroup label="Badges (separados por coma)" hint="Ej: Sincronización Live, Recordatorios, 24/7">
-                    <input className="admin-input" value={featureBadgeInput}
-                      onChange={e => setFeatureBadgeInput(e.target.value)}
-                      placeholder="Sincronización Live, Recordatorios" />
-                  </FieldGroup>
-
-                  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                    <button className="save-btn" onClick={saveFeature} style={{ padding: '8px 18px', fontSize: 12 }}>
-                      Guardar tarjeta
-                    </button>
-                    <button onClick={cancelFeature} style={{
-                      background: 'transparent', border: '1px solid rgba(255,255,255,0.15)',
-                      color: 'rgba(255,255,255,0.5)', padding: '8px 18px',
-                      borderRadius: 8, cursor: 'pointer', fontSize: 12,
-                    }}>
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Lista tarjetas */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {features.length === 0 && (
-                  <div style={{
-                    textAlign: 'center', color: 'rgba(255,255,255,0.2)',
-                    fontSize: 13, padding: '24px 0',
-                    border: '1px dashed rgba(255,255,255,0.08)', borderRadius: 10,
-                  }}>
-                    Sin tarjetas aún. Haz clic en "+ TARJETA" para añadir.
-                  </div>
-                )}
-                {features.map((f, idx) => (
-                  <div key={idx} style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.07)',
-                    borderRadius: 10, padding: '12px 14px',
-                  }}>
-                    {/* Orden */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
-                      <button onClick={() => moveFeature(idx, -1)} disabled={idx === 0} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: idx === 0 ? 'default' : 'pointer', fontSize: 10, padding: 0 }}>▲</button>
-                      <button onClick={() => moveFeature(idx, 1)}  disabled={idx === features.length - 1} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: idx === features.length - 1 ? 'default' : 'pointer', fontSize: 10, padding: 0 }}>▼</button>
-                    </div>
-                    {/* Preview imagen */}
-                    {f.image && (
-                      <img src={f.image} alt="" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
-                    )}
-                    {!f.image && (
-                      <div style={{ width: 48, height: 48, borderRadius: 8, background: 'rgba(255,255,255,0.06)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
-                        {f.icon || '✦'}
-                      </div>
-                    )}
-                    {/* Info */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>
-                        {f.icon} {f.title}
-                      </div>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {f.description}
-                      </div>
-                      {f.badges?.length > 0 && (
-                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 3 }}>
-                          {f.badges.join(' · ')}
-                        </div>
-                      )}
-                    </div>
-                    {/* Acciones */}
-                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                      <button onClick={() => startEditFeature(f, idx)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', padding: '5px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 11 }}>✏️</button>
-                      <button onClick={() => deleteFeature(idx)} style={{ background: 'rgba(255,60,60,0.08)', border: '1px solid rgba(255,60,60,0.2)', color: '#ff3c3c', padding: '5px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 11 }}>🗑</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* Acciones form */}
-          <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-            <button className="save-btn" onClick={handleSave} disabled={saving}>
-              {saving ? 'Guardando...' : '💾 Guardar Proyecto'}
-            </button>
-            <button onClick={cancel} style={{
-              background: 'transparent', border: '1px solid rgba(255,255,255,0.15)',
-              color: 'rgba(255,255,255,0.5)', padding: '10px 20px',
-              borderRadius: 8, cursor: 'pointer', fontSize: 13,
-            }}>
-              Cancelar
-            </button>
-            {form.client && (
-              <a
-                href={`/proposal/${slug}`}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  color: 'rgba(255,255,255,0.5)', padding: '10px 18px',
-                  borderRadius: 8, textDecoration: 'none', fontSize: 13,
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)' }}
-              >
-                🔗 Ver propuesta
-              </a>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ─── Lista de proyectos ─── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {projects.map((proj, idx) => {
-          const client      = proj.client   || proj.title    || '—'
-          const industry    = proj.industry || proj.category || ''
-          const description = proj.description || proj.desc  || ''
-          const results     = proj.results || ''
-          const slug        = toSlug(client)
-          const accent      = proj.accentColor || 'var(--primary)'
-          const featCount   = parseFeatures(proj.proposalFeatures).length
-
-          return (
-            <div key={proj.id || idx} style={{
-              borderRadius: 14, overflow: 'hidden',
-              border: '1px solid rgba(255,255,255,0.08)',
-              display: 'flex', gap: 0,
-            }}>
-              {proj.image && (
-                <div style={{ width: 100, flexShrink: 0, overflow: 'hidden' }}>
-                  <img src={proj.image} alt={client}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                </div>
-              )}
-              <div style={{ flex: 1, padding: '14px 16px', background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span style={{ color: accent, fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                      {client}
-                    </span>
-                    {industry && (
-                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', padding: '2px 7px', borderRadius: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                        {industry}
-                      </span>
-                    )}
-                    {featCount > 0 && (
-                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>
-                        {featCount} tarjeta{featCount > 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </div>
-                  {description && (
-                    <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {description}
-                    </div>
-                  )}
-                  {results && (
-                    <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 3 }}>
-                      📊 {results}
-                    </div>
-                  )}
-                  {/* Link propuesta */}
-                  <a
-                    href={`/proposal/${slug}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={e => e.stopPropagation()}
-                    style={{ fontSize: 11, color: accent, textDecoration: 'none', marginTop: 4, display: 'inline-block', opacity: 0.7 }}
-                  >
-                    🔗 /proposal/{slug}
-                  </a>
-                </div>
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                  <button onClick={() => startEdit(proj, idx)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>
-                    ✏️ Editar
-                  </button>
-                  <button onClick={() => handleDelete(proj, idx)} disabled={deleting === idx} style={{ background: 'rgba(255,60,60,0.08)', border: '1px solid rgba(255,60,60,0.2)', color: '#ff3c3c', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>
-                    {deleting === idx ? '…' : '🗑'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-</file>
-
 <file path="src/components/site/Footer.jsx">
 import { useUIStrings } from '../../hooks/useUIStrings'
 
@@ -6332,6 +5768,311 @@ export const auth = getAuth(app)
 setPersistence(auth, browserLocalPersistence)
 
 export default app
+</file>
+
+<file path="src/components/admin/tabs/ProjectsTab.jsx">
+import { useState } from 'react'
+import { saveProject, deleteProject } from '../../../lib/firebaseHelpers'
+import FieldGroup from '../FieldGroup'
+import ImageUploadField from '../ImageUploadField'
+import toast from 'react-hot-toast'
+
+const EMPTY = {
+  client:           '',
+  industry:         '',
+  title:            '',
+  description:      '',
+  results:          '',
+  image:            '',
+  url:              '#',
+  order:            0,
+  accentColor:      '#c5a059',
+  proposalBg:       '#080a0c',
+  proposalTagline:  '',
+  ctaLink:          '/#contacto',
+  ctaLabel:         'Solicitar Demo',
+  footerTitle:      '¿Listo para empezar?',
+  footerSub:        'Construyamos juntos la experiencia digital que tu negocio merece.',
+  proposalFeatures: '[]',
+  detailHtml:       '',
+}
+
+const EMPTY_FEATURE = { title: '', description: '', image: '', icon: '✦', badges: [] }
+
+function toSlug(str = '') {
+  return str.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+}
+
+function parseFeatures(raw) {
+  if (Array.isArray(raw)) return raw
+  try { return JSON.parse(raw || '[]') } catch { return [] }
+}
+
+function serializeFeatures(arr) { return JSON.stringify(arr) }
+
+function detectHtmlType(html) {
+  if (!html || !html.trim()) return 'empty'
+  if (/<!doctype\s+html/i.test(html) || /<html[\s>]/i.test(html)) return 'full'
+  return 'fragment'
+}
+
+export default function ProjectsTab({ data }) {
+  const { projects, setProjects } = data
+  const [editing,         setEditing]         = useState(null)
+  const [form,            setForm]            = useState(EMPTY)
+  const [saving,          setSaving]          = useState(false)
+  const [deleting,        setDeleting]        = useState(null)
+  const [tab,             setTab]             = useState('basic')
+  const [features,        setFeatures]        = useState([])
+  const [editingFeature,  setEditingFeature]  = useState(null)
+  const [featureForm,     setFeatureForm]     = useState(EMPTY_FEATURE)
+  const [featureBadgeInput, setFeatureBadgeInput] = useState('')
+
+  const startEdit = (item, idx) => {
+    setForm({ ...EMPTY, ...item })
+    setFeatures(parseFeatures(item.proposalFeatures))
+    setEditing(idx)
+    setTab('basic')
+    setEditingFeature(null)
+  }
+  const startNew = () => {
+    setForm({ ...EMPTY, order: projects.length })
+    setFeatures([])
+    setEditing('new')
+    setTab('basic')
+    setEditingFeature(null)
+  }
+  const cancel = () => { setEditing(null); setEditingFeature(null) }
+  const set = (key, val) => setForm(p => ({ ...p, [key]: val }))
+
+  const handleSave = async () => {
+    if (!form.client.trim()) { toast.error('El nombre del cliente es obligatorio'); return }
+    setSaving(true)
+    try {
+      const payload = { ...form, proposalFeatures: serializeFeatures(features) }
+      const id = editing !== 'new' ? projects[editing]?.id : null
+      const result = await saveProject(id, payload)
+      if (editing === 'new') {
+        setProjects(prev => [...prev, { ...payload, id: result.id }])
+      } else {
+        setProjects(prev => prev.map((s, i) => i === editing ? { ...s, ...payload } : s))
+      }
+      toast.success('Proyecto guardado ✓')
+      setEditing(null)
+    } catch { toast.error('Error al guardar') }
+    finally  { setSaving(false) }
+  }
+
+  const handleDelete = async (item, idx) => {
+    setDeleting(idx)
+    try {
+      if (item.id) await deleteProject(item.id)
+      setProjects(prev => prev.filter((_, i) => i !== idx))
+      toast.success('Eliminado')
+    } catch { toast.error('Error al eliminar') }
+    finally  { setDeleting(null) }
+  }
+
+  // Feature CRUD
+  const startNewFeature = () => { setFeatureForm({ ...EMPTY_FEATURE }); setFeatureBadgeInput(''); setEditingFeature('new') }
+  const startEditFeature = (f, idx) => { setFeatureForm({ ...EMPTY_FEATURE, ...f, badges: f.badges || [] }); setFeatureBadgeInput((f.badges || []).join(', ')); setEditingFeature(idx) }
+  const cancelFeature = () => setEditingFeature(null)
+  const saveFeature = () => {
+    if (!featureForm.title.trim()) { toast.error('El título es obligatorio'); return }
+    const badges = featureBadgeInput.split(',').map(b => b.trim()).filter(Boolean)
+    const fData  = { ...featureForm, badges }
+    let updated = editingFeature === 'new' ? [...features, fData] : features.map((f, i) => i === editingFeature ? fData : f)
+    setFeatures(updated); setEditingFeature(null)
+  }
+  const deleteFeature = (idx) => setFeatures(prev => prev.filter((_, i) => i !== idx))
+  const moveFeature = (idx, dir) => {
+    const arr = [...features]; const t = idx + dir
+    if (t < 0 || t >= arr.length) return
+    ;[arr[idx], arr[t]] = [arr[t], arr[idx]]; setFeatures(arr)
+  }
+
+  const tabStyle = (id) => ({
+    padding: '7px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
+    fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
+    background: tab === id ? 'var(--primary)' : 'rgba(255,255,255,0.06)',
+    color:      tab === id ? 'white' : 'rgba(255,255,255,0.5)',
+  })
+
+  const slug = toSlug(form.client)
+  const htmlType = detectHtmlType(form.detailHtml)
+  const htmlTypeMeta = {
+    empty: { label: 'Vacío — abre link externo o solo hover', color: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.04)' },
+    full:  { label: '✓ Documento HTML completo', color: '#1D9E75', bg: 'rgba(29,158,117,0.08)' },
+    fragment: { label: '⚠ Fragmento HTML — se envuelve automáticamente', color: '#EF9F27', bg: 'rgba(239,159,39,0.08)' },
+  }[htmlType]
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 4 }}>Proyectos & Apps</h2>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>
+            Cada proyecto puede ser una landing HTML aislada o un link externo.
+          </p>
+        </div>
+        {editing === null && <button className="save-btn" onClick={startNew}>+ NUEVO PROYECTO</button>}
+      </div>
+
+      {editing !== null && (
+        <div className="section-card" style={{ border: '1px solid rgba(255,60,60,0.3)', marginBottom: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#ff3c3c', margin: 0 }}>
+              {editing === 'new' ? '+ Nuevo Proyecto' : `Editando: ${form.client || '…'}`}
+            </h3>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <button style={tabStyle('basic')}    onClick={() => setTab('basic')}>📋 Básico</button>
+              <button style={tabStyle('proposal')} onClick={() => setTab('proposal')}>🎨 Propuesta</button>
+              <button style={tabStyle('features')} onClick={() => setTab('features')}>✦ Tarjetas</button>
+              <button style={tabStyle('landing')}  onClick={() => setTab('landing')}>🌐 Landing App</button>
+            </div>
+          </div>
+
+          {tab === 'basic' && (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <FieldGroup label="Cliente / Empresa *"><input className="admin-input" value={form.client} onChange={e => set('client', e.target.value)} placeholder="King Barbers" /></FieldGroup>
+                <FieldGroup label="Industria / Categoría"><input className="admin-input" value={form.industry} onChange={e => set('industry', e.target.value)} placeholder="Barbería · Restaurante" /></FieldGroup>
+              </div>
+              <FieldGroup label="Título del proyecto"><input className="admin-input" value={form.title} onChange={e => set('title', e.target.value)} placeholder="Rediseño Digital Completo" /></FieldGroup>
+              <FieldGroup label="Descripción del trabajo"><textarea className="admin-textarea" value={form.description} onChange={e => set('description', e.target.value)} rows={3} placeholder="Sistema de reservas con panel admin..." /></FieldGroup>
+              <FieldGroup label="Resultados / Métricas" hint='Separar con " · "'><input className="admin-input" value={form.results} onChange={e => set('results', e.target.value)} placeholder="+300% reservas" /></FieldGroup>
+              <FieldGroup label="URL Externa (fallback)"><input className="admin-input" value={form.url} onChange={e => set('url', e.target.value)} placeholder="https://..." /></FieldGroup>
+              <ImageUploadField label="Portada" folder="projects" value={form.image} onChange={url => set('image', url)} />
+              {form.client && <div style={{ marginTop:12, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'rgba(255,255,255,0.4)' }}>🔗 URL propuesta: <span style={{ color:'var(--primary)', fontWeight:700 }}>/proposal/{slug}</span></div>}
+            </>
+          )}
+
+          {tab === 'proposal' && (
+            <>
+              <div style={{ background:'rgba(255,200,0,0.04)', border:'1px solid rgba(255,200,0,0.15)', borderRadius:8, padding:'10px 14px', marginBottom:20, fontSize:12, color:'rgba(255,200,0,0.7)' }}>Configura el diseño visual de la propuesta estática.</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                <FieldGroup label="Color acento"><div style={{ display:'flex', gap:8 }}><input type="color" value={form.accentColor} onChange={e => set('accentColor', e.target.value)} style={{ width:48, height:42 }} /><input className="admin-input" value={form.accentColor} onChange={e => set('accentColor', e.target.value)} /></div></FieldGroup>
+                <FieldGroup label="Fondo"><div style={{ display:'flex', gap:8 }}><input type="color" value={form.proposalBg} onChange={e => set('proposalBg', e.target.value)} style={{ width:48, height:42 }} /><input className="admin-input" value={form.proposalBg} onChange={e => set('proposalBg', e.target.value)} /></div></FieldGroup>
+              </div>
+              <FieldGroup label="Tagline"><textarea className="admin-textarea" value={form.proposalTagline} onChange={e => set('proposalTagline', e.target.value)} rows={2} /></FieldGroup>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                <FieldGroup label="Texto CTA"><input className="admin-input" value={form.ctaLabel} onChange={e => set('ctaLabel', e.target.value)} /></FieldGroup>
+                <FieldGroup label="Link CTA"><input className="admin-input" value={form.ctaLink} onChange={e => set('ctaLink', e.target.value)} /></FieldGroup>
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                <FieldGroup label="Título Footer"><input className="admin-input" value={form.footerTitle} onChange={e => set('footerTitle', e.target.value)} /></FieldGroup>
+                <FieldGroup label="Sub Footer"><input className="admin-input" value={form.footerSub} onChange={e => set('footerSub', e.target.value)} /></FieldGroup>
+              </div>
+            </>
+          )}
+
+          {tab === 'features' && (
+            <>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+                <p style={{ fontSize:13, color:'rgba(255,255,255,0.4)', margin:0 }}>Tarjetas de la propuesta.</p>
+                {editingFeature === null && <button className="save-btn" onClick={startNewFeature} style={{ padding:'8px 16px', fontSize:12 }}>+ TARJETA</button>}
+              </div>
+              {editingFeature !== null && (
+                <div style={{ background:'rgba(255,60,60,0.04)', border:'1px solid rgba(255,60,60,0.2)', borderRadius:12, padding:20, marginBottom:16 }}>
+                  <h4 style={{ fontSize:13, color:'#ff3c3c', marginBottom:16 }}>{editingFeature === 'new' ? '+ Nueva tarjeta' : 'Editando'}</h4>
+                  <div style={{ display:'grid', gridTemplateColumns:'60px 1fr', gap:12 }}>
+                    <FieldGroup label="Icono"><input className="admin-input" value={featureForm.icon} onChange={e => setFeatureForm(p => ({ ...p, icon: e.target.value }))} style={{ textAlign:'center', fontSize:22 }} /></FieldGroup>
+                    <FieldGroup label="Título *"><input className="admin-input" value={featureForm.title} onChange={e => setFeatureForm(p => ({ ...p, title: e.target.value }))} /></FieldGroup>
+                  </div>
+                  <FieldGroup label="Descripción"><textarea className="admin-textarea" value={featureForm.description} onChange={e => setFeatureForm(p => ({ ...p, description: e.target.value }))} rows={3} /></FieldGroup>
+                  <ImageUploadField label="Imagen tarjeta" folder="proposals" value={featureForm.image} onChange={url => setFeatureForm(p => ({ ...p, image: url }))} />
+                  <FieldGroup label="Badges (coma)"><input className="admin-input" value={featureBadgeInput} onChange={e => setFeatureBadgeInput(e.target.value)} placeholder="Live, 24/7" /></FieldGroup>
+                  <div style={{ display:'flex', gap:8, marginTop:8 }}>
+                    <button className="save-btn" onClick={saveFeature} style={{ padding:'8px 18px', fontSize:12 }}>Guardar</button>
+                    <button onClick={cancelFeature} style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.5)', padding:'8px 18px', borderRadius:8 }}>Cancelar</button>
+                  </div>
+                </div>
+              )}
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {features.length === 0 && <div style={{ textAlign:'center', color:'rgba(255,255,255,0.2)', fontSize:13, padding:'24px 0', border:'1px dashed rgba(255,255,255,0.08)', borderRadius:10 }}>Sin tarjetas</div>}
+                {features.map((f, idx) => (
+                  <div key={idx} style={{ display:'flex', alignItems:'center', gap:12, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:10, padding:'12px 14px' }}>
+                    <div style={{ display:'flex', flexDirection:'column', gap:2, flexShrink:0 }}>
+                      <button onClick={() => moveFeature(idx, -1)} disabled={idx === 0} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.3)', cursor: idx===0?'default':'pointer' }}>▲</button>
+                      <button onClick={() => moveFeature(idx, 1)}  disabled={idx === features.length - 1} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.3)', cursor: idx===features.length-1?'default':'pointer' }}>▼</button>
+                    </div>
+                    {f.image ? <img src={f.image} alt="" style={{ width:48, height:48, borderRadius:8, objectFit:'cover', flexShrink:0 }} /> : <div style={{ width:48, height:48, borderRadius:8, background:'rgba(255,255,255,0.06)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>{f.icon || '✦'}</div>}
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontWeight:700, fontSize:13, marginBottom:2 }}>{f.icon} {f.title}</div>
+                      <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.description}</div>
+                      {f.badges?.length > 0 && <div style={{ fontSize:10, color:'rgba(255,255,255,0.25)', marginTop:3 }}>{f.badges.join(' · ')}</div>}
+                    </div>
+                    <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+                      <button onClick={() => startEditFeature(f, idx)} style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.6)', padding:'5px 10px', borderRadius:6 }}>✏️</button>
+                      <button onClick={() => deleteFeature(idx)} style={{ background:'rgba(255,60,60,0.08)', border:'1px solid rgba(255,60,60,0.2)', color:'#ff3c3c', padding:'5px 10px', borderRadius:6 }}>🗑</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {tab === 'landing' && (
+            <>
+              <div style={{ background:'rgba(55,138,221,0.06)', border:'1px solid rgba(55,138,221,0.2)', borderRadius:8, padding:'12px 14px', marginBottom:16, fontSize:12, color:'rgba(55,138,221,0.9)' }}>
+                <strong>🌐 Landing App HTML:</strong> Pega aquí el código completo o fragmento. Se ejecutará en un iframe aislado con sandbox completo. Incluye un script automático que intercepta formularios y envía leads al inbox de Polartronic.
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10, padding:'7px 12px', borderRadius:7, background:htmlTypeMeta.bg, border:`1px solid ${htmlTypeMeta.color}30`, fontSize:11, color:htmlTypeMeta.color }}>
+                <span>{htmlType === 'empty' ? '⬜' : htmlType === 'full' ? '🟢' : '🟡'}</span> {htmlTypeMeta.label}
+                {htmlType !== 'empty' && <span style={{ marginLeft:'auto', opacity:0.7 }}>{form.detailHtml.length.toLocaleString()} chars</span>}
+              </div>
+              <textarea
+                className="admin-textarea"
+                value={form.detailHtml}
+                onChange={e => set('detailHtml', e.target.value)}
+                rows={14}
+                style={{ fontFamily:'monospace', fontSize:11, lineHeight:1.5 }}
+                placeholder={`<!DOCTYPE html>\n<html>\n<head>...</head>\n<body>...</body>\n</html>`}
+              />
+              {form.detailHtml.trim() && (
+                <button onClick={() => { if(window.confirm('¿Eliminar HTML? Volverá al comportamiento por defecto.')) set('detailHtml', '') }} style={{ marginTop:10, background:'rgba(255,60,60,0.06)', border:'1px solid rgba(255,60,60,0.2)', color:'#ff6060', padding:'7px 14px', borderRadius:7, cursor:'pointer', fontSize:11 }}>🗑 Eliminar Landing</button>
+              )}
+            </>
+          )}
+
+          <div style={{ display:'flex', gap:10, marginTop:24 }}>
+            <button className="save-btn" onClick={handleSave} disabled={saving}>{saving ? 'Guardando...' : '💾 Guardar Proyecto'}</button>
+            <button onClick={cancel} style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.5)', padding:'10px 20px', borderRadius:8 }}>Cancelar</button>
+            {form.client && <a href={`/proposal/${slug}`} target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:6, background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.12)', color:'rgba(255,255,255,0.5)', padding:'10px 18px', borderRadius:8, textDecoration:'none', fontSize:13 }}>🔗 Ver propuesta</a>}
+          </div>
+        </div>
+      )}
+
+      {/* LISTA PROYECTOS */}
+      <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+        {projects.map((proj, idx) => {
+          const client = proj.client || proj.title || '—'
+          const slug = toSlug(client)
+          const hasLanding = !!(proj.detailHtml && proj.detailHtml.trim())
+          return (
+            <div key={proj.id || idx} style={{ borderRadius:14, overflow:'hidden', border:'1px solid rgba(255,255,255,0.08)', display:'flex' }}>
+              {proj.image && <div style={{ width:100, flexShrink:0 }}><img src={proj.image} alt={client} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} /></div>}
+              <div style={{ flex:1, padding:'14px 16px', background:'rgba(0,0,0,0.7)', display:'flex', alignItems:'center', gap:12 }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+                    <span style={{ color: proj.accentColor || 'var(--primary)', fontSize:12, fontWeight:800 }}>{client}</span>
+                    {hasLanding && <span style={{ fontSize:10, color:'#378add', background:'rgba(55,138,221,0.1)', border:'1px solid rgba(55,138,221,0.3)', borderRadius:4, padding:'1px 6px' }}>🌐 App Online</span>}
+                  </div>
+                  {proj.description && <div style={{ color:'rgba(255,255,255,0.4)', fontSize:12, marginTop:4 }}>{proj.description}</div>}
+                  <a href={hasLanding ? `#` : proj.url} onClick={e => e.stopPropagation()} style={{ fontSize:11, color:'rgba(255,255,255,0.3)', textDecoration:'none', marginTop:4 }}>🔗 /{hasLanding ? 'app-landing' : `proposal/${slug}`}</a>
+                </div>
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={() => startEdit(proj, idx)} style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.6)', padding:'6px 14px', borderRadius:6, fontSize:12 }}>✏️</button>
+                  <button onClick={() => handleDelete(proj, idx)} disabled={deleting === idx} style={{ background:'rgba(255,60,60,0.08)', border:'1px solid rgba(255,60,60,0.2)', color:'#ff3c3c', padding:'6px 12px', borderRadius:6, fontSize:12 }}>{deleting === idx ? '…' : '🗑'}</button>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 </file>
 
 <file path="src/components/admin/tabs/SiteConfigTab.jsx">
@@ -6911,309 +6652,6 @@ export default function ContactSection({ contact, footer, brand, site }) {
         )}
       </div>
     </section>
-  )
-}
-</file>
-
-<file path="src/components/site/ProjectsSection.jsx">
-/**
- * ProjectsSection.jsx — v3
- * ─────────────────────────────────────────────────────────────────────────
- * FIX: Clic en tarjeta siempre mandaba a la página principal.
- *
- * CAUSA:
- *   url = '#' (default en EMPTY de ProjectsTab) → <a href="#"> navega al
- *   tope de la página. Si el campo está vacío → <a href=""> recarga la página.
- *
- * SOLUCIÓN:
- *   hasValidUrl(url) → true solo si la URL es un link real (empieza con
- *   http/https/www o es una ruta interna no vacía distinta de '#').
- *   - Si hay URL válida → <a href={url} target="_blank">  (abre en nueva pestaña)
- *   - Si NO hay URL    → <div> (no navega a ningún lado, solo hover visual)
- *
- * TODO LO DEMÁS IDÉNTICO A v2 (carrusel scroll-snap, flechas, ProjectCard logic).
- */
-
-import { useState, useRef } from 'react'
-import { useUIStrings } from '../../hooks/useUIStrings'
-
-// ── Constantes carrusel ────────────────────────────────────────────────
-const CARD_WIDTH  = 320
-const CARD_GAP    = 20
-const SCROLL_STEP = CARD_WIDTH + CARD_GAP
-
-// ── Helper: determina si la URL es navegable ──────────────────────────
-function hasValidUrl(url) {
-  if (!url) return false
-  const u = url.trim()
-  if (!u || u === '#' || u === '/#') return false
-  return true
-}
-
-// ── Sección principal ─────────────────────────────────────────────────
-export default function ProjectsSection({ projects, brand }) {
-  if (!projects?.length) return null
-
-  const primary  = brand?.primary || 'var(--primary)'
-  const t        = useUIStrings(brand)
-  const trackRef = useRef(null)
-
-  const scrollLeft  = () => trackRef.current?.scrollBy({ left: -SCROLL_STEP, behavior: 'smooth' })
-  const scrollRight = () => trackRef.current?.scrollBy({ left:  SCROLL_STEP, behavior: 'smooth' })
-
-  return (
-    <section id="proyectos" style={{ padding: '100px 0', background: 'rgba(255,255,255,0.01)', overflow: 'hidden' }}>
-
-      {/* Encabezado */}
-      <div style={{ padding: '0 6%', textAlign: 'center', marginBottom: 48 }}>
-        <p style={{
-          color: primary, fontSize: '0.75rem', fontWeight: 800,
-          textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12,
-        }}>
-          {t.projects.eyebrow}
-        </p>
-        <h2 style={{ fontSize: 'clamp(2rem,5vw,3rem)', fontWeight: 800 }}>
-          {t.projects.heading}{' '}
-          <span style={{ color: primary }}>{t.projects.headingAccent}</span>
-        </h2>
-        <p style={{
-          color: 'rgba(255,255,255,0.4)', fontSize: 15, marginTop: 12,
-          maxWidth: 500, margin: '12px auto 0',
-        }}>
-          {t.projects.sub}
-        </p>
-      </div>
-
-      {/* Carrusel */}
-      <div style={{ position: 'relative' }}>
-        <div
-          ref={trackRef}
-          style={{
-            display: 'flex',
-            gap: CARD_GAP,
-            overflowX: 'auto',
-            scrollSnapType: 'x mandatory',
-            WebkitOverflowScrolling: 'touch',
-            paddingLeft: '6%',
-            paddingRight: '6%',
-            paddingBottom: 8,
-            msOverflowStyle: 'none',
-            scrollbarWidth: 'none',
-          }}
-        >
-          <style>{`#proyectos div::-webkit-scrollbar { display: none; }`}</style>
-
-          {projects.map((proj, i) => (
-            <div
-              key={proj.id || i}
-              style={{ flex: '0 0 auto', width: CARD_WIDTH, scrollSnapAlign: 'start' }}
-            >
-              <ProjectCard proj={proj} primary={primary} t={t} />
-            </div>
-          ))}
-        </div>
-
-        {/* Flechas — solo si hay más de 2 proyectos */}
-        {projects.length > 2 && (
-          <>
-            <button
-              onClick={scrollLeft}
-              aria-label="Anterior"
-              style={arrowStyle('left')}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.6)';         e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'  }}
-            >‹</button>
-            <button
-              onClick={scrollRight}
-              aria-label="Siguiente"
-              style={arrowStyle('right')}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.6)';         e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'  }}
-            >›</button>
-          </>
-        )}
-      </div>
-    </section>
-  )
-}
-
-function arrowStyle(side) {
-  return {
-    position: 'absolute',
-    top: '50%',
-    [side]: 'calc(6% - 22px)',
-    transform: 'translateY(-50%)',
-    width: 44, height: 44,
-    background: 'rgba(0,0,0,0.6)',
-    backdropFilter: 'blur(10px)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: '50%',
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 22,
-    cursor: 'pointer',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    zIndex: 10,
-    transition: 'all 0.2s',
-    lineHeight: 1,
-    padding: 0,
-    userSelect: 'none',
-  }
-}
-
-// ── ProjectCard ────────────────────────────────────────────────────────
-function ProjectCard({ proj, primary, t }) {
-  const [hovered, setHovered] = useState(false)
-
-  const client      = proj.client      || proj.title    || ''
-  const industry    = proj.industry    || proj.category || ''
-  const title       = proj.title       || ''
-  const description = proj.description || proj.desc     || ''
-  const results     = proj.results     || ''
-
-  // FIX: leer url y validar que sea un link real antes de usarla
-  const rawUrl  = proj.url || proj.link || ''
-  const isValid = hasValidUrl(rawUrl)
-
-  const resultItems = results
-    ? results.split('·').map(r => r.trim()).filter(Boolean)
-    : []
-
-  const cardStyle = {
-    display: 'flex', flexDirection: 'column',
-    borderRadius: 20, overflow: 'hidden',
-    border: hovered ? `1px solid ${primary}` : '1px solid rgba(255,255,255,0.07)',
-    textDecoration: 'none',
-    background: hovered ? 'rgba(255,60,60,0.03)' : 'rgba(255,255,255,0.02)',
-    transition: 'all 0.4s cubic-bezier(0.23,1,0.32,1)',
-    transform: hovered ? 'translateY(-6px)' : 'translateY(0)',
-    boxShadow: hovered ? '0 24px 60px rgba(0,0,0,0.5)' : 'none',
-    cursor: isValid ? 'pointer' : 'default',
-    height: '100%',
-    color: 'inherit',
-  }
-
-  const inner = (
-    <>
-      {proj.image && (
-        <div style={{ height: 200, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
-          <img
-            src={proj.image}
-            alt={client}
-            style={{
-              width: '100%', height: '100%', objectFit: 'cover', display: 'block',
-              filter: hovered ? 'brightness(0.65)' : 'brightness(0.5)',
-              transform: hovered ? 'scale(1.06)' : 'scale(1)',
-              transition: 'all 0.5s cubic-bezier(0.23,1,0.32,1)',
-            }}
-          />
-          {industry && (
-            <div style={{
-              position: 'absolute', top: 14, left: 14,
-              background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              color: 'rgba(255,255,255,0.8)',
-              fontSize: 10, fontWeight: 700,
-              textTransform: 'uppercase', letterSpacing: 1.5,
-              padding: '4px 10px', borderRadius: 20,
-            }}>
-              {industry}
-            </div>
-          )}
-          {/* Icono ↗ solo cuando hay URL válida */}
-          {isValid && (
-            <div style={{
-              position: 'absolute', top: 14, right: 14,
-              width: 32, height: 32, borderRadius: '50%',
-              background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: primary, fontSize: 14,
-              opacity: hovered ? 1 : 0, transition: 'opacity 0.3s',
-            }}>↗</div>
-          )}
-        </div>
-      )}
-
-      <div style={{ padding: '22px 24px 24px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-        <div style={{ marginBottom: 10 }}>
-          <div style={{
-            color: primary, fontWeight: 800, fontSize: '0.72rem',
-            textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4,
-          }}>
-            {client}
-          </div>
-          {title && title !== client && (
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, lineHeight: 1.3, color: 'rgba(255,255,255,0.9)' }}>
-              {title}
-            </h3>
-          )}
-        </div>
-
-        {description && (
-          <p style={{
-            color: 'rgba(255,255,255,0.45)', fontSize: 13, lineHeight: 1.7,
-            margin: '0 0 16px', flex: 1,
-          }}>
-            {description}
-          </p>
-        )}
-
-        {resultItems.length > 0 && (
-          <div style={{
-            borderTop: '1px solid rgba(255,255,255,0.06)',
-            paddingTop: 14, marginTop: 'auto',
-            display: 'flex', flexDirection: 'column', gap: 6,
-          }}>
-            <div style={{
-              fontSize: 9, fontWeight: 800, textTransform: 'uppercase',
-              letterSpacing: 2, color: 'rgba(255,255,255,0.25)', marginBottom: 4,
-            }}>
-              {t.projects.results}
-            </div>
-            {resultItems.map((r, i) => (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                fontSize: 12, color: 'rgba(255,255,255,0.7)',
-              }}>
-                <span style={{
-                  width: 16, height: 16, borderRadius: '50%',
-                  background: 'rgba(255,60,60,0.12)', border: `1px solid ${primary}40`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 8, color: primary, flexShrink: 0,
-                }}>▲</span>
-                {r}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </>
-  )
-
-  // FIX CLAVE: renderizar <a> solo cuando la URL es válida
-  if (isValid) {
-    return (
-      <a
-        href={rawUrl}
-        target="_blank"
-        rel="noreferrer"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={cardStyle}
-      >
-        {inner}
-      </a>
-    )
-  }
-
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={cardStyle}
-    >
-      {inner}
-    </div>
   )
 }
 </file>
@@ -7839,6 +7277,210 @@ export default function NavBar({ brand }) {
 }
 </file>
 
+<file path="src/components/site/ProjectsSection.jsx">
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { useUIStrings } from '../../hooks/useUIStrings'
+import { processNewLead } from '../../lib/leadHelpers'
+
+const CARD_WIDTH  = 320
+const CARD_GAP    = 20
+const SCROLL_STEP = CARD_WIDTH + CARD_GAP
+
+function hasValidUrl(url) {
+  if (!url) return false
+  const u = url.trim()
+  return u !== '#' && u !== '/#'
+}
+
+// ── MODAL LANDING ──
+function ProjectLandingModal({ project, site, onClose }) {
+  const iframeRef = useRef(null)
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    const handleKey = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handleKey)
+    return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', handleKey) }
+  }, [onClose])
+
+  const handleMessage = useCallback(async (e) => {
+    if (e.source !== iframeRef.current?.contentWindow) return
+    if (e.data?.type === 'PROJECT_LEAD') {
+      const raw = e.data.data
+      const lead = {
+        name: raw.name || raw.nombre || '',
+        email: raw.email || '',
+        phone: raw.phone || raw.telefono || '',
+        zona: raw.zona || raw.city || '',
+        servicio: project.title || project.client || 'App Consulta',
+        message: raw.message || raw.mensaje || '',
+      }
+      try {
+        await processNewLead(lead, site)
+        iframeRef.current?.contentWindow.postMessage({ type: 'LEAD_SUCCESS' }, '*')
+      } catch(err) { console.error('[Project Lead Error]', err) }
+    }
+  }, [project, site])
+
+  useEffect(() => {
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [handleMessage])
+
+  return (
+    <div onClick={e => { if(e.target === e.currentTarget) onClose() }} style={{ position:'fixed', inset:0, zIndex:9000, background:'rgba(0,0,0,0.95)', backdropFilter:'blur(20px)', display:'flex', flexDirection:'column', animation:'projLandingIn 0.35s cubic-bezier(0.23,1,0.32,1) both' }}>
+      <style>{`@keyframes projLandingIn { from { opacity:0; } to { opacity:1; } }`}</style>
+      <div style={{ flexShrink:0, height:60, background:'rgba(10,10,10,0.98)', borderBottom:'1px solid var(--primary)30', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 24px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <span style={{ fontSize:11, fontWeight:800, color:'var(--primary)', textTransform:'uppercase', letterSpacing:2 }}>🌐 APP ONLINE</span>
+          <span style={{ fontSize:15, fontWeight:700, color:'white' }}>{project.title || project.client}</span>
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <a href="/" onClick={() => window.location.href = '/'} style={{ background:'var(--primary)', color:'white', padding:'8px 14px', borderRadius:8, textDecoration:'none', fontSize:12, fontWeight:700, transition:'all 0.2s' }} onMouseEnter={e=>e.currentTarget.style.opacity='0.9'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>🏠 Volver a Polartronic</a>
+          <button onClick={onClose} style={{ background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', color:'white', width:36, height:36, borderRadius:'50%', cursor:'pointer', fontSize:18, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+        </div>
+      </div>
+      <div style={{ flex:1, overflow:'hidden' }}>
+        <iframe ref={iframeRef} title={`${project.client} app`} sandbox="allow-scripts allow-same-origin allow-popups allow-forms" style={{ width:'100%', height:'100%', border:'none' }} srcDoc={buildProjectSrcDoc(project)} />
+      </div>
+    </div>
+  )
+}
+
+function buildProjectSrcDoc(proj) {
+  const html = proj.detailHtml || ''
+  const injector = `<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const handleSubmit = (e) => {
+        if(e.target.tagName === 'FORM') {
+          e.preventDefault()
+          const fd = new FormData(e.target)
+          window.parent.postMessage({ type:'PROJECT_LEAD',  Object.fromEntries(fd) }, '*')
+        }
+      }
+      document.addEventListener('submit', handleSubmit, true)
+    })
+  </script>`
+  if (/<!doctype\s+html/i.test(html) || /<html[\s>]/i.test(html)) {
+    return html.replace(/<\/head>/i, `${injector}</head>`)
+  }
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}body{font-family:system-ui,sans-serif;line-height:1.6;color:#111}img{max-width:100%}</style>${injector}</head><body>${html}</body></html>`
+}
+
+export default function ProjectsSection({ projects, brand, site }) {
+  if (!projects?.length) return null
+  const primary  = brand?.primary || 'var(--primary)'
+  const t        = useUIStrings(brand)
+  const trackRef = useRef(null)
+  const [activeProject, setActiveProject] = useState(null)
+
+  const scrollLeft  = () => trackRef.current?.scrollBy({ left: -SCROLL_STEP, behavior: 'smooth' })
+  const scrollRight = () => trackRef.current?.scrollBy({ left:  SCROLL_STEP, behavior: 'smooth' })
+
+  const hasLanding = (p) => !!(p.detailHtml && p.detailHtml.trim())
+
+  return (
+    <section id="proyectos" style={{ padding:'100px 0', background:'rgba(255,255,255,0.01)', overflow:'hidden' }}>
+      <div style={{ padding:'0 6%', textAlign:'center', marginBottom:48 }}>
+        <p style={{ color:primary, fontSize:'0.75rem', fontWeight:800, textTransform:'uppercase', letterSpacing:4, marginBottom:12 }}>{t.projects.eyebrow}</p>
+        <h2 style={{ fontSize:'clamp(2rem,5vw,3rem)', fontWeight:800 }}>{t.projects.heading} <span style={{ color:primary }}>{t.projects.headingAccent}</span></h2>
+        <p style={{ color:'rgba(255,255,255,0.4)', fontSize:15, marginTop:12, maxWidth:500, margin:'12px auto 0' }}>{t.projects.sub}</p>
+      </div>
+      <div style={{ position:'relative' }}>
+        <div ref={trackRef} style={{ display:'flex', gap:CARD_GAP, overflowX:'auto', scrollSnapType:'x mandatory', WebkitOverflowScrolling:'touch', paddingLeft:'6%', paddingRight:'6%', paddingBottom:8, msOverflowStyle:'none', scrollbarWidth:'none' }}>
+          <style>{`#proyectos div::-webkit-scrollbar { display:none; }`}</style>
+          {projects.map((proj, i) => (
+            <div key={proj.id || i} style={{ flex:'0 0 auto', width:CARD_WIDTH, scrollSnapAlign:'start' }}>
+              <ProjectCard proj={proj} primary={primary} t={t} onOpen={() => setActiveProject(proj)} hasLanding={hasLanding} />
+            </div>
+          ))}
+        </div>
+        {projects.length > 2 && (
+          <>
+            <button onClick={scrollLeft} aria-label="Anterior" style={arrowStyle('left')}>‹</button>
+            <button onClick={scrollRight} aria-label="Siguiente" style={arrowStyle('right')}>›</button>
+          </>
+        )}
+      </div>
+      {activeProject && (
+        hasLanding(activeProject) ? (
+          <ProjectLandingModal project={activeProject} site={site} onClose={() => setActiveProject(null)} />
+        ) : (
+          activeProject.url && window.open(activeProject.url, '_blank')
+        )
+      )}
+    </section>
+  )
+}
+
+function arrowStyle(side) {
+  return { position:'absolute', top:'50%', [side]:'calc(6% - 22px)', transform:'translateY(-50%)', width:44, height:44, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(10px)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'50%', color:'rgba(255,255,255,0.8)', fontSize:22, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10, lineHeight:1, padding:0 }
+}
+
+function ProjectCard({ proj, primary, t, onOpen, hasLanding }) {
+  const [hovered, setHovered] = useState(false)
+  const client = proj.client || proj.title || ''
+  const industry = proj.industry || proj.category || ''
+  const title = proj.title || ''
+  const description = proj.description || proj.desc || ''
+  const results = proj.results || ''
+  const rawUrl = proj.url || proj.link || ''
+  const isValid = hasValidUrl(rawUrl)
+  const hasL = hasLanding(proj)
+  const isClickable = hasL || isValid
+
+  const resultItems = results ? results.split('·').map(r => r.trim()).filter(Boolean) : []
+  const cardStyle = {
+    display:'flex', flexDirection:'column', borderRadius:20, overflow:'hidden',
+    border: hovered ? `1px solid ${primary}` : '1px solid rgba(255,255,255,0.07)',
+    textDecoration:'none', background: hovered ? 'rgba(255,60,60,0.03)' : 'rgba(255,255,255,0.02)',
+    transition:'all 0.4s cubic-bezier(0.23,1,0.32,1)', transform: hovered ? 'translateY(-6px)' : 'translateY(0)',
+    boxShadow: hovered ? '0 24px 60px rgba(0,0,0,0.5)' : 'none',
+    cursor: isClickable ? 'pointer' : 'default', height:'100%', color:'inherit',
+  }
+
+  const inner = (
+    <>
+      {proj.image && (
+        <div style={{ height:200, overflow:'hidden', position:'relative', flexShrink:0 }}>
+          <img src={proj.image} alt={client} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block', filter: hovered ? 'brightness(0.65)' : 'brightness(0.5)', transform: hovered ? 'scale(1.06)' : 'scale(1)', transition:'all 0.5s cubic-bezier(0.23,1,0.32,1)' }} />
+          {industry && (
+            <div style={{ position:'absolute', top:14, left:14, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(10px)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.8)', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:1.5, padding:'4px 10px', borderRadius:20 }}>{industry}</div>
+          )}
+          {hasL && (
+            <div style={{ position:'absolute', top:14, right:14, background:'var(--primary)', color:'white', fontSize:9, fontWeight:800, textTransform:'uppercase', letterSpacing:1, padding:'4px 10px', borderRadius:6 }}>🌐 APP</div>
+          )}
+        </div>
+      )}
+      <div style={{ padding:'22px 24px 24px', display:'flex', flexDirection:'column', flex:1 }}>
+        <div style={{ marginBottom:10 }}>
+          <div style={{ color:primary, fontWeight:800, fontSize:'0.72rem', textTransform:'uppercase', letterSpacing:2, marginBottom:4 }}>{client}</div>
+          {title && title !== client && <h3 style={{ fontSize:'1.1rem', fontWeight:700, margin:0, lineHeight:1.3, color:'rgba(255,255,255,0.9)' }}>{title}</h3>}
+        </div>
+        {description && <p style={{ color:'rgba(255,255,255,0.45)', fontSize:13, lineHeight:1.7, margin:'0 0 16px', flex:1 }}>{description}</p>}
+        {resultItems.length > 0 && (
+          <div style={{ borderTop:'1px solid rgba(255,255,255,0.06)', paddingTop:14, marginTop:'auto', display:'flex', flexDirection:'column', gap:6 }}>
+            <div style={{ fontSize:9, fontWeight:800, textTransform:'uppercase', letterSpacing:2, color:'rgba(255,255,255,0.25)', marginBottom:4 }}>{t.projects.results}</div>
+            {resultItems.map((r, i) => (
+              <div key={i} style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, color:'rgba(255,255,255,0.7)' }}>
+                <span style={{ width:16, height:16, borderRadius:'50%', background:'rgba(255,60,60,0.12)', border:`1px solid ${primary}40`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, color:primary, flexShrink:0 }}>▲</span>
+                {r}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  )
+
+  return isClickable ? (
+    <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onClick={() => hasL ? onOpen() : window.open(rawUrl, '_blank')} style={cardStyle}>{inner}</div>
+  ) : (
+    <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={cardStyle}>{inner}</div>
+  )
+}
+</file>
+
 <file path="src/hooks/useSiteData.js">
 import { useState, useEffect } from 'react'
 import {
@@ -8386,7 +8028,7 @@ export default function PublicSite() {
  *   - Strings localizados (eyebrow, heading, headingPrefix, viewDetail, etc.)
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback,useRef } from 'react'
 import { useUIStrings } from '../../hooks/useUIStrings'
 
 // ── Helpers ───────────────────────────────────────────────────────────

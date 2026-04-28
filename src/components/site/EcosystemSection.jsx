@@ -1,21 +1,28 @@
 /**
- * EcosystemSection.jsx — v3 LANDING MODAL
+ * EcosystemSection.jsx — v4 DRAWER
  * ─────────────────────────────────────────────────────────────────────────
- * CAMBIO PRINCIPAL:
- *   Al hacer clic en una card, si `eco.detailHtml` está configurado,
- *   se abre un overlay fullscreen que renderiza ese HTML como una
- *   mini-landing page inmersiva (inspirada en la estructura King Barbes).
+ * CAMBIO PRINCIPAL (según diagrama):
+ *   Al hacer clic en una card de ecosistema, se abre un DRAWER lateral
+ *   (panel que desliza desde la derecha) que permanece DENTRO del contexto
+ *   de Polartronic. El usuario nunca "sale" del sitio.
  *
- *   Si NO hay detailHtml → fallback al modal clásico (lista de beneficios).
+ *   El drawer muestra:
+ *     - Header con categoría + título del ecosistema
+ *     - Casos de éxito del sector (proyectos filtrados por industry/category)
+ *     - Resultados típicos
+ *     - Servicios/beneficios incluidos
+ *     - CTA: "Ver proyectos →" y "Hablemos →"
  *
- * TODO LO DEMÁS INTACTO:
- *   - parseFeatures, useUIStrings, t.ecosystems.*
- *   - Upload de imágenes, idiomas, CRUD desde EcosystemsTab
- *   - Grid de cards, hover effects, badge destacado
- *   - Strings localizados (eyebrow, heading, headingPrefix, viewDetail, etc.)
+ *   Si eco.detailHtml está configurado, se renderiza dentro del drawer
+ *   (iframe embebido en el panel lateral), no como overlay fullscreen.
+ *
+ * FALLBACK: Si no hay detailHtml → drawer con contenido automático
+ *   (beneficios, casos de éxito filtrados, CTAs).
+ *
+ * IDIOMA: useUIStrings(brand) — 100% localizado.
  */
 
-import { useState, useEffect, useCallback,useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useUIStrings } from '../../hooks/useUIStrings'
 
 // ── Helpers ───────────────────────────────────────────────────────────
@@ -27,7 +34,6 @@ function parseFeatures(raw) {
   } catch { return [] }
 }
 
-// ── Lock/unlock scroll del body ───────────────────────────────────────
 function useBodyLock(active) {
   useEffect(() => {
     if (active) {
@@ -40,353 +46,513 @@ function useBodyLock(active) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// LANDING MODAL — renderiza detailHtml como overlay fullscreen
+// DRAWER LATERAL — panel que desliza desde la derecha
 // ─────────────────────────────────────────────────────────────────────
-function LandingModal({ eco, primary, onClose }) {
+function EcosystemDrawer({ eco, primary, onClose, t, projects = [] }) {
   useBodyLock(true)
+  const drawerRef = useRef(null)
+  const hasLanding = !!(eco.detailHtml && eco.detailHtml.trim())
 
-  // Inyectar estilos base en el iframe o en el div para que el HTML funcione
-  // Usamos un <div> con dangerouslySetInnerHTML dentro de un contenedor aislado
-  // para no contaminar el DOM de la app.
-  const handleBackdropClick = useCallback((e) => {
-    if (e.target === e.currentTarget) onClose()
-  }, [onClose])
-
+  // Cierre con Escape
   useEffect(() => {
     const handleKey = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
   }, [onClose])
 
+  // Filtrar proyectos del mismo sector para mostrar como casos de éxito
+  const relatedProjects = projects.filter(p => {
+    const pInd = (p.industry || p.category || '').toLowerCase()
+    const eCat = (eco.category || eco.title || '').toLowerCase()
+    return pInd && eCat && (pInd.includes(eCat.split(' ')[0]) || eCat.includes(pInd.split(' ')[0]))
+  }).slice(0, 3)
+
+  const features = parseFeatures(eco.features)
+
+  // Construye srcDoc del iframe si hay detailHtml
+  function buildIframeSrcDoc(html) {
+    if (/<!doctype\s+html/i.test(html) || /<html[\s>]/i.test(html)) return html
+    return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}body{font-family:system-ui,sans-serif;line-height:1.6;color:#111}img{max-width:100%}</style></head><body>${html}</body></html>`
+  }
+
   return (
-    <div
-      onClick={handleBackdropClick}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9000,
-        background: 'rgba(0,0,0,0.92)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        display: 'flex',
-        flexDirection: 'column',
-        animation: 'ecoLandingIn 0.35s cubic-bezier(0.23,1,0.32,1) both',
-      }}
-    >
+    <>
       <style>{`
-        @keyframes ecoLandingIn {
-          from { opacity: 0; transform: scale(0.97); }
-          to   { opacity: 1; transform: scale(1); }
+        @keyframes drawerIn {
+          from { transform: translateX(100%); opacity: 0.5; }
+          to   { transform: translateX(0);    opacity: 1; }
         }
-        @keyframes ecoLandingOut {
-          from { opacity: 1; }
-          to   { opacity: 0; }
+        @keyframes backdropIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
         }
-        .eco-landing-close-btn:hover {
-          background: rgba(255,255,255,0.15) !important;
+        .eco-drawer-close:hover {
+          background: rgba(255,255,255,0.12) !important;
           transform: scale(1.08);
         }
-        /* Estilos base que se inyectan en el contenedor del HTML externo */
-        .eco-html-host * { box-sizing: border-box; }
-        .eco-html-host img { max-width: 100%; }
-        .eco-html-host a { color: inherit; }
+        .eco-drawer-cta-primary:hover {
+          opacity: 0.88 !important;
+          transform: translateY(-1px) !important;
+        }
+        .eco-drawer-cta-secondary:hover {
+          border-color: ${primary} !important;
+          color: ${primary} !important;
+          transform: translateY(-1px) !important;
+        }
+        .eco-drawer-project-card:hover {
+          border-color: ${primary}60 !important;
+          background: ${primary}06 !important;
+          transform: translateY(-2px) !important;
+        }
+        .eco-drawer-scroll::-webkit-scrollbar { width: 3px; }
+        .eco-drawer-scroll::-webkit-scrollbar-track { background: transparent; }
+        .eco-drawer-scroll::-webkit-scrollbar-thumb { background: ${primary}40; border-radius: 2px; }
       `}</style>
 
-      {/* Barra superior — título + botón cerrar */}
-      <div style={{
-        flexShrink: 0,
-        height: 56,
-        background: 'rgba(10,10,10,0.95)',
-        borderBottom: `1px solid ${primary}30`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 20px',
-        zIndex: 1,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      {/* Backdrop oscuro */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 8000,
+          background: 'rgba(0,0,0,0.65)',
+          backdropFilter: 'blur(6px)',
+          WebkitBackdropFilter: 'blur(6px)',
+          animation: 'backdropIn 0.3s ease both',
+        }}
+      />
+
+      {/* Drawer panel */}
+      <div
+        ref={drawerRef}
+        style={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 8100,
+          width: 'min(520px, 92vw)',
+          background: '#0a0a0a',
+          borderLeft: `1px solid ${primary}25`,
+          display: 'flex',
+          flexDirection: 'column',
+          animation: 'drawerIn 0.38s cubic-bezier(0.23,1,0.32,1) both',
+          boxShadow: `-24px 0 80px rgba(0,0,0,0.6), -1px 0 0 ${primary}15`,
+        }}
+      >
+        {/* ── Header del drawer ── */}
+        <div style={{
+          flexShrink: 0,
+          padding: '20px 24px',
+          borderBottom: `1px solid rgba(255,255,255,0.07)`,
+          background: 'rgba(255,255,255,0.02)',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 14,
+        }}>
+          {/* Thumbnail */}
           {eco.image && (
-            <img
-              src={eco.image}
-              alt={eco.title}
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 6,
-                objectFit: 'cover',
-                border: `1px solid ${primary}40`,
-              }}
-            />
+            <div style={{
+              width: 52,
+              height: 52,
+              borderRadius: 10,
+              overflow: 'hidden',
+              flexShrink: 0,
+              border: `1px solid ${primary}30`,
+            }}>
+              <img
+                src={eco.image}
+                alt={eco.title}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
           )}
-          <div>
+
+          <div style={{ flex: 1, minWidth: 0 }}>
             {eco.category && (
               <div style={{
                 fontSize: 9,
                 fontWeight: 800,
                 textTransform: 'uppercase',
-                letterSpacing: 2,
+                letterSpacing: 2.5,
                 color: primary,
-                lineHeight: 1,
+                marginBottom: 4,
               }}>
                 {eco.category}
               </div>
             )}
-            <div style={{
-              fontSize: 14,
-              fontWeight: 700,
+            <h2 style={{
+              fontSize: '1.25rem',
+              fontWeight: 800,
               color: 'white',
+              margin: 0,
               lineHeight: 1.2,
-              marginTop: eco.category ? 2 : 0,
             }}>
               {eco.title}
-            </div>
+            </h2>
+            <p style={{
+              fontSize: 12,
+              color: 'rgba(255,255,255,0.4)',
+              margin: '6px 0 0',
+              lineHeight: 1.5,
+            }}>
+              {t.ecosystems.drawerSubtitle || 'Cómo trabajamos este sector'}
+            </p>
           </div>
+
+          {/* Botón cerrar */}
+          <button
+            onClick={onClose}
+            className="eco-drawer-close"
+            aria-label="Cerrar"
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              color: 'rgba(255,255,255,0.6)',
+              width: 34,
+              height: 34,
+              borderRadius: '50%',
+              cursor: 'pointer',
+              fontSize: 16,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              flexShrink: 0,
+              padding: 0,
+            }}
+          >
+            ✕
+          </button>
         </div>
 
-        <button
-          onClick={onClose}
-          className="eco-landing-close-btn"
-          aria-label="Cerrar"
-          style={{
-            background: 'rgba(255,255,255,0.08)',
-            border: '1px solid rgba(255,255,255,0.15)',
-            color: 'white',
-            width: 36,
-            height: 36,
-            borderRadius: '50%',
-            cursor: 'pointer',
-            fontSize: 18,
+        {/* ── Precio (si existe) ── */}
+        {eco.price && (
+          <div style={{
+            flexShrink: 0,
+            padding: '12px 24px',
+            borderBottom: `1px solid rgba(255,255,255,0.05)`,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s',
-            flexShrink: 0,
-            padding: 0,
-            lineHeight: 1,
-          }}
-        >
-          ✕
-        </button>
-      </div>
-
-      {/* Contenedor scrollable del HTML */}
-      <div style={{
-        flex: 1,
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        WebkitOverflowScrolling: 'touch',
-      }}>
-        {/*
-          Renderizamos el HTML en un iframe sandboxed para aislamiento completo.
-          allow-scripts permite ejecutar el JS interno del HTML (menú hamburguesa,
-          animaciones, form submit, etc.).
-          allow-same-origin permite que los fetch internos funcionen.
-          allow-popups permite abrir links externos.
-          allow-forms permite el submit del formulario.
-        */}
-        <iframe
-          title={`${eco.title} — detalle`}
-          sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-          style={{
-            width: '100%',
-            minHeight: 'calc(100vh - 56px)',
-            border: 'none',
-            display: 'block',
-            background: 'white',
-          }}
-          srcDoc={buildIframeSrcDoc(eco)}
-        />
-      </div>
-    </div>
-  )
-}
-
-/**
- * buildIframeSrcDoc
- * Envuelve el detailHtml del admin en un documento HTML completo con:
- *  - viewport meta tag
- *  - scroll-behavior smooth
- *  - reset básico
- * Si el HTML ya incluye <!DOCTYPE html>, lo usa tal cual.
- * Si es un fragmento, lo envuelve.
- */
-function buildIframeSrcDoc(eco) {
-  const html = eco.detailHtml || ''
-
-  // Si ya es un documento HTML completo, usarlo directamente
-  if (/<!doctype\s+html/i.test(html) || /<html[\s>]/i.test(html)) {
-    return html
-  }
-
-  // Si es un fragmento, envolverlo en un documento mínimo
-  return `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body { font-family: 'Inter', system-ui, sans-serif; line-height: 1.6; color: #333; }
-    img { max-width: 100%; height: auto; }
-    a { color: inherit; }
-  </style>
-</head>
-<body>
-${html}
-</body>
-</html>`
-}
-
-// ─────────────────────────────────────────────────────────────────────
-// MODAL CLÁSICO — fallback cuando no hay detailHtml
-// (idéntico al modal de la v2, sin cambios)
-// ─────────────────────────────────────────────────────────────────────
-function ClassicModal({ eco, primary, onClose, t }) {
-  useBodyLock(true)
-
-  useEffect(() => {
-    const handleKey = (e) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  }, [onClose])
-
-  const features = parseFeatures(eco.features)
-
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 9000,
-        background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '1rem',
-        animation: 'ecoModalIn 0.3s cubic-bezier(0.23,1,0.32,1) both',
-      }}
-    >
-      <style>{`
-        @keyframes ecoModalIn {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-        @keyframes ecoModalCardIn {
-          from { opacity: 0; transform: scale(0.94) translateY(16px); }
-          to   { opacity: 1; transform: scale(1) translateY(0); }
-        }
-      `}</style>
-
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          background: '#0d0d0d',
-          border: `1px solid ${primary}30`,
-          borderRadius: 20,
-          maxWidth: 580,
-          width: '100%',
-          maxHeight: '88vh',
-          overflowY: 'auto',
-          padding: '2rem',
-          position: 'relative',
-          animation: 'ecoModalCardIn 0.35s cubic-bezier(0.23,1,0.32,1) both',
-        }}
-      >
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute', top: 16, right: 16,
-            background: 'rgba(255,255,255,0.08)', border: 'none',
-            color: 'white', width: 32, height: 32, borderRadius: '50%',
-            cursor: 'pointer', fontSize: 16,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-        >✕</button>
-
-        {eco.image && (
-          <div style={{ height: 160, borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
-            <img src={eco.image} alt={eco.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          </div>
-        )}
-
-        <div style={{ color: primary, fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 6 }}>
-          {eco.category}
-        </div>
-
-        <h3 style={{ fontSize: '1.6rem', fontWeight: 800, margin: '0 0 8px', color: 'white' }}>
-          {eco.title}
-        </h3>
-
-        {eco.price && (
-          <div style={{ color: primary, fontWeight: 800, fontSize: '1.4rem', marginBottom: 12 }}>
-            {eco.price}
+            gap: 8,
+          }}>
+            <span style={{
+              fontSize: '1.4rem',
+              fontWeight: 800,
+              color: primary,
+            }}>
+              {eco.price}
+            </span>
             {eco.period && (
-              <span style={{ fontSize: 14, fontWeight: 400, color: 'rgba(255,255,255,0.4)' }}>{' '}{eco.period}</span>
+              <span style={{
+                fontSize: 13,
+                color: 'rgba(255,255,255,0.35)',
+              }}>
+                {eco.period}
+              </span>
+            )}
+            {eco.featured && (
+              <span style={{
+                marginLeft: 'auto',
+                fontSize: 9,
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: 1,
+                background: primary,
+                color: 'white',
+                padding: '3px 10px',
+                borderRadius: 20,
+              }}>
+                {t.ecosystems.featured}
+              </span>
             )}
           </div>
         )}
 
-        {eco.desc && (
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
-            {eco.desc}
-          </p>
-        )}
-
-        {features.length > 0 && (
-          <>
-            <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.5, color: 'rgba(255,255,255,0.35)', marginBottom: 12 }}>
-              {t.ecosystems.benefits}
-            </div>
-            <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-              {features.map((f, i) => (
-                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 14, color: 'rgba(255,255,255,0.75)' }}>
-                  <span style={{ color: primary, flexShrink: 0, fontWeight: 700 }}>✓</span>
-                  {f}
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-
-        {eco.extraText && (
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, lineHeight: 1.7 }}>{eco.extraText}</p>
-        )}
-
-        {eco.ctaLabel && eco.ctaLink && (
-          <a
-            href={eco.ctaLink}
-            target="_blank"
-            rel="noreferrer"
-            style={{
-              display: 'block', textAlign: 'center',
-              background: primary, color: 'white',
-              padding: '14px 32px', borderRadius: 10,
-              fontWeight: 800, fontSize: '0.9rem',
-              letterSpacing: 1.5, textTransform: 'uppercase',
-              textDecoration: 'none', marginTop: 24,
-            }}
-          >
-            {eco.ctaLabel}
-          </a>
-        )}
-
-        <button
-          onClick={onClose}
+        {/* ── Contenido scrollable ── */}
+        <div
+          className="eco-drawer-scroll"
           style={{
-            marginTop: 16, width: '100%',
-            background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
-            color: 'rgba(255,255,255,0.4)', padding: '10px',
-            borderRadius: 8, cursor: 'pointer', fontSize: 13,
+            flex: 1,
+            overflowY: 'auto',
+            overflowX: 'hidden',
           }}
         >
-          {t.ecosystems.close}
-        </button>
+          {/* Si hay HTML de landing, renderizarlo en iframe dentro del drawer */}
+          {hasLanding ? (
+            <iframe
+              title={`${eco.title} — detalle`}
+              sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+              style={{
+                width: '100%',
+                minHeight: 500,
+                border: 'none',
+                display: 'block',
+                background: 'white',
+              }}
+              srcDoc={buildIframeSrcDoc(eco.detailHtml)}
+            />
+          ) : (
+            <div style={{ padding: '24px 24px 8px' }}>
+
+              {/* Descripción */}
+              {eco.desc && (
+                <p style={{
+                  color: 'rgba(255,255,255,0.55)',
+                  fontSize: 14,
+                  lineHeight: 1.75,
+                  marginBottom: 24,
+                }}>
+                  {eco.desc}
+                </p>
+              )}
+
+              {/* Casos de éxito del sector */}
+              {relatedProjects.length > 0 && (
+                <div style={{ marginBottom: 28 }}>
+                  <div style={{
+                    fontSize: 10,
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: 2,
+                    color: 'rgba(255,255,255,0.3)',
+                    marginBottom: 12,
+                  }}>
+                    {t.ecosystems.successCases || 'Casos de éxito'}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {relatedProjects.map((proj, i) => (
+                      <div
+                        key={proj.id || i}
+                        className="eco-drawer-project-card"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 12,
+                          padding: '12px 14px',
+                          borderRadius: 10,
+                          border: '1px solid rgba(255,255,255,0.07)',
+                          background: 'rgba(255,255,255,0.02)',
+                          transition: 'all 0.2s',
+                          cursor: 'default',
+                        }}
+                      >
+                        {proj.image && (
+                          <div style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 7,
+                            overflow: 'hidden',
+                            flexShrink: 0,
+                          }}>
+                            <img
+                              src={proj.image}
+                              alt={proj.client}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          </div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            fontWeight: 700,
+                            fontSize: 13,
+                            color: 'white',
+                          }}>
+                            {proj.client || proj.title}
+                          </div>
+                          {proj.results && (
+                            <div style={{
+                              fontSize: 11,
+                              color: primary,
+                              marginTop: 2,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}>
+                              ▲ {proj.results.split('·')[0].trim()}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Resultados típicos del sector */}
+              {relatedProjects.some(p => p.results) && (
+                <div style={{
+                  marginBottom: 28,
+                  padding: '14px 16px',
+                  borderRadius: 10,
+                  background: `${primary}08`,
+                  border: `1px solid ${primary}20`,
+                }}>
+                  <div style={{
+                    fontSize: 10,
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: 2,
+                    color: primary,
+                    marginBottom: 10,
+                  }}>
+                    {t.ecosystems.typicalResults || 'Resultados típicos'}
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {relatedProjects
+                      .flatMap(p => (p.results || '').split('·').map(r => r.trim()).filter(Boolean))
+                      .slice(0, 4)
+                      .map((r, i) => (
+                        <div key={i} style={{
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: primary,
+                          background: `${primary}12`,
+                          border: `1px solid ${primary}30`,
+                          borderRadius: 20,
+                          padding: '4px 12px',
+                        }}>
+                          {r}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Beneficios / Servicios incluidos */}
+              {features.length > 0 && (
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{
+                    fontSize: 10,
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: 2,
+                    color: 'rgba(255,255,255,0.3)',
+                    marginBottom: 12,
+                  }}>
+                    {t.ecosystems.benefits || 'Incluido en este plan'}
+                  </div>
+                  <ul style={{
+                    listStyle: 'none',
+                    padding: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                  }}>
+                    {features.map((f, i) => (
+                      <li key={i} style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 10,
+                        fontSize: 13,
+                        color: 'rgba(255,255,255,0.7)',
+                        lineHeight: 1.5,
+                      }}>
+                        <span style={{
+                          color: primary,
+                          flexShrink: 0,
+                          fontWeight: 800,
+                          marginTop: 1,
+                        }}>✓</span>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Extra text */}
+              {eco.extraText && (
+                <p style={{
+                  color: 'rgba(255,255,255,0.35)',
+                  fontSize: 12,
+                  lineHeight: 1.7,
+                  marginBottom: 16,
+                  fontStyle: 'italic',
+                }}>
+                  {eco.extraText}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Footer del drawer — CTAs fijos ── */}
+        <div style={{
+          flexShrink: 0,
+          padding: '16px 24px',
+          borderTop: `1px solid rgba(255,255,255,0.07)`,
+          background: 'rgba(0,0,0,0.4)',
+          backdropFilter: 'blur(10px)',
+          display: 'flex',
+          gap: 10,
+        }}>
+          {/* CTA primario: "Hablemos" → contacto */}
+          <a
+            href="#contacto"
+            onClick={onClose}
+            className="eco-drawer-cta-primary"
+            style={{
+              flex: 1,
+              padding: '13px 20px',
+              background: primary,
+              color: 'white',
+              border: 'none',
+              borderRadius: 10,
+              fontWeight: 800,
+              fontSize: 13,
+              letterSpacing: 1,
+              textTransform: 'uppercase',
+              textDecoration: 'none',
+              textAlign: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+            }}
+          >
+            {t.ecosystems.ctaContact || 'Hablemos'} →
+          </a>
+
+          {/* CTA secundario: "Ver proyectos" */}
+          <a
+            href="#proyectos"
+            onClick={onClose}
+            className="eco-drawer-cta-secondary"
+            style={{
+              flex: 1,
+              padding: '13px 20px',
+              background: 'transparent',
+              color: 'rgba(255,255,255,0.6)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: 10,
+              fontWeight: 700,
+              fontSize: 13,
+              letterSpacing: 0.5,
+              textTransform: 'uppercase',
+              textDecoration: 'none',
+              textAlign: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+            }}
+          >
+            {t.ecosystems.ctaProjects || 'Ver proyectos'} →
+          </a>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// ECOSYSTEM CARD — con indicador visual si tiene landing HTML
+// ECOSYSTEM CARD
 // ─────────────────────────────────────────────────────────────────────
 function EcosystemCard({ eco, idx, primary, t, onOpen }) {
   const [hovered, setHovered] = useState(false)
@@ -405,12 +571,12 @@ function EcosystemCard({ eco, idx, primary, t, onOpen }) {
         border: eco.featured
           ? `1px solid ${primary}50`
           : hovered
-            ? `1px solid ${primary}60`
+            ? `1px solid ${primary}55`
             : '1px solid rgba(255,255,255,0.08)',
         background: eco.featured
           ? `${primary}08`
           : hovered
-            ? `${primary}05`
+            ? `${primary}04`
             : 'rgba(255,255,255,0.02)',
         transition: 'all 0.3s cubic-bezier(0.23,1,0.32,1)',
         transform: hovered ? 'translateY(-6px)' : 'translateY(0)',
@@ -430,31 +596,6 @@ function EcosystemCard({ eco, idx, primary, t, onOpen }) {
         </div>
       )}
 
-      {/* Indicador de landing HTML — ícono de página */}
-      {hasLanding && (
-        <div style={{
-          position: 'absolute',
-          top: eco.featured ? 40 : 12,
-          right: 12,
-          zIndex: 2,
-          background: 'rgba(0,0,0,0.65)',
-          backdropFilter: 'blur(8px)',
-          border: `1px solid ${primary}40`,
-          borderRadius: 6,
-          padding: '3px 8px',
-          fontSize: 9,
-          fontWeight: 700,
-          color: primary,
-          textTransform: 'uppercase',
-          letterSpacing: 1,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 4,
-        }}>
-          <span style={{ fontSize: 10 }}>🌐</span> Landing
-        </div>
-      )}
-
       {/* Imagen */}
       {eco.image && (
         <div style={{ height: 140, overflow: 'hidden', position: 'relative' }}>
@@ -468,32 +609,23 @@ function EcosystemCard({ eco, idx, primary, t, onOpen }) {
               transition: 'all 0.5s cubic-bezier(0.23,1,0.32,1)',
             }}
           />
-          {/* Overlay con ícono de apertura al hover */}
+          {/* Overlay icono "→" en hover */}
           <div style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             opacity: hovered ? 1 : 0,
             transition: 'opacity 0.3s',
           }}>
             <div style={{
-              width: 44,
-              height: 44,
-              borderRadius: '50%',
-              background: 'rgba(0,0,0,0.7)',
-              backdropFilter: 'blur(8px)',
+              width: 44, height: 44, borderRadius: '50%',
+              background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)',
               border: `2px solid ${primary}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: hasLanding ? 20 : 16,
-              color: primary,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 18, color: primary,
               transform: hovered ? 'scale(1)' : 'scale(0.7)',
               transition: 'transform 0.3s cubic-bezier(0.23,1,0.32,1)',
             }}>
-              {hasLanding ? '↗' : '→'}
+              ↗
             </div>
           </div>
         </div>
@@ -547,25 +679,15 @@ function EcosystemCard({ eco, idx, primary, t, onOpen }) {
           </ul>
         )}
 
-        {/* Link "ver detalle" / "ver landing" — localizado */}
+        {/* Indicador "ver detalle" */}
         <div style={{
-          marginTop: 4,
-          fontSize: 11,
+          marginTop: 4, fontSize: 11,
           color: hovered ? primary : 'var(--text-muted)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 5,
+          display: 'flex', alignItems: 'center', gap: 5,
           transition: 'color 0.2s',
           fontWeight: hovered ? 700 : 400,
         }}>
-          {hasLanding ? (
-            <>
-              <span style={{ fontSize: 12 }}>🌐</span>
-              {t.ecosystems.viewDetail} →
-            </>
-          ) : (
-            <>{t.ecosystems.viewDetail} →</>
-          )}
+          {t.ecosystems.viewDetail || 'Ver detalle'} →
         </div>
       </div>
     </div>
@@ -575,7 +697,7 @@ function EcosystemCard({ eco, idx, primary, t, onOpen }) {
 // ─────────────────────────────────────────────────────────────────────
 // SECCIÓN PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────
-export default function EcosystemSection({ ecosystems, brand }) {
+export default function EcosystemSection({ ecosystems, brand, projects = [] }) {
   const [selected, setSelected] = useState(null)
   const t = useUIStrings(brand)
 
@@ -583,11 +705,10 @@ export default function EcosystemSection({ ecosystems, brand }) {
 
   const selectedEco = selected !== null ? ecosystems[selected] : null
   const primary = brand?.primary || '#ff3c3c'
-  const hasLanding = selectedEco && !!(selectedEco.detailHtml && selectedEco.detailHtml.trim())
 
   return (
     <section id="ecosistemas" style={{ padding: '100px 6%' }}>
-      {/* Encabezado — usa strings localizados idénticos a v2 */}
+      {/* Encabezado */}
       <div style={{ textAlign: 'center', marginBottom: 60 }}>
         <p style={{
           color: primary, fontSize: '0.75rem', fontWeight: 800,
@@ -619,22 +740,15 @@ export default function EcosystemSection({ ecosystems, brand }) {
         ))}
       </div>
 
-      {/* Modal — Landing HTML o modal clásico según configuración */}
+      {/* Drawer lateral */}
       {selectedEco && (
-        hasLanding ? (
-          <LandingModal
-            eco={selectedEco}
-            primary={primary}
-            onClose={() => setSelected(null)}
-          />
-        ) : (
-          <ClassicModal
-            eco={selectedEco}
-            primary={primary}
-            onClose={() => setSelected(null)}
-            t={t}
-          />
-        )
+        <EcosystemDrawer
+          eco={selectedEco}
+          primary={primary}
+          onClose={() => setSelected(null)}
+          t={t}
+          projects={projects}
+        />
       )}
     </section>
   )

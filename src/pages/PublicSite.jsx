@@ -1,3 +1,9 @@
+/**
+ * PublicSite.jsx — v2
+ * CAMBIO: EcosystemSection ahora recibe `projects` para mostrar
+ * casos de éxito del sector dentro del drawer lateral.
+ */
+
 import { useEffect } from 'react'
 import { useSiteData }         from '../hooks/useSiteData'
 import NavBar                  from '../components/site/NavBar'
@@ -65,8 +71,11 @@ export default function PublicSite() {
       <NavBar              brand={site.brand} />
       <Hero                hero={site.hero}   brand={site.brand} />
       <ServicesSection     services={services} brand={site.brand} />
-      <EcosystemSection    ecosystems={ecosystems} brand={site.brand} />
-      <ProjectsSection     projects={projects} brand={site.brand} />
+
+      {/* EcosystemSection recibe projects para mostrar casos de éxito en el drawer */}
+      <EcosystemSection    ecosystems={ecosystems} brand={site.brand} projects={projects} />
+
+      <ProjectsSection     projects={projects} brand={site.brand} site={site} />
       <TestimonialsSection testimonials={testimonials} brand={site.brand} />
       <ContactSection      contact={site.contact} footer={site.footer} brand={site.brand} site={site} />
       <Footer              site={site} />
