@@ -1,20 +1,15 @@
 /**
- * EcosystemSection.jsx — v5 FULLSCREEN SHELL
+ * EcosystemSection.jsx — v6 PREMIUM REDESIGN
  * ─────────────────────────────────────────────────────────────────────────
- * Al clicar una card:
- *   - Se hay detailHtml → abre overlay FULLSCREEN con barra Polartronic
- *       La barra solo tiene: Logo | Nombre del eco | "← Volver" | "Hablemos →"
- *       El iframe NO tiene ningún botón, formulario ni hamburguesa interno
- *       (son bloqueados via CSS injection + sandbox)
- *   - Si no hay detailHtml → drawer lateral con contenido automático (fallback)
- *
- * IDIOMA: useUIStrings(brand) — 100% localizado.
+ * Cards rediseñadas: glass morphism + reveal animado + badges flotantes.
+ * Shell fullscreen: barra superior con blur + branding + indicador de carga iframe.
+ * Drawer fallback: slide-in con animación spring + glassmorphism panel.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useUIStrings } from '../../hooks/useUIStrings'
 
-// ── Helpers ───────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────
 function parseFeatures(raw) {
   if (Array.isArray(raw)) return raw
   try {
@@ -24,275 +19,203 @@ function parseFeatures(raw) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// FULLSCREEN SHELL — overlay fullscreen con barra Polartronic minima
+// FULLSCREEN SHELL — overlay con barra Polartronic + iframe
 // ─────────────────────────────────────────────────────────────────────
 function EcosystemFullscreen({ eco, brand, onClose, t }) {
-  const iframeRef = useRef(null)
-  const primary   = brand?.primary || '#ff3c3c'
-  const brandName = brand?.logo ? null : (brand?.name || 'POLARTRONIC')
-  const brandLogo = brand?.logo || ''
+  const iframeRef  = useRef(null)
+  const [iframeReady, setIframeReady] = useState(false)
+  const primary    = brand?.primary || '#ff3c3c'
+  const brandName  = brand?.name   || 'POLARTRONIC'
+  const brandLogo  = brand?.logo   || ''
 
-  // Lock body scroll
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
   }, [])
 
-  // Escape to close
   useEffect(() => {
     const fn = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', fn)
     return () => window.removeEventListener('keydown', fn)
   }, [onClose])
 
-  /**
-   * Build iframe srcDoc:
-   * - Wraps fragment in full HTML if needed
-   * - Injects CSS that hides ALL buttons, forms, nav, hamburgers, CTAs
-   *   that are INSIDE the HTML (clean demo commercial template)
-   */
   function buildSrcDoc(html) {
-    // CSS injected into the iframe to strip all interactive elements
-    const stripCSS = `
-      <style id="polartronic-strip">
-        /* Hide all interactive / navigation elements inside the demo */
-        button,
-        input[type="submit"],
-        input[type="button"],
-        input[type="reset"],
-        form,
-        nav,
-        .nav, .navbar, .navigation,
-        .hamburger, .menu-toggle, .burger, .menu-btn,
-        [class*="hamburger"], [class*="burger"], [id*="hamburger"],
-        [class*="menu-btn"], [id*="menu-btn"],
-        footer a[href*="contact"], footer a[href*="whatsapp"],
-        a[href^="mailto"], a[href^="tel"], a[href^="wa.me"], a[href^="https://wa.me"],
-        a[href*="whatsapp"], a[href*="contacto"], a[href*="contact"],
-        a[href*="reserva"], a[href*="book"], a[href*="prenotazione"],
-        [class*="cta"], [class*="btn"], [id*="cta"], [id*="btn"],
-        .cta, .btn, .button,
-        .contact-form, .booking-form, [class*="form"],
-        textarea, select
-        {
-          display: none !important;
-          visibility: hidden !important;
-          pointer-events: none !important;
-          opacity: 0 !important;
-          height: 0 !important;
-          overflow: hidden !important;
-        }
-        /* Disable all links to prevent navigation away */
-        a { pointer-events: none !important; cursor: default !important; }
-        /* Remove scroll bar from iframe body */
-        html, body { overflow-x: hidden; }
-      </style>
-    `
-
+    const stripCSS = `<style id="pt-strip">
+      button,input[type="submit"],input[type="button"],input[type="reset"],
+      form,.nav,nav,.navbar,.navigation,.hamburger,.menu-toggle,.burger,.menu-btn,
+      [class*="hamburger"],[class*="burger"],[id*="hamburger"],
+      [class*="menu-btn"],[id*="menu-btn"],
+      a[href^="mailto"],a[href^="tel"],a[href^="wa.me"],a[href*="whatsapp"],
+      a[href*="contacto"],a[href*="contact"],a[href*="reserva"],a[href*="book"],
+      [class*="cta"],[class*="btn"],[id*="cta"],[id*="btn"],
+      .cta,.btn,.button,.contact-form,.booking-form,[class*="form"],
+      textarea,select{display:none!important;visibility:hidden!important;pointer-events:none!important;}
+      a{pointer-events:none!important;cursor:default!important;}
+      html,body{overflow-x:hidden;}
+    </style>`
     if (/<!doctype\s+html/i.test(html) || /<html[\s>]/i.test(html)) {
-      // Full HTML — inject strip CSS into <head>
       return html.replace(/<\/head>/i, stripCSS + '</head>')
     }
-    // Fragment — wrap with full HTML + strip CSS
-    return `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}body{font-family:system-ui,sans-serif;line-height:1.6;color:#111}img{max-width:100%}</style>
-  ${stripCSS}
-</head>
-<body>${html}</body>
-</html>`
+    return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,sans-serif;line-height:1.6;color:#111}img{max-width:100%}</style>${stripCSS}</head><body>${html}</body></html>`
   }
 
   return (
     <div style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 9000,
-      display: 'flex',
-      flexDirection: 'column',
-      background: '#080a0c',
-      animation: 'ecoShellIn 0.32s cubic-bezier(0.23,1,0.32,1) both',
+      position: 'fixed', inset: 0, zIndex: 9000,
+      display: 'flex', flexDirection: 'column',
+      background: '#05070a',
+      animation: 'shellOpen 0.38s cubic-bezier(0.16,1,0.3,1) both',
     }}>
       <style>{`
-        @keyframes ecoShellIn {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-        .eco-shell-back:hover {
-          background: rgba(255,255,255,0.12) !important;
-          color: white !important;
-        }
-        .eco-shell-contact:hover {
-          opacity: 0.88 !important;
-          transform: translateY(-1px) !important;
-        }
+        @keyframes shellOpen{from{opacity:0;transform:scale(0.985)}to{opacity:1;transform:scale(1)}}
+        @keyframes iframeReveal{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes barSlide{from{opacity:0;transform:translateY(-100%)}to{opacity:1;transform:translateY(0)}}
+        @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+        .shell-back-btn:hover{background:rgba(255,255,255,0.12)!important;color:white!important;border-color:rgba(255,255,255,0.3)!important;}
+        .shell-contact-btn:hover{transform:translateY(-2px)!important;box-shadow:0 12px 32px ${primary}60!important;}
       `}</style>
 
-      {/* ── POLARTRONIC SHELL BAR — minimal: Logo | Name | Back | Contact ── */}
+      {/* BARRA TOP */}
       <div style={{
-        flexShrink: 0,
-        height: 58,
-        background: 'rgba(5,5,5,0.97)',
-        borderBottom: `1px solid ${primary}35`,
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 20px',
-        gap: 14,
-        backdropFilter: 'blur(20px)',
-        position: 'relative',
-        zIndex: 1,
+        flexShrink: 0, height: 62,
+        background: 'rgba(5,7,10,0.9)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        borderBottom: `1px solid ${primary}25`,
+        display: 'flex', alignItems: 'center',
+        padding: '0 24px', gap: 16,
+        animation: 'barSlide 0.4s cubic-bezier(0.16,1,0.3,1) both',
+        position: 'relative', zIndex: 2,
       }}>
+        {/* Línea de color del acento debajo de la barra */}
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, height: 2,
+          background: `linear-gradient(90deg, transparent, ${primary}80, transparent)`,
+        }} />
+
         {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          {brandLogo ? (
-            <img src={brandLogo} alt={brand?.name} style={{ height: 26, maxWidth: 120, objectFit: 'contain' }} />
-          ) : (
-            <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '1.35rem', color: primary, letterSpacing: 2, lineHeight: 1 }}>
-              {brandName}
-            </span>
+          {brandLogo
+            ? <img src={brandLogo} alt={brandName} style={{ height: 28, maxWidth: 130, objectFit: 'contain' }} />
+            : <span style={{ fontFamily: 'Bebas Neue,sans-serif', fontSize: '1.4rem', color: primary, letterSpacing: 2 }}>{brandName}</span>
+          }
+        </div>
+
+        {/* Divider */}
+        <div style={{ width: 1, height: 26, background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
+
+        {/* Eco info */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+          {eco.category && (
+            <span style={{
+              fontSize: 9, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase',
+              color: primary, background: `${primary}15`,
+              border: `1px solid ${primary}35`, padding: '3px 10px', borderRadius: 20,
+              flexShrink: 0,
+            }}>{eco.category}</span>
           )}
-        </div>
-
-        {/* Separator */}
-        <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
-
-        {/* Ecosystem name */}
-        <div style={{ flex: 1, minWidth: 0 }}>
           <span style={{
-            fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.75)',
+            fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.85)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            display: 'block',
-          }}>
-            {eco.category && <span style={{ color: primary, marginRight: 6, fontSize: 10, textTransform: 'uppercase', letterSpacing: 1.5 }}>{eco.category} ·</span>}
-            {eco.title}
-          </span>
+          }}>{eco.title}</span>
+          {/* Indicador "DEMO COMERCIAL" */}
+          <span style={{
+            fontSize: 9, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase',
+            color: 'rgba(255,255,255,0.3)',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            padding: '3px 8px', borderRadius: 4, flexShrink: 0,
+          }}>DEMO</span>
         </div>
 
-        {/* CTA: Hablemos → #contacto */}
-        <a
-          href="#contacto"
-          onClick={(e) => {
-            e.preventDefault()
-            onClose()
-            setTimeout(() => {
-              const el = document.getElementById('contacto')
-              if (el) el.scrollIntoView({ behavior: 'smooth' })
-            }, 220)
-          }}
-          className="eco-shell-contact"
-          style={{
-            flexShrink: 0,
-            padding: '8px 18px',
-            background: primary,
-            color: 'white',
-            border: 'none',
-            borderRadius: 8,
-            fontWeight: 800,
-            fontSize: 12,
-            letterSpacing: 0.8,
-            textTransform: 'uppercase',
-            textDecoration: 'none',
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            display: 'flex', alignItems: 'center', gap: 5,
-            boxShadow: `0 0 16px ${primary}30`,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {t.ecosystems?.ctaContact || 'Hablemos'} →
-        </a>
-
-        {/* Back button */}
-        <button
-          onClick={onClose}
-          className="eco-shell-back"
-          style={{
-            flexShrink: 0,
-            padding: '8px 14px',
-            background: 'rgba(255,255,255,0.06)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            color: 'rgba(255,255,255,0.55)',
-            borderRadius: 8,
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            display: 'flex', alignItems: 'center', gap: 5,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          ← {t.ecosystems?.close || 'Volver'}
-        </button>
+        {/* CTAs */}
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>
+          <a
+            href="#contacto"
+            onClick={(e) => {
+              e.preventDefault(); onClose()
+              setTimeout(() => { document.getElementById('contacto')?.scrollIntoView({ behavior: 'smooth' }) }, 220)
+            }}
+            className="shell-contact-btn"
+            style={{
+              padding: '9px 20px', background: primary, color: 'white',
+              borderRadius: 9, fontWeight: 800, fontSize: 12, letterSpacing: 0.8,
+              textTransform: 'uppercase', textDecoration: 'none',
+              display: 'flex', alignItems: 'center', gap: 6,
+              transition: 'all 0.22s', boxShadow: `0 4px 20px ${primary}35`,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {t.ecosystems?.ctaContact || 'Contratar'} →
+          </a>
+          <button
+            onClick={onClose}
+            className="shell-back-btn"
+            style={{
+              padding: '9px 16px', background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.55)',
+              borderRadius: 9, fontSize: 12, fontWeight: 600,
+              cursor: 'pointer', transition: 'all 0.18s',
+              display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
+            }}
+          >
+            ✕ {t.ecosystems?.close || 'Cerrar'}
+          </button>
+        </div>
       </div>
 
-      {/* ── IFRAME — sandboxed demo, no interactive elements ── */}
-      <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+      {/* IFRAME */}
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        {/* Shimmer loader mientras carga */}
+        {!iframeReady && (
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 3,
+            background: '#08090c',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: 20,
+          }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: '50%',
+              border: `3px solid rgba(255,255,255,0.06)`,
+              borderTopColor: primary,
+              animation: 'shellSpin 0.8s linear infinite',
+            }} />
+            <div style={{
+              fontSize: 12, color: 'rgba(255,255,255,0.25)',
+              fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase',
+            }}>Cargando demo...</div>
+            <style>{`@keyframes shellSpin{to{transform:rotate(360deg)}}`}</style>
+          </div>
+        )}
         <iframe
           ref={iframeRef}
-          title={`${eco.title} — demo`}
+          title={`${eco.title} demo`}
           sandbox="allow-scripts allow-same-origin"
+          onLoad={() => setIframeReady(true)}
           style={{
-            width: '100%',
-            height: '100%',
-            border: 'none',
-            display: 'block',
+            width: '100%', height: '100%', border: 'none', display: 'block',
             background: 'white',
+            opacity: iframeReady ? 1 : 0,
+            transition: 'opacity 0.4s ease',
+            animation: iframeReady ? 'iframeReveal 0.5s ease both' : 'none',
           }}
           srcDoc={buildSrcDoc(eco.detailHtml || '')}
         />
       </div>
 
-      {/* ── MOBILE BOTTOM BAR ── */}
+      {/* MOBILE BAR */}
       <div style={{
-        flexShrink: 0,
-        display: 'none',
-        padding: '10px 16px',
-        background: 'rgba(5,5,5,0.97)',
+        flexShrink: 0, display: 'none', padding: '12px 16px', gap: 10,
+        background: 'rgba(5,7,10,0.97)',
         borderTop: '1px solid rgba(255,255,255,0.07)',
-        gap: 10,
-      }}
-        className="eco-shell-mobile-bar"
-      >
-        <style>{`
-          @media (max-width: 640px) {
-            .eco-shell-mobile-bar { display: flex !important; }
-          }
-        `}</style>
-        <a
-          href="#contacto"
-          onClick={(e) => {
-            e.preventDefault()
-            onClose()
-            setTimeout(() => {
-              const el = document.getElementById('contacto')
-              if (el) el.scrollIntoView({ behavior: 'smooth' })
-            }, 220)
-          }}
-          style={{
-            flex: 1, padding: '12px', background: primary,
-            color: 'white', border: 'none', borderRadius: 8,
-            fontWeight: 800, fontSize: 12, textTransform: 'uppercase',
-            textDecoration: 'none', textAlign: 'center', cursor: 'pointer',
-            letterSpacing: 0.8,
-          }}
-        >
-          {t.ecosystems?.ctaContact || 'Hablemos'} →
+      }} className="eco-mobile-bar">
+        <style>{`.eco-mobile-bar{@media(max-width:640px){display:flex!important;}}`}</style>
+        <a href="#contacto" onClick={(e) => { e.preventDefault(); onClose(); setTimeout(() => document.getElementById('contacto')?.scrollIntoView({ behavior: 'smooth' }), 220) }}
+          style={{ flex: 1, padding: '13px', background: primary, color: 'white', borderRadius: 10, fontWeight: 800, fontSize: 13, textDecoration: 'none', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.8 }}>
+          {t.ecosystems?.ctaContact || 'Contratar'} →
         </a>
-        <button
-          onClick={onClose}
-          style={{
-            padding: '12px 16px',
-            background: 'rgba(255,255,255,0.06)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            color: 'rgba(255,255,255,0.55)',
-            borderRadius: 8, fontSize: 12, fontWeight: 600,
-            cursor: 'pointer', whiteSpace: 'nowrap',
-          }}
-        >
-          ← {t.ecosystems?.close || 'Volver'}
+        <button onClick={onClose} style={{ padding: '13px 16px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          ✕
         </button>
       </div>
     </div>
@@ -300,7 +223,7 @@ function EcosystemFullscreen({ eco, brand, onClose, t }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// FALLBACK DRAWER — when no detailHtml
+// FALLBACK DRAWER — sin detailHtml
 // ─────────────────────────────────────────────────────────────────────
 function EcosystemDrawer({ eco, primary, onClose, t, projects = [] }) {
   useEffect(() => {
@@ -314,68 +237,100 @@ function EcosystemDrawer({ eco, primary, onClose, t, projects = [] }) {
     return () => window.removeEventListener('keydown', fn)
   }, [onClose])
 
-  const relatedProjects = projects.filter(p => {
-    const pInd = (p.industry || p.category || '').toLowerCase()
-    const eCat = (eco.category || eco.title || '').toLowerCase()
-    return pInd && eCat && (pInd.includes(eCat.split(' ')[0]) || eCat.includes(pInd.split(' ')[0]))
-  }).slice(0, 3)
-
   const features = parseFeatures(eco.features)
+  const relatedProjects = projects.filter(p => {
+    const pi = (p.industry || p.category || '').toLowerCase()
+    const ec = (eco.category || eco.title || '').toLowerCase()
+    return pi && ec && (pi.includes(ec.split(' ')[0]) || ec.includes(pi.split(' ')[0]))
+  }).slice(0, 3)
 
   return (
     <>
       <style>{`
-        @keyframes drawerIn { from { transform: translateX(100%); opacity: 0.5; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes backdropIn { from { opacity: 0; } to { opacity: 1; } }
-        .eco-drawer-scroll::-webkit-scrollbar { width: 3px; }
-        .eco-drawer-scroll::-webkit-scrollbar-thumb { background: ${primary}40; border-radius: 2px; }
-        .eco-drawer-cta1:hover { opacity: 0.88 !important; transform: translateY(-1px) !important; }
-        .eco-drawer-cta2:hover { border-color: ${primary} !important; color: ${primary} !important; }
+        @keyframes drawerIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+        @keyframes backdropIn{from{opacity:0}to{opacity:1}}
+        .drawer-cta-primary:hover{transform:translateY(-2px)!important;box-shadow:0 12px 32px ${primary}50!important;}
+        .drawer-cta-ghost:hover{border-color:${primary}!important;color:${primary}!important;}
+        .feature-item:hover{background:rgba(255,255,255,0.03)!important;padding-left:14px!important;}
       `}</style>
 
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 8000, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', animation: 'backdropIn 0.3s ease both' }} />
+      {/* Backdrop */}
+      <div onClick={onClose} style={{
+        position: 'fixed', inset: 0, zIndex: 8000,
+        background: 'rgba(0,0,0,0.72)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        animation: 'backdropIn 0.28s ease both',
+        cursor: 'pointer',
+      }} />
 
-      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 8100, width: 'min(520px, 92vw)', background: '#0a0a0a', borderLeft: `1px solid ${primary}25`, display: 'flex', flexDirection: 'column', animation: 'drawerIn 0.38s cubic-bezier(0.23,1,0.32,1) both', boxShadow: `-24px 0 80px rgba(0,0,0,0.6)` }}>
+      {/* Panel */}
+      <div style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0,
+        zIndex: 8100, width: 'min(500px, 92vw)',
+        background: 'linear-gradient(160deg, #0d0e12 0%, #08090c 100%)',
+        borderLeft: `1px solid ${primary}20`,
+        display: 'flex', flexDirection: 'column',
+        animation: 'drawerIn 0.42s cubic-bezier(0.16,1,0.3,1) both',
+        boxShadow: `-32px 0 80px rgba(0,0,0,0.7)`,
+      }}>
 
-        {/* Header */}
-        <div style={{ flexShrink: 0, padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+        {/* Línea de acento top */}
+        <div style={{ height: 3, background: `linear-gradient(90deg, ${primary}, ${primary}40, transparent)`, flexShrink: 0 }} />
+
+        {/* Hero del drawer */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
           {eco.image && (
-            <div style={{ width: 52, height: 52, borderRadius: 10, overflow: 'hidden', flexShrink: 0, border: `1px solid ${primary}30` }}>
-              <img src={eco.image} alt={eco.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <div style={{ height: 180, overflow: 'hidden' }}>
+              <img src={eco.image} alt={eco.title} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.45)' }} />
+              <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, #0d0e12 0%, transparent 60%)` }} />
             </div>
           )}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {eco.category && <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 2.5, color: primary, marginBottom: 4 }}>{eco.category}</div>}
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white', margin: 0, lineHeight: 1.2 }}>{eco.title}</h2>
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', margin: '6px 0 0', lineHeight: 1.5 }}>{t.ecosystems?.drawerSubtitle || 'Cómo trabajamos este sector'}</p>
+          {/* Header sobre/bajo imagen */}
+          <div style={{ padding: eco.image ? '0 24px 20px' : '24px 24px 20px', position: eco.image ? 'absolute' : 'relative', bottom: eco.image ? 0 : 'auto', left: 0, right: 0 }}>
+            {eco.category && (
+              <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 2.5, color: primary, textTransform: 'uppercase', marginBottom: 6 }}>{eco.category}</div>
+            )}
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white', margin: 0, lineHeight: 1.2 }}>{eco.title}</h2>
+            {eco.price && (
+              <div style={{ marginTop: 8, display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                <span style={{ fontSize: '1.5rem', fontWeight: 900, color: primary }}>{eco.price}</span>
+                {eco.period && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>{eco.period}</span>}
+              </div>
+            )}
           </div>
-          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', width: 34, height: 34, borderRadius: '50%', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}>✕</button>
+
+          {/* Botón cerrar */}
+          <button onClick={onClose} style={{
+            position: 'absolute', top: 16, right: 16,
+            width: 36, height: 36, borderRadius: '50%',
+            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.15)',
+            color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
+            fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>✕</button>
         </div>
 
-        {/* Price */}
-        {eco.price && (
-          <div style={{ flexShrink: 0, padding: '12px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: '1.4rem', fontWeight: 800, color: primary }}>{eco.price}</span>
-            {eco.period && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>{eco.period}</span>}
-          </div>
-        )}
-
-        {/* Scrollable content */}
-        <div className="eco-drawer-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '24px 24px 8px' }}>
-          {eco.desc && <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 14, lineHeight: 1.75, marginBottom: 24 }}>{eco.desc}</p>}
+        {/* Scroll content */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px 8px' }}>
+          {eco.desc && (
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, lineHeight: 1.8, marginBottom: 24, borderLeft: `2px solid ${primary}40`, paddingLeft: 14 }}>
+              {eco.desc}
+            </p>
+          )}
 
           {/* Related projects */}
           {relatedProjects.length > 0 && (
             <div style={{ marginBottom: 28 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 2, color: 'rgba(255,255,255,0.3)', marginBottom: 12 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 2, color: 'rgba(255,255,255,0.25)', marginBottom: 12 }}>
                 {t.ecosystems?.successCases || 'Casos de éxito'}
               </div>
-              {relatedProjects.map((proj, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', marginBottom: 8 }}>
-                  {proj.image && <div style={{ width: 40, height: 40, borderRadius: 7, overflow: 'hidden', flexShrink: 0 }}><img src={proj.image} alt={proj.client} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>}
+              {relatedProjects.map((p, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', marginBottom: 8, transition: 'all 0.2s' }}>
+                  {p.image && <div style={{ width: 40, height: 40, borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}><img src={p.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: 'white' }}>{proj.client || proj.title}</div>
-                    {proj.results && <div style={{ fontSize: 11, color: primary, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>▲ {proj.results.split('·')[0].trim()}</div>}
+                    <div style={{ fontWeight: 700, fontSize: 13, color: 'rgba(255,255,255,0.85)' }}>{p.client || p.title}</div>
+                    {p.results && <div style={{ fontSize: 11, color: primary, marginTop: 2 }}>↑ {p.results.split('·')[0].trim()}</div>}
                   </div>
                 </div>
               ))}
@@ -385,30 +340,34 @@ function EcosystemDrawer({ eco, primary, onClose, t, projects = [] }) {
           {/* Features */}
           {features.length > 0 && (
             <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 2, color: 'rgba(255,255,255,0.3)', marginBottom: 12 }}>
-                {t.ecosystems?.benefits || 'Beneficios incluidos'}
+              <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 2, color: 'rgba(255,255,255,0.25)', marginBottom: 14 }}>
+                {t.ecosystems?.benefits || 'Incluye'}
               </div>
-              <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {features.map((f, i) => (
-                  <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
-                    <span style={{ color: primary, flexShrink: 0, fontWeight: 800, marginTop: 1 }}>✓</span>
+                  <div key={i} className="feature-item" style={{ display: 'flex', gap: 10, padding: '9px 10px', borderRadius: 8, fontSize: 13, color: 'rgba(255,255,255,0.7)', transition: 'all 0.18s' }}>
+                    <span style={{ color: primary, flexShrink: 0, fontWeight: 900, fontSize: 12 }}>✓</span>
                     {f}
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
 
-          {eco.extraText && <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, lineHeight: 1.7, marginBottom: 16, fontStyle: 'italic' }}>{eco.extraText}</p>}
+          {eco.extraText && (
+            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, lineHeight: 1.7, fontStyle: 'italic', marginBottom: 16 }}>{eco.extraText}</p>
+          )}
         </div>
 
         {/* Footer CTAs */}
-        <div style={{ flexShrink: 0, padding: '16px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(0,0,0,0.4)', display: 'flex', gap: 10 }}>
-          <a href="#contacto" onClick={onClose} className="eco-drawer-cta1" style={{ flex: 1, padding: '13px 20px', background: primary, color: 'white', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 13, letterSpacing: 1, textTransform: 'uppercase', textDecoration: 'none', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+        <div style={{ flexShrink: 0, padding: '16px 24px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: 10 }}>
+          <a href="#contacto" onClick={onClose} className="drawer-cta-primary"
+            style={{ flex: 1, padding: '14px 20px', background: primary, color: 'white', borderRadius: 10, fontWeight: 800, fontSize: 13, letterSpacing: 0.8, textTransform: 'uppercase', textDecoration: 'none', textAlign: 'center', transition: 'all 0.22s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: `0 4px 20px ${primary}30` }}>
             {t.ecosystems?.ctaContact || 'Hablemos'} →
           </a>
-          <a href="#proyectos" onClick={onClose} className="eco-drawer-cta2" style={{ flex: 1, padding: '13px 20px', background: 'transparent', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, fontWeight: 700, fontSize: 13, letterSpacing: 0.5, textTransform: 'uppercase', textDecoration: 'none', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            {t.ecosystems?.ctaProjects || 'Ver proyectos'} →
+          <a href="#proyectos" onClick={onClose} className="drawer-cta-ghost"
+            style={{ flex: 1, padding: '14px 20px', background: 'transparent', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.13)', borderRadius: 10, fontWeight: 700, fontSize: 13, textTransform: 'uppercase', textDecoration: 'none', textAlign: 'center', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+            {t.ecosystems?.ctaProjects || 'Proyectos'} →
           </a>
         </div>
       </div>
@@ -417,70 +376,160 @@ function EcosystemDrawer({ eco, primary, onClose, t, projects = [] }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// ECOSYSTEM CARD
+// ECOSYSTEM CARD — diseño premium con spotlight hover
 // ─────────────────────────────────────────────────────────────────────
 function EcosystemCard({ eco, idx, primary, t, onOpen }) {
   const [hovered, setHovered] = useState(false)
+  const [mousePos, setMousePos] = useState({ x: 50, y: 50 })
+  const cardRef = useRef(null)
   const features   = parseFeatures(eco.features).slice(0, 3)
   const hasLanding = !!(eco.detailHtml && eco.detailHtml.trim())
 
+  function handleMouseMove(e) {
+    const rect = cardRef.current?.getBoundingClientRect()
+    if (!rect) return
+    setMousePos({
+      x: ((e.clientX - rect.left) / rect.width) * 100,
+      y: ((e.clientY - rect.top) / rect.height) * 100,
+    })
+  }
+
   return (
     <div
+      ref={cardRef}
       onClick={() => onOpen(idx)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onMouseMove={handleMouseMove}
       style={{
-        borderRadius: 16, overflow: 'hidden', cursor: 'pointer',
+        borderRadius: 20, overflow: 'hidden',
+        cursor: 'pointer', position: 'relative',
         border: eco.featured
-          ? `1px solid ${primary}50`
-          : hovered ? `1px solid ${primary}55` : '1px solid rgba(255,255,255,0.08)',
-        background: eco.featured
-          ? `${primary}08`
-          : hovered ? `${primary}04` : 'rgba(255,255,255,0.02)',
-        transition: 'all 0.3s cubic-bezier(0.23,1,0.32,1)',
-        transform: hovered ? 'translateY(-6px)' : 'translateY(0)',
-        boxShadow: hovered ? `0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px ${primary}30` : 'none',
-        position: 'relative',
+          ? `1px solid ${primary}55`
+          : hovered ? `1px solid ${primary}45` : '1px solid rgba(255,255,255,0.07)',
+        background: '#0a0b0e',
+        transition: 'transform 0.4s cubic-bezier(0.16,1,0.3,1), border-color 0.3s, box-shadow 0.4s',
+        transform: hovered ? 'translateY(-8px) scale(1.01)' : 'translateY(0) scale(1)',
+        boxShadow: hovered ? `0 28px 60px rgba(0,0,0,0.55), 0 0 0 1px ${primary}25` : '0 4px 20px rgba(0,0,0,0.3)',
+        animationDelay: `${idx * 0.07}s`,
       }}
     >
-      {eco.featured && (
-        <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 2, background: primary, color: 'white', fontSize: 9, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', padding: '3px 10px', borderRadius: 20 }}>
-          {t.ecosystems?.featured || '★ Destacado'}
-        </div>
+      {/* Spotlight hover effect */}
+      {hovered && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
+          background: `radial-gradient(circle 200px at ${mousePos.x}% ${mousePos.y}%, ${primary}10 0%, transparent 70%)`,
+          transition: 'opacity 0.2s',
+        }} />
       )}
 
+      {/* Featured badge */}
+      {eco.featured && (
+        <div style={{
+          position: 'absolute', top: 14, right: 14, zIndex: 3,
+          background: primary, color: 'white',
+          fontSize: 9, fontWeight: 900, letterSpacing: 1.2,
+          textTransform: 'uppercase', padding: '4px 12px', borderRadius: 20,
+          boxShadow: `0 4px 16px ${primary}50`,
+        }}>★ Destacado</div>
+      )}
+
+      {/* Landing badge */}
+      {hasLanding && (
+        <div style={{
+          position: 'absolute', top: eco.featured ? 42 : 14, right: 14, zIndex: 3,
+          background: 'rgba(55,138,221,0.15)',
+          border: '1px solid rgba(55,138,221,0.4)',
+          color: '#5aacff',
+          fontSize: 9, fontWeight: 800, letterSpacing: 1,
+          textTransform: 'uppercase', padding: '4px 10px', borderRadius: 20,
+        }}>🌐 Demo live</div>
+      )}
+
+      {/* Imagen */}
       {eco.image && (
-        <div style={{ height: 140, overflow: 'hidden', position: 'relative' }}>
-          <img src={eco.image} alt={eco.title} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: hovered ? 'brightness(0.65)' : 'brightness(0.55)', transform: hovered ? 'scale(1.06)' : 'scale(1)', transition: 'all 0.5s cubic-bezier(0.23,1,0.32,1)' }} />
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: hovered ? 1 : 0, transition: 'opacity 0.3s' }}>
-            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', border: `2px solid ${primary}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: primary, transform: hovered ? 'scale(1)' : 'scale(0.7)', transition: 'transform 0.3s cubic-bezier(0.23,1,0.32,1)' }}>
-              {hasLanding ? '↗' : '→'}
+        <div style={{ height: 180, overflow: 'hidden', position: 'relative', zIndex: 1 }}>
+          <img src={eco.image} alt={eco.title} style={{
+            width: '100%', height: '100%', objectFit: 'cover',
+            filter: hovered ? 'brightness(0.6) saturate(1.1)' : 'brightness(0.45)',
+            transform: hovered ? 'scale(1.08)' : 'scale(1)',
+            transition: 'all 0.6s cubic-bezier(0.16,1,0.3,1)',
+          }} />
+          {/* Gradient overlay */}
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #0a0b0e 0%, rgba(10,11,14,0.3) 60%, transparent 100%)' }} />
+
+          {/* Play/arrow overlay */}
+          <div style={{
+            position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            opacity: hovered ? 1 : 0, transition: 'opacity 0.3s',
+          }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: '50%',
+              background: 'rgba(5,7,10,0.75)', backdropFilter: 'blur(10px)',
+              border: `2px solid ${primary}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: hasLanding ? 22 : 20, color: primary,
+              transform: hovered ? 'scale(1)' : 'scale(0.6)',
+              transition: 'transform 0.35s cubic-bezier(0.16,1,0.3,1)',
+              boxShadow: `0 0 32px ${primary}40`,
+            }}>
+              {hasLanding ? '▶' : '→'}
             </div>
           </div>
         </div>
       )}
 
-      <div style={{ padding: '18px 20px' }}>
-        <div style={{ color: primary, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 4 }}>{eco.category}</div>
-        <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0 0 8px', color: 'var(--text-main)' }}>{eco.title}</h3>
-        {eco.price && (
-          <div style={{ color: primary, fontWeight: 800, fontSize: '1.1rem', marginBottom: 8 }}>
-            {eco.price}
-            {eco.period && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}> {eco.period}</span>}
+      {/* Content */}
+      <div style={{ padding: '20px 22px 22px', position: 'relative', zIndex: 1 }}>
+        {eco.category && (
+          <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 2, color: primary, marginBottom: 6 }}>
+            {eco.category}
           </div>
         )}
-        {eco.desc && <p style={{ color: 'var(--text-dim)', fontSize: 13, lineHeight: 1.6, margin: '0 0 12px' }}>{eco.desc}</p>}
+        <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: '0 0 6px', color: 'white', lineHeight: 1.2 }}>
+          {eco.title}
+        </h3>
+        {eco.price && (
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 10 }}>
+            <span style={{ fontSize: '1.25rem', fontWeight: 900, color: primary }}>{eco.price}</span>
+            {eco.period && <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{eco.period}</span>}
+          </div>
+        )}
+        {eco.desc && (
+          <p style={{ color: 'rgba(255,255,255,0.42)', fontSize: 13, lineHeight: 1.65, margin: '0 0 14px' }}>
+            {eco.desc}
+          </p>
+        )}
+
+        {/* Features list */}
         {features.length > 0 && (
-          <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+          <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 16px', display: 'flex', flexDirection: 'column', gap: 5 }}>
             {features.map((f, i) => (
-              <li key={i} style={{ display: 'flex', gap: 8, fontSize: 12, color: 'var(--text-dim)' }}>
-                <span style={{ color: primary, flexShrink: 0 }}>✓</span>{f}
+              <li key={i} style={{ display: 'flex', gap: 8, fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>
+                <span style={{ color: primary, flexShrink: 0, fontWeight: 900 }}>✓</span>{f}
               </li>
             ))}
           </ul>
         )}
-        <div style={{ marginTop: 4, fontSize: 11, color: hovered ? primary : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5, transition: 'color 0.2s', fontWeight: hovered ? 700 : 400 }}>
-          {hasLanding ? (t.ecosystems?.viewDetail || 'Ver detalle') + ' ↗' : (t.ecosystems?.viewDetail || 'Ver detalle') + ' →'}
+
+        {/* CTA bottom */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6, paddingTop: 14,
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+        }}>
+          <span style={{
+            fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+            color: hovered ? primary : 'rgba(255,255,255,0.25)',
+            transition: 'color 0.2s',
+          }}>
+            {hasLanding
+              ? (t.ecosystems?.viewDetail || 'Ver demo') + ' ▶'
+              : (t.ecosystems?.viewDetail || 'Ver detalle') + ' →'
+            }
+          </span>
+          {hovered && (
+            <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${primary}60, transparent)`, animation: 'lineGrow 0.3s ease both' }} />
+          )}
         </div>
       </div>
     </div>
@@ -502,41 +551,38 @@ export default function EcosystemSection({ ecosystems, brand, projects = [] }) {
 
   return (
     <section id="ecosistemas" style={{ padding: '100px 6%' }}>
+      <style>{`
+        @keyframes cardReveal{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes lineGrow{from{scaleX:0;opacity:0}to{scaleX:1;opacity:1}}
+        #ecosistemas .eco-card{animation:cardReveal 0.55s cubic-bezier(0.16,1,0.3,1) both;}
+      `}</style>
+
+      {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: 60 }}>
-        <p style={{ color: primary, fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12 }}>
+        <p style={{ color: primary, fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 14 }}>
           {t.ecosystems?.eyebrow || 'Grupos Partners'}
         </p>
-        <h2 style={{ fontSize: 'clamp(2rem,5vw,3rem)', fontWeight: 800, color: 'var(--text-main)' }}>
+        <h2 style={{ fontSize: 'clamp(2rem,5vw,3rem)', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
           {t.ecosystems?.headingPrefix || 'Nuestras'}{' '}
           <span style={{ color: primary }}>{t.ecosystems?.heading || 'Membresías'}</span>
         </h2>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
+      {/* Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 22 }}>
         {ecosystems.map((eco, idx) => (
-          <EcosystemCard key={eco.id || idx} eco={eco} idx={idx} primary={primary} t={t} onOpen={setSelected} />
+          <div key={eco.id || idx} className="eco-card" style={{ animationDelay: `${idx * 0.07}s` }}>
+            <EcosystemCard eco={eco} idx={idx} primary={primary} t={t} onOpen={setSelected} />
+          </div>
         ))}
       </div>
 
-      {/* Fullscreen shell (has detailHtml) */}
+      {/* Overlays */}
       {selectedEco && hasLanding && (
-        <EcosystemFullscreen
-          eco={selectedEco}
-          brand={brand}
-          onClose={() => setSelected(null)}
-          t={t}
-        />
+        <EcosystemFullscreen eco={selectedEco} brand={brand} onClose={() => setSelected(null)} t={t} />
       )}
-
-      {/* Fallback drawer (no detailHtml) */}
       {selectedEco && !hasLanding && (
-        <EcosystemDrawer
-          eco={selectedEco}
-          primary={primary}
-          onClose={() => setSelected(null)}
-          t={t}
-          projects={projects}
-        />
+        <EcosystemDrawer eco={selectedEco} primary={primary} onClose={() => setSelected(null)} t={t} projects={projects} />
       )}
     </section>
   )
