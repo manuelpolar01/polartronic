@@ -32,7 +32,6 @@ function BrandLogo({ brand, scrolled }) {
   return <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '2rem', color: primary, letterSpacing: 2 }}>{name}</span>
 }
 
-// ── Icono hamburguesa animado ─────────────────────────────────────────
 function HamburgerIcon({ open, primary }) {
   return (
     <div style={{ width: 22, height: 16, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -65,18 +64,19 @@ function HamburgerIcon({ open, primary }) {
 export default function NavBar({ brand }) {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [activeLink, setActiveLink] = useState('#home')
   const t = useUIStrings(brand)
 
   const primary = brand?.primary || '#ff3c3c'
   const name    = brand?.name    || 'POLARTRONIC'
 
   const NAV_LINKS = [
-    { href: '#home',        label: t.nav.home,        num: '01' },
-    { href: '#servicios',   label: t.nav.services,    num: '02' },
-    { href: '#ecosistemas', label: t.nav.memberships, num: '03' },
-    { href: '#proyectos',   label: t.nav.projects,    num: '04' },
-    { href: '#testimonios', label: t.nav.clients,     num: '05' },
-    { href: '#contacto',    label: t.nav.contact,     num: '06' },
+    { href: '#home',        label: t.nav.home        },
+    { href: '#servicios',   label: t.nav.services    },
+    { href: '#ecosistemas', label: t.nav.memberships },
+    { href: '#proyectos',   label: t.nav.projects    },
+    { href: '#testimonios', label: t.nav.clients     },
+    { href: '#contacto',    label: t.nav.contact     },
   ]
 
   useEffect(() => {
@@ -96,6 +96,11 @@ export default function NavBar({ brand }) {
     return () => { document.body.style.overflow = '' }
   }, [menuOpen])
 
+  const handleLinkClick = (href) => {
+    setActiveLink(href)
+    setMenuOpen(false)
+  }
+
   return (
     <>
       <style>{`
@@ -103,7 +108,7 @@ export default function NavBar({ brand }) {
         .mobile-menu-btn { display: none !important; }
 
         @media (max-width: 768px) {
-          .desktop-nav    { display: none !important; }
+          .desktop-nav     { display: none !important; }
           .mobile-menu-btn { display: flex !important; }
         }
 
@@ -119,71 +124,40 @@ export default function NavBar({ brand }) {
         }
         .nav-link:hover { color: ${primary}; }
 
-        @keyframes menuOverlayIn {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-        @keyframes menuItemIn {
-          from { opacity: 0; transform: translateX(-28px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes menuFooterIn {
-          from { opacity: 0; transform: translateY(16px); }
+        @keyframes glassMenuIn {
+          from { opacity: 0; transform: translateY(-8px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        @keyframes glassItemIn {
+          from { opacity: 0; transform: translateX(-12px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
 
-        .mobile-nav-item {
+        .glass-menu-item {
           display: flex;
           align-items: center;
-          gap: 20px;
-          padding: 18px 0;
+          padding: 14px 20px;
           text-decoration: none;
-          border-bottom: 1px solid rgba(255,255,255,0.05);
+          font-size: 15px;
+          font-weight: 600;
+          letter-spacing: 0.5px;
+          border-bottom: 0.5px solid rgba(255,255,255,0.05);
+          border-left: 2px solid transparent;
+          transition: all 0.2s cubic-bezier(0.23,1,0.32,1);
+          color: rgba(255,255,255,0.45);
           position: relative;
-          overflow: hidden;
-          transition: padding-left 0.3s cubic-bezier(0.23,1,0.32,1);
         }
-        .mobile-nav-item:last-child { border-bottom: none; }
-        .mobile-nav-item:hover { padding-left: 8px; }
-        .mobile-nav-item::after {
-          content: '';
-          position: absolute;
-          left: 0; top: 0; bottom: 0;
-          width: 2px;
-          background: ${primary};
-          transform: scaleY(0);
-          transform-origin: bottom;
-          transition: transform 0.3s cubic-bezier(0.23,1,0.32,1);
+        .glass-menu-item.active {
+          color: white;
+          border-left-color: ${primary};
+          background: rgba(255,60,60,0.05);
+          padding-left: 22px;
         }
-        .mobile-nav-item:hover::after { transform: scaleY(1); }
-        .mobile-nav-item:hover .mobile-nav-label { color: white; }
-        .mobile-nav-item:hover .mobile-nav-num   { color: ${primary}; }
-        .mobile-nav-item:hover .mobile-nav-arrow { transform: translateX(6px); opacity: 1; }
-
-        .mobile-nav-num {
-          font-family: 'Cinzel', serif;
-          font-size: 11px;
-          color: rgba(255,255,255,0.2);
-          letter-spacing: 2px;
-          min-width: 24px;
-          transition: color 0.3s;
-        }
-        .mobile-nav-label {
-          font-size: clamp(1.6rem, 7vw, 2.2rem);
-          font-weight: 800;
-          text-transform: uppercase;
-          letter-spacing: 2px;
-          color: rgba(255,255,255,0.75);
-          flex: 1;
-          transition: color 0.3s;
-        }
-        .mobile-nav-arrow {
-          font-size: 18px;
-          color: ${primary};
-          opacity: 0;
-          transform: translateX(0);
-          transition: all 0.3s cubic-bezier(0.23,1,0.32,1);
-          flex-shrink: 0;
+        .glass-menu-item:hover:not(.active) {
+          color: rgba(255,255,255,0.8);
+          border-left-color: rgba(255,60,60,0.3);
+          padding-left: 22px;
+          background: rgba(255,255,255,0.02);
         }
       `}</style>
 
@@ -212,17 +186,21 @@ export default function NavBar({ brand }) {
           ))}
         </nav>
 
-        {/* Botón hamburguesa mobile */}
+        {/* Botón hamburguesa — glassmorphism cuadrado */}
         <button
           onClick={() => setMenuOpen(p => !p)}
           className="mobile-menu-btn"
           aria-label="Menu"
           style={{
-            background: 'rgba(255,255,255,0.06)',
-            border: `1px solid ${menuOpen ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.1)'}`,
-            width: 44, height: 44, borderRadius: 12,
+            background: menuOpen
+              ? `rgba(255,60,60,0.12)`
+              : 'rgba(255,255,255,0.06)',
+            border: `1px solid ${menuOpen ? `rgba(255,60,60,0.4)` : 'rgba(255,255,255,0.12)'}`,
+            width: 44, height: 44,
+            borderRadius: 10,
             cursor: 'pointer',
-            alignItems: 'center', justifyContent: 'center',
+            alignItems: 'center',
+            justifyContent: 'center',
             transition: 'all 0.3s',
             flexShrink: 0,
             padding: 0,
@@ -232,134 +210,127 @@ export default function NavBar({ brand }) {
         </button>
       </header>
 
-      {/* ── MOBILE MENU OVERLAY ── */}
+      {/* ── MOBILE MENU — Glass style ── */}
       {menuOpen && (
-        <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 999,
-            background: 'rgba(3,3,3,0.97)',
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setMenuOpen(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 998,
+              background: 'rgba(0,0,0,0.6)',
+              backdropFilter: 'blur(4px)',
+              WebkitBackdropFilter: 'blur(4px)',
+            }}
+          />
+
+          {/* Panel glass */}
+          <div style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0,
+            zIndex: 999,
+            background: 'rgba(8,8,12,0.97)',
             backdropFilter: 'blur(24px)',
             WebkitBackdropFilter: 'blur(24px)',
-            display: 'flex',
-            flexDirection: 'column',
-            animation: 'menuOverlayIn 0.3s ease both',
-            overflowY: 'auto',
-          }}
-        >
-          {/* Glow decorativo de fondo */}
-          <div style={{
-            position: 'absolute', top: '-20%', left: '-10%',
-            width: '60%', height: '60%',
-            background: `radial-gradient(ellipse, ${primary}12 0%, transparent 70%)`,
-            pointerEvents: 'none',
-          }} />
-          <div style={{
-            position: 'absolute', bottom: '-10%', right: '-10%',
-            width: '50%', height: '50%',
-            background: `radial-gradient(ellipse, ${primary}08 0%, transparent 70%)`,
-            pointerEvents: 'none',
-          }} />
-
-          {/* Header del overlay — logo + cerrar */}
-          <div style={{
-            display: 'flex', alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 6%',
-            height: 80, flexShrink: 0,
-            borderBottom: '1px solid rgba(255,255,255,0.05)',
+            borderBottom: `1px solid rgba(255,255,255,0.08)`,
+            animation: 'glassMenuIn 0.3s cubic-bezier(0.23,1,0.32,1) both',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
           }}>
-            <a
-              href="#home"
-              onClick={() => setMenuOpen(false)}
-              style={{ textDecoration: 'none' }}
-            >
-              <BrandLogo brand={brand} scrolled={false} />
-            </a>
-            <button
-              onClick={() => setMenuOpen(false)}
-              style={{
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                width: 44, height: 44, borderRadius: 12,
-                cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
-            >
-              <HamburgerIcon open={true} primary={primary} />
-            </button>
-          </div>
 
-          {/* Links */}
-          <nav style={{
-            flex: 1,
-            padding: '32px 6% 24px',
-            display: 'flex', flexDirection: 'column',
-            justifyContent: 'center',
-            position: 'relative', zIndex: 1,
-          }}>
-            {NAV_LINKS.map((l, i) => (
-              <a
-                key={l.href}
-                href={l.href}
+            {/* Línea de acento top */}
+            <div style={{
+              height: 2,
+              background: `linear-gradient(90deg, ${primary}, ${primary}40, transparent)`,
+            }} />
+
+            {/* Header del panel */}
+            <div style={{
+              display: 'flex', alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0 20px',
+              height: 64,
+              borderBottom: '0.5px solid rgba(255,255,255,0.06)',
+            }}>
+              <a href="#home" onClick={() => setMenuOpen(false)} style={{ textDecoration: 'none' }}>
+                <BrandLogo brand={brand} scrolled={true} />
+              </a>
+              <button
                 onClick={() => setMenuOpen(false)}
-                className="mobile-nav-item"
                 style={{
-                  animation: `menuItemIn 0.5s cubic-bezier(0.23,1,0.32,1) ${i * 0.07}s both`,
+                  width: 36, height: 36, borderRadius: 8,
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  color: 'rgba(255,255,255,0.6)',
+                  cursor: 'pointer', fontSize: 16,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
               >
-                <span className="mobile-nav-num">{l.num}</span>
-                <span className="mobile-nav-label">{l.label}</span>
-                <span className="mobile-nav-arrow">→</span>
-              </a>
-            ))}
-          </nav>
-
-          {/* Footer del overlay */}
-          <div style={{
-            padding: '20px 6% 40px',
-            borderTop: '1px solid rgba(255,255,255,0.05)',
-            display: 'flex', alignItems: 'center',
-            justifyContent: 'space-between', flexShrink: 0,
-            animation: 'menuFooterIn 0.6s cubic-bezier(0.23,1,0.32,1) 0.4s both',
-            position: 'relative', zIndex: 1,
-          }}>
-            <div>
-              <div style={{
-                fontSize: 10, fontWeight: 700, letterSpacing: 3,
-                textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)',
-                marginBottom: 4,
-              }}>
-                {name}
-              </div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.18)' }}>
-                {brand?.tagline || 'Elite Digital Studio'}
-              </div>
+                ✕
+              </button>
             </div>
 
-            {/* CTA contacto directo */}
-            <a
-              href="#contacto"
-              onClick={() => setMenuOpen(false)}
-              style={{
-                background: primary,
-                color: 'white',
-                padding: '10px 24px',
-                borderRadius: 50,
-                fontWeight: 700,
-                fontSize: 11,
-                letterSpacing: 1.5,
-                textTransform: 'uppercase',
-                textDecoration: 'none',
-                transition: 'transform 0.2s',
-                boxShadow: `0 0 24px ${primary}40`,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)' }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
-            >
-              {t.nav.contact}
-            </a>
+            {/* Links */}
+            <nav style={{ display: 'flex', flexDirection: 'column' }}>
+              {NAV_LINKS.map((l, i) => (
+                <a
+                  key={l.href}
+                  href={l.href}
+                  onClick={() => handleLinkClick(l.href)}
+                  className={`glass-menu-item${activeLink === l.href ? ' active' : ''}`}
+                  style={{
+                    animation: `glassItemIn 0.35s cubic-bezier(0.23,1,0.32,1) ${i * 0.05}s both`,
+                  }}
+                >
+                  {l.label}
+                  {activeLink === l.href && (
+                    <span style={{
+                      marginLeft: 'auto',
+                      width: 6, height: 6, borderRadius: '50%',
+                      background: primary,
+                      flexShrink: 0,
+                    }} />
+                  )}
+                </a>
+              ))}
+            </nav>
+
+            {/* Footer CTA */}
+            <div style={{
+              padding: '14px 20px 20px',
+              borderTop: '0.5px solid rgba(255,255,255,0.06)',
+              display: 'flex', gap: 10,
+            }}>
+              <a
+                href="#contacto"
+                onClick={() => handleLinkClick('#contacto')}
+                style={{
+                  flex: 1, padding: '13px',
+                  background: primary, color: 'white',
+                  borderRadius: 10, fontWeight: 800,
+                  fontSize: 13, letterSpacing: 0.8,
+                  textTransform: 'uppercase',
+                  textDecoration: 'none', textAlign: 'center',
+                  boxShadow: `0 4px 20px ${primary}35`,
+                }}
+              >
+                {t.nav.contact} →
+              </a>
+              <button
+                onClick={() => setMenuOpen(false)}
+                style={{
+                  padding: '13px 16px',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  color: 'rgba(255,255,255,0.5)',
+                  borderRadius: 10, fontSize: 13,
+                  fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                ✕
+              </button>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </>
   )
