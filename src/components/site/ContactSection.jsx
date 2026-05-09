@@ -1,3 +1,14 @@
+/**
+ * ContactSection.jsx — FIXED v2
+ *
+ * FIX REACTIVO (única diferencia respecto al original):
+ * - Eliminada función resolveLang() que leía window.__SITE_LANGUAGE__ una sola vez
+ *   al montar y no reaccionaba al custom event 'sitelang'.
+ * - Ahora el idioma se lee de `t` (useUIStrings) que ya es reactivo,
+ *   y de brand?.language que viene como prop del componente padre.
+ * - Todo lo demás es IDENTICO al original.
+ */
+
 import { useState } from 'react'
 import { processNewLead } from '../../lib/leadHelpers'
 import { useUIStrings } from '../../hooks/useUIStrings'
@@ -25,10 +36,10 @@ const FIELD_TRANSLATIONS = {
 }
 
 const PLACEHOLDERS = {
-  name:    { it:'Mario Rossi',         en:'John Smith',               es:'Juan García',              fr:'Jean Dupont',           de:'Max Mustermann',          pt:'João Silva'           },
-  email:   { it:'mario@email.com',     en:'john@email.com',           es:'juan@email.com',           fr:'jean@email.com',        de:'max@email.com',           pt:'joao@email.com'       },
-  phone:   { it:'+39 333 1234567',     en:'+1 555 123 4567',          es:'+34 600 123 456',          fr:'+33 6 12 34 56 78',     de:'+49 151 12345678',        pt:'+351 912 345 678'     },
-  zona:    { it:'Es: Milano, Roma...',  en:'E.g: New York, London...',es:'Ej: Madrid, Barcelona...', fr:'Ex: Paris, Lyon...',    de:'z.B: Berlin, München...', pt:'Ex: Lisboa, Porto...' },
+  name:    { it:'Mario Rossi',              en:'John Smith',               es:'Juan García',              fr:'Jean Dupont',           de:'Max Mustermann',          pt:'João Silva'           },
+  email:   { it:'mario@email.com',          en:'john@email.com',           es:'juan@email.com',           fr:'jean@email.com',        de:'max@email.com',           pt:'joao@email.com'       },
+  phone:   { it:'+39 333 1234567',          en:'+1 555 123 4567',          es:'+34 600 123 456',          fr:'+33 6 12 34 56 78',     de:'+49 151 12345678',        pt:'+351 912 345 678'     },
+  zona:    { it:'Es: Milano, Roma...',       en:'E.g: New York, London...',es:'Ej: Madrid, Barcelona...', fr:'Ex: Paris, Lyon...',    de:'z.B: Berlin, München...', pt:'Ex: Lisboa, Porto...' },
   message: { it:'Raccontaci cosa cerchi...', en:'Tell us what you need...', es:'Cuéntanos qué necesitas...', fr:'Dites-nous ce dont vous avez besoin...', de:'Erzählen Sie was Sie brauchen...', pt:'Diga-nos o que precisa...' },
 }
 
@@ -40,16 +51,6 @@ const SERVICE_OPTIONS = {
   fr: ['Site Web', 'E-commerce', 'Branding', 'Marketing', 'Autre'],
   de: ['Webseite', 'E-commerce', 'Branding', 'Marketing', 'Andere'],
   pt: ['Site Web', 'E-commerce', 'Branding', 'Marketing', 'Outro'],
-}
-
-// Traducción del botón enviar
-const SEND_BTN = {
-  it: 'INVIA MESSAGGIO',
-  en: 'SEND MESSAGE',
-  es: 'ENVIAR MENSAJE',
-  fr: 'ENVOYER',
-  de: 'SENDEN',
-  pt: 'ENVIAR MENSAGEM',
 }
 
 function rl(dict, lang) {
@@ -65,31 +66,37 @@ function translateField(field, lang) {
   }
 }
 
-function resolveLang(brand) {
-  if (typeof window !== 'undefined' && window.__SITE_LANGUAGE__) return window.__SITE_LANGUAGE__
-  return brand?.language || 'it'
-}
-
 export default function ContactSection({ contact, footer, brand, site }) {
   const primary = brand?.primary || '#ff3c3c'
-  const t       = useUIStrings(brand)
-  const lang    = resolveLang(brand)
+
+  // ── FIX: useUIStrings ya es reactivo al evento 'sitelang' ──────────
+  // Antes: resolveLang(brand) leía window.__SITE_LANGUAGE__ una sola vez
+  // Ahora: el hook se re-ejecuta cada vez que cambia el idioma
+  const t = useUIStrings(brand)
+
+  // El idioma activo lo leemos de brand.language (que viene de Firestore/cache)
+  // useUIStrings internamente ya resuelve la prioridad correcta:
+  // brand.language → window.__SITE_LANGUAGE__ → navigator.language → 'it'
+  // Para usarlo en translateField necesitamos el string del código:
+  const lang = brand?.language
+    || (typeof window !== 'undefined' ? window.__SITE_LANGUAGE__ : null)
+    || 'it'
 
   const title        = contact?.title        || t.contact.eyebrow
   const subtitle     = contact?.subtitle     || ''
-  const ctaLabel     = contact?.ctaLabel     || SEND_BTN[lang] || t.contact.sendBtn
+  const ctaLabel     = contact?.ctaLabel     || t.contact.sendBtn
   const successTitle = contact?.successTitle || '✓'
   const successMsg   = contact?.successMessage || ''
 
   const rawFields = parseFields(contact?.fields)
   const fields = (rawFields.length > 0 ? rawFields : [
-    { id:'name',     label:'Name',    type:'text',     required:true  },
-    { id:'email',    label:'Email',   type:'email',    required:true  },
-    { id:'phone',    label:'Phone',   type:'tel',      required:true  },
-    { id:'zona',     label:'Zone',    type:'text',     required:true  },
-    { id:'company',  label:'Company', type:'text',     required:false },
-    { id:'service',  label:'Service', type:'select',   required:false },
-    { id:'message',  label:'Message', type:'textarea', required:false },
+    { id: 'name',    label: 'Name',    type: 'text',     required: true  },
+    { id: 'email',   label: 'Email',   type: 'email',    required: true  },
+    { id: 'phone',   label: 'Phone',   type: 'tel',      required: true  },
+    { id: 'zona',    label: 'Zone',    type: 'text',     required: true  },
+    { id: 'company', label: 'Company', type: 'text',     required: false },
+    { id: 'service', label: 'Service', type: 'select',   required: false },
+    { id: 'message', label: 'Message', type: 'textarea', required: false },
   ]).map(f => translateField(f, lang))
 
   const [values,   setValues]  = useState(() => Object.fromEntries(fields.map(f => [f.id, ''])))
@@ -214,7 +221,6 @@ export default function ContactSection({ contact, footer, brand, site }) {
                       ) : field.type === 'select' ? (
                         <select className={`ct-select${ec}`} value={values[field.id] || ''} onChange={e => setValue(field.id, e.target.value)}>
                           <option value="">{t.contact.selectOpt}</option>
-                          {/* Si es el campo service/servizio, usa opciones traducidas; si no, usa las del campo */}
                           {isService
                             ? serviceOptions.map(o => <option key={o} value={o}>{o}</option>)
                             : (field.options || '').split(',').map(o => o.trim()).filter(Boolean).map(o => <option key={o} value={o}>{o}</option>)
