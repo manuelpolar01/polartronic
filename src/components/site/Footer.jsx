@@ -1,4 +1,5 @@
 import { useUIStrings } from '../../hooks/useUIStrings'
+import { useTranslatedContent } from '../../hooks/useTranslatedContent'
 
 export default function Footer({ site }) {
   const { brand, footer } = site
@@ -6,6 +7,15 @@ export default function Footer({ site }) {
   const name    = brand?.name    || 'POLARTRONIC'
   const logo    = brand?.logo    || ''
   const t = useUIStrings(brand)
+
+  // Traducir campos editoriales del footer
+  const translatedFooter = useTranslatedContent(
+    {
+      copy: footer?.copy || `© 2026 ${name}. Todos los derechos reservados.`,
+      sub:  footer?.sub  || 'Diseño Web & Branding de Alto Impacto.',
+    },
+    brand
+  )
 
   return (
     <footer style={{ background: '#060606', padding: '80px 6% 40px',
@@ -105,8 +115,8 @@ export default function Footer({ site }) {
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 30,
         display: 'flex', justifyContent: 'space-between', color: 'rgba(255,255,255,0.25)',
         fontSize: 13, flexWrap: 'wrap', gap: 10 }}>
-        <span>{footer?.copy || `© 2026 ${name}. Todos los derechos reservados.`}</span>
-        <span>{footer?.sub  || 'Diseño Web & Branding de Alto Impacto.'}</span>
+        <span>{translatedFooter.copy}</span>
+        <span>{translatedFooter.sub}</span>
       </div>
     </footer>
   )

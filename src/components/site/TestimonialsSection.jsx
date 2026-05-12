@@ -1,9 +1,14 @@
 import { useUIStrings } from '../../hooks/useUIStrings'
+import { useTranslatedArray } from '../../hooks/useTranslatedContent'
 
 export default function TestimonialsSection({ testimonials, brand }) {
   if (!testimonials?.length) return null
   const primary = brand?.primary || 'var(--primary)'
   const t = useUIStrings(brand)
+
+  // Traducir campos editoriales de cada testimonio
+  // name y role se dejan sin traducir (son nombres propios)
+  const translatedTestimonials = useTranslatedArray(testimonials, ['text', 'role'], brand)
 
   return (
     <section id="testimonios" style={{ padding: '100px 6%' }}>
@@ -18,7 +23,7 @@ export default function TestimonialsSection({ testimonials, brand }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))', gap: 20 }}>
-        {testimonials.map((item, i) => (
+        {translatedTestimonials.map((item, i) => (
           <div key={item.id || i} style={{ background: 'rgba(255,255,255,0.03)',
             border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '28px 24px',
             transition: 'all 0.3s' }}

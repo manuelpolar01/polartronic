@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useUIStrings } from '../../hooks/useUIStrings'
+import { useTranslatedArray } from '../../hooks/useTranslatedContent'
 
 export default function Hero({ hero, brand }) {
   const primary  = brand?.primary || '#ff3c3c'
   const t        = useUIStrings(brand)
 
-  // hero.slides = array of { badge, headline, sub, cta, bgImage }
-  // fallback: single slide from old fields
-  const slides = (() => {
+  const rawSlides = (() => {
     if (Array.isArray(hero?.slides) && hero.slides.length > 0) return hero.slides
     return [{
       badge:    hero?.badge    || t.hero.badge,
@@ -18,12 +17,15 @@ export default function Hero({ hero, brand }) {
     }]
   })()
 
+  // Traducir contenido editorial de cada slide
+  const slides = useTranslatedArray(rawSlides, ['badge', 'headline', 'sub', 'cta'], brand)
+
   const [current, setCurrent] = useState(0)
   const [paused,  setPaused]  = useState(false)
   const [fading,  setFading]  = useState(false)
   const total = slides.length
 
-  const goTo = useCallback((idx, dir = 1) => {
+  const goTo = useCallback((idx) => {
     setFading(true)
     setTimeout(() => {
       setCurrent(idx)
@@ -31,13 +33,8 @@ export default function Hero({ hero, brand }) {
     }, 350)
   }, [])
 
-  const next = useCallback(() => {
-    goTo((current + 1) % total)
-  }, [current, total, goTo])
-
-  const prev = useCallback(() => {
-    goTo((current - 1 + total) % total)
-  }, [current, total, goTo])
+  const next = useCallback(() => goTo((current + 1) % total), [current, total, goTo])
+  const prev = useCallback(() => goTo((current - 1 + total) % total), [current, total, goTo])
 
   useEffect(() => {
     if (total <= 1 || paused) return
@@ -47,7 +44,6 @@ export default function Hero({ hero, brand }) {
 
   const slide = slides[current] || slides[0]
   const bg    = slide.bgImage || 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?auto=format&fit=crop&w=1920&q=80'
-
   const words = (slide.headline || 'ESTÉTICA QUE VENDE.').split(' ')
 
   return (
@@ -66,7 +62,6 @@ export default function Hero({ hero, brand }) {
         overflow: 'hidden',
       }}
     >
-      {/* Background layer — animates on slide change */}
       <div
         key={`bg-${current}`}
         style={{
@@ -86,7 +81,6 @@ export default function Hero({ hero, brand }) {
         }}
       />
 
-      {/* Content */}
       <div
         style={{
           maxWidth: 800,
@@ -148,7 +142,6 @@ export default function Hero({ hero, brand }) {
         </a>
       </div>
 
-      {/* Navigation arrows — only if multiple slides */}
       {total > 1 && (
         <>
           <button
@@ -166,7 +159,6 @@ export default function Hero({ hero, brand }) {
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'white' }}
           >›</button>
 
-          {/* Dots */}
           <div style={{
             position: 'absolute', bottom: 32, left: '50%',
             transform: 'translateX(-50%)',
@@ -187,7 +179,6 @@ export default function Hero({ hero, brand }) {
             ))}
           </div>
 
-          {/* Slide counter */}
           <div style={{
             position: 'absolute', bottom: 36, right: '6%',
             fontSize: 11, color: 'rgba(255,255,255,0.35)',

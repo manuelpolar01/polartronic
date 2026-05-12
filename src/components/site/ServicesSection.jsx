@@ -1,9 +1,13 @@
 import { useUIStrings } from '../../hooks/useUIStrings'
+import { useTranslatedArray } from '../../hooks/useTranslatedContent'
 
 export default function ServicesSection({ services, brand }) {
   if (!services?.length) return null
   const primary = brand?.primary || 'var(--primary)'
   const t = useUIStrings(brand)
+
+  // Traducir campos editoriales de cada servicio
+  const translatedServices = useTranslatedArray(services, ['title', 'desc', 'price'], brand)
 
   return (
     <section id="servicios" style={{ padding: '100px 6%', background: 'var(--bg)' }}>
@@ -20,7 +24,7 @@ export default function ServicesSection({ services, brand }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 24 }}>
-        {services.map((svc, i) => (
+        {translatedServices.map((svc, i) => (
           <ServiceCard key={svc.id || i} svc={svc} primary={primary} />
         ))}
       </div>
@@ -56,7 +60,6 @@ function ServiceCard({ svc, primary }) {
         e.currentTarget.style.boxShadow   = 'none'
       }}
     >
-      {/* Imagen de copertina */}
       {hasImage && (
         <div style={{ height: 160, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
           <img
@@ -76,7 +79,6 @@ function ServiceCard({ svc, primary }) {
               e.currentTarget.style.filter    = 'brightness(0.65)'
             }}
           />
-          {/* Emoji badge sobre la imagen */}
           {svc.icon && (
             <div style={{
               position: 'absolute', bottom: 12, left: 16,
@@ -94,7 +96,6 @@ function ServiceCard({ svc, primary }) {
       )}
 
       <div style={{ padding: '24px 24px 28px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {/* Emoji solo si no hay imagen */}
         {!hasImage && svc.icon && (
           <div style={{ fontSize: 36, marginBottom: 18 }}>{svc.icon}</div>
         )}

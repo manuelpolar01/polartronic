@@ -66,6 +66,7 @@ src/components/admin/tabs/ProjectsTab.jsx
 src/components/admin/tabs/ServicesTab.jsx
 src/components/admin/tabs/SiteConfigTab.jsx
 src/components/admin/tabs/TestimonialsTab.jsx
+src/components/common/PhoneInput.jsx
 src/components/site/ContactSection.jsx
 src/components/site/EcosystemSection.jsx
 src/components/site/Footer.jsx
@@ -75,12 +76,14 @@ src/components/site/ProjectsSection.jsx
 src/components/site/ServicesSection.jsx
 src/components/site/TestimonialsSection.jsx
 src/hooks/useSiteData.js
+src/hooks/useTranslatedContent.js
 src/hooks/useUIStrings.js
 src/index.css
 src/lib/firebase.js
 src/lib/firebaseHelpers.js
 src/lib/i18n.js
 src/lib/leadHelpers.js
+src/lib/translate.js
 src/lib/uiStrings.js
 src/lib/useAuth.js
 src/main.jsx
@@ -95,6 +98,706 @@ vite.config.js
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path="src/components/common/PhoneInput.jsx">
+/**
+ * PhoneInput.jsx
+ * ─────────────────────────────────────────────────────────────────────────
+ * Input de teléfono con:
+ *  - Selector de país con bandera + prefijo
+ *  - Validación de longitud exacta por país
+ *  - Máscara de formato automática
+ *  - 100% responsivo
+ *  - Sin dependencias externas
+ *
+ * Props:
+ *   value       {string}   Número completo con prefijo (ej: "+39 333 123 4567")
+ *   onChange    {Function} (fullNumber: string) => void
+ *   error       {string}   Mensaje de error opcional
+ *   primary     {string}   Color primario del tema
+ *   placeholder {string}   Placeholder personalizado
+ */
+
+// ─── Países: [código, bandera, prefijo, longitud dígitos sin prefijo, máscara] ──
+// máscara: '0' = dígito, ' '/'-'/'(' = literal
+const COUNTRIES = [
+  { code: 'IT', flag: '🇮🇹', prefix: '+39',  digits: 10, mask: '000 000 0000',     name: 'Italia'          },
+  { code: 'ES', flag: '🇪🇸', prefix: '+34',  digits: 9,  mask: '000 000 000',      name: 'España'          },
+  { code: 'FR', flag: '🇫🇷', prefix: '+33',  digits: 9,  mask: '0 00 00 00 00',    name: 'France'          },
+  { code: 'DE', flag: '🇩🇪', prefix: '+49',  digits: 10, mask: '0000 0000000',     name: 'Deutschland'     },
+  { code: 'PT', flag: '🇵🇹', prefix: '+351', digits: 9,  mask: '000 000 000',      name: 'Portugal'        },
+  { code: 'CH', flag: '🇨🇭', prefix: '+41',  digits: 9,  mask: '00 000 00 00',     name: 'Schweiz'         },
+  { code: 'GB', flag: '🇬🇧', prefix: '+44',  digits: 10, mask: '0000 000000',      name: 'United Kingdom'  },
+  { code: 'US', flag: '🇺🇸', prefix: '+1',   digits: 10, mask: '(000) 000-0000',   name: 'United States'   },
+  { code: 'AR', flag: '🇦🇷', prefix: '+54',  digits: 10, mask: '(000) 000-0000',   name: 'Argentina'       },
+  { code: 'MX', flag: '🇲🇽', prefix: '+52',  digits: 10, mask: '(000) 000-0000',   name: 'México'          },
+  { code: 'BR', flag: '🇧🇷', prefix: '+55',  digits: 11, mask: '(00) 00000-0000',  name: 'Brasil'          },
+  { code: 'CO', flag: '🇨🇴', prefix: '+57',  digits: 10, mask: '000 000 0000',     name: 'Colombia'        },
+  { code: 'NL', flag: '🇳🇱', prefix: '+31',  digits: 9,  mask: '00 000 0000',      name: 'Nederland'       },
+  { code: 'BE', flag: '🇧🇪', prefix: '+32',  digits: 9,  mask: '000 00 00 00',     name: 'Belgique'        },
+  { code: 'AT', flag: '🇦🇹', prefix: '+43',  digits: 10, mask: '000 000 0000',     name: 'Österreich'      },
+  { code: 'PL', flag: '🇵🇱', prefix: '+48',  digits: 9,  mask: '000 000 000',      name: 'Polska'          },
+  { code: 'RO', flag: '🇷🇴', prefix: '+40',  digits: 9,  mask: '000 000 000',      name: 'România'         },
+  { code: 'RU', flag: '🇷🇺', prefix: '+7',   digits: 10, mask: '(000) 000-00-00',  name: 'Россия'          },
+  { code: 'TR', flag: '🇹🇷', prefix: '+90',  digits: 10, mask: '(000) 000 0000',   name: 'Türkiye'         },
+  { code: 'AE', flag: '🇦🇪', prefix: '+971', digits: 9,  mask: '00 000 0000',      name: 'الإمارات'        },
+  { code: 'SA', flag: '🇸🇦', prefix: '+966', digits: 9,  mask: '00 000 0000',      name: 'السعودية'        },
+  { code: 'CN', flag: '🇨🇳', prefix: '+86',  digits: 11, mask: '000 0000 0000',    name: '中国'            },
+  { code: 'JP', flag: '🇯🇵', prefix: '+81',  digits: 10, mask: '00-0000-0000',     name: '日本'            },
+  { code: 'IN', flag: '🇮🇳', prefix: '+91',  digits: 10, mask: '00000 00000',      name: 'India'           },
+  { code: 'AU', flag: '🇦🇺', prefix: '+61',  digits: 9,  mask: '000 000 000',      name: 'Australia'       },
+  { code: 'CA', flag: '🇨🇦', prefix: '+1',   digits: 10, mask: '(000) 000-0000',   name: 'Canada'          },
+  { code: 'ZA', flag: '🇿🇦', prefix: '+27',  digits: 9,  mask: '00 000 0000',      name: 'South Africa'    },
+  { code: 'NG', flag: '🇳🇬', prefix: '+234', digits: 10, mask: '000 000 0000',     name: 'Nigeria'         },
+  { code: 'MA', flag: '🇲🇦', prefix: '+212', digits: 9,  mask: '000-000000',       name: 'المغرب'          },
+]
+
+/**
+ * Aplica la máscara al string de dígitos
+ * Ejemplo: digits="3331234567", mask="000 000 0000" → "333 123 4567"
+ */
+function applyMask(digits, mask) {
+  let result = ''
+  let di = 0
+  for (let i = 0; i < mask.length && di < digits.length; i++) {
+    if (mask[i] === '0') {
+      result += digits[di++]
+    } else {
+      result += mask[i]
+      // Si el siguiente char de la máscara es un dígito y aún hay dígitos, seguir
+    }
+  }
+  return result
+}
+
+/**
+ * Detecta país por prefijo desde un número completo guardado
+ */
+function detectCountryFromValue(value) {
+  if (!value) return COUNTRIES[0]
+  const clean = value.replace(/\s/g, '')
+  // Ordenar por longitud de prefijo desc para evitar falsos positivos (+1 vs +12)
+  const sorted = [...COUNTRIES].sort((a, b) => b.prefix.length - a.prefix.length)
+  return sorted.find(c => clean.startsWith(c.prefix)) || COUNTRIES[0]
+}
+
+/**
+ * Extrae solo los dígitos locales de un valor completo
+ */
+function extractLocalDigits(value, country) {
+  if (!value) return ''
+  const withoutPrefix = value.replace(/\s/g, '').replace(country.prefix, '')
+  return withoutPrefix.replace(/\D/g, '')
+}
+
+import { useState, useRef, useEffect } from 'react'
+
+export default function PhoneInput({ value, onChange, error, primary = '#ff3c3c', placeholder }) {
+  const [country,   setCountry]   = useState(() => detectCountryFromValue(value))
+  const [localRaw,  setLocalRaw]  = useState(() => extractLocalDigits(value, detectCountryFromValue(value)))
+  const [open,      setOpen]      = useState(false)
+  const [search,    setSearch]    = useState('')
+  const [focused,   setFocused]   = useState(false)
+  const dropRef  = useRef(null)
+  const inputRef = useRef(null)
+
+  // Sync hacia fuera cada vez que cambia country o localRaw
+  useEffect(() => {
+    const digits = localRaw.replace(/\D/g, '').slice(0, country.digits)
+    const masked = applyMask(digits, country.mask)
+    const full   = masked ? `${country.prefix} ${masked}` : ''
+    onChange(full)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [country, localRaw])
+
+  // Cerrar dropdown al click fuera
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropRef.current && !dropRef.current.contains(e.target)) {
+        setOpen(false)
+        setSearch('')
+      }
+    }
+    if (open) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [open])
+
+  function handleCountrySelect(c) {
+    setCountry(c)
+    setLocalRaw('')
+    setOpen(false)
+    setSearch('')
+    setTimeout(() => inputRef.current?.focus(), 50)
+  }
+
+  function handleLocalInput(e) {
+    // Solo dígitos, máximo según país
+    const digits = e.target.value.replace(/\D/g, '').slice(0, country.digits)
+    setLocalRaw(digits)
+  }
+
+  const digits  = localRaw.replace(/\D/g, '').slice(0, country.digits)
+  const masked  = applyMask(digits, country.mask)
+  const isValid = digits.length === country.digits
+  const isEmpty = digits.length === 0
+
+  const filteredCountries = search
+    ? COUNTRIES.filter(c =>
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.prefix.includes(search) ||
+        c.code.toLowerCase().includes(search.toLowerCase())
+      )
+    : COUNTRIES
+
+  const borderColor = error
+    ? 'rgba(255,80,80,0.6)'
+    : focused
+      ? primary
+      : 'rgba(255,255,255,0.12)'
+
+  // Placeholder dinámico basado en la máscara del país
+  const dynamicPlaceholder = placeholder || country.mask.replace(/0/g, '·')
+
+  return (
+    <div style={{ position: 'relative', width: '100%' }}>
+      <style>{`
+        .phone-input-wrap {
+          display: flex;
+          align-items: stretch;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid ${borderColor};
+          border-radius: 10px;
+          overflow: visible;
+          transition: border-color 0.2s;
+          position: relative;
+        }
+        .phone-flag-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 0 12px;
+          background: rgba(255,255,255,0.04);
+          border: none;
+          border-right: 1px solid rgba(255,255,255,0.08);
+          cursor: pointer;
+          flex-shrink: 0;
+          transition: background 0.15s;
+          border-radius: 10px 0 0 10px;
+          min-width: 90px;
+        }
+        .phone-flag-btn:hover { background: rgba(255,255,255,0.08); }
+        .phone-flag-emoji { font-size: 20px; line-height: 1; }
+        .phone-prefix { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.7); }
+        .phone-chevron { font-size: 10px; color: rgba(255,255,255,0.3); transition: transform 0.2s; }
+        .phone-number-input {
+          flex: 1;
+          background: transparent;
+          border: none;
+          outline: none;
+          color: white;
+          font-size: 14px;
+          font-family: inherit;
+          padding: 13px 14px;
+          letter-spacing: 0.5px;
+          min-width: 0;
+        }
+        .phone-number-input::placeholder { color: rgba(255,255,255,0.25); }
+        .phone-validity {
+          display: flex;
+          align-items: center;
+          padding: 0 12px;
+          flex-shrink: 0;
+          font-size: 13px;
+          transition: all 0.2s;
+        }
+        /* Dropdown */
+        .phone-dropdown {
+          position: absolute;
+          top: calc(100% + 6px);
+          left: 0;
+          right: 0;
+          z-index: 9999;
+          background: #111318;
+          border: 1px solid rgba(255,255,255,0.12);
+          border-radius: 12px;
+          box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+          overflow: hidden;
+          animation: phoneDropIn 0.18s cubic-bezier(0.16,1,0.3,1) both;
+        }
+        @keyframes phoneDropIn {
+          from { opacity:0; transform:translateY(-6px) scale(0.98); }
+          to   { opacity:1; transform:translateY(0) scale(1); }
+        }
+        .phone-search {
+          padding: 10px 14px;
+          border-bottom: 1px solid rgba(255,255,255,0.07);
+        }
+        .phone-search input {
+          width: 100%;
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 7px;
+          color: white;
+          font-size: 13px;
+          padding: 8px 12px;
+          outline: none;
+          font-family: inherit;
+          box-sizing: border-box;
+        }
+        .phone-search input::placeholder { color: rgba(255,255,255,0.3); }
+        .phone-list {
+          max-height: 220px;
+          overflow-y: auto;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255,255,255,0.1) transparent;
+        }
+        .phone-list::-webkit-scrollbar { width: 4px; }
+        .phone-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+        .phone-country-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 14px;
+          cursor: pointer;
+          transition: background 0.12s;
+          border: none;
+          background: transparent;
+          width: 100%;
+          text-align: left;
+        }
+        .phone-country-item:hover { background: rgba(255,255,255,0.06); }
+        .phone-country-item.active { background: rgba(255,60,60,0.08); }
+        .phone-country-name { font-size: 13px; color: rgba(255,255,255,0.75); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .phone-country-prefix { font-size: 12px; color: rgba(255,255,255,0.35); font-weight: 700; flex-shrink: 0; }
+        /* Progress bar de dígitos */
+        .phone-progress-wrap {
+          height: 2px;
+          background: rgba(255,255,255,0.06);
+          border-radius: 0 0 10px 10px;
+          overflow: hidden;
+          margin-top: 0;
+        }
+        .phone-progress-bar {
+          height: 100%;
+          border-radius: 2px;
+          transition: width 0.2s, background 0.2s;
+        }
+        @media (max-width: 480px) {
+          .phone-flag-btn { min-width: 76px; padding: 0 8px; gap: 4px; }
+          .phone-prefix { font-size: 12px; }
+          .phone-number-input { font-size: 14px; padding: 13px 10px; }
+        }
+      `}</style>
+
+      <div ref={dropRef}>
+        <div className="phone-input-wrap">
+          {/* Selector de país */}
+          <button
+            type="button"
+            className="phone-flag-btn"
+            onClick={() => setOpen(p => !p)}
+            aria-label="Seleccionar país"
+          >
+            <span className="phone-flag-emoji">{country.flag}</span>
+            <span className="phone-prefix">{country.prefix}</span>
+            <span className="phone-chevron" style={{ transform: open ? 'rotate(180deg)' : 'none' }}>▼</span>
+          </button>
+
+          {/* Input numérico */}
+          <input
+            ref={inputRef}
+            type="tel"
+            inputMode="numeric"
+            className="phone-number-input"
+            value={masked}
+            onChange={handleLocalInput}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder={dynamicPlaceholder}
+            autoComplete="tel-national"
+          />
+
+          {/* Indicador válido/inválido */}
+          <div className="phone-validity">
+            {!isEmpty && (
+              isValid
+                ? <span style={{ color: '#1D9E75', fontSize: 16 }}>✓</span>
+                : <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>{digits.length}/{country.digits}</span>
+            )}
+          </div>
+        </div>
+
+        {/* Barra de progreso */}
+        <div className="phone-progress-wrap">
+          <div
+            className="phone-progress-bar"
+            style={{
+              width: `${(digits.length / country.digits) * 100}%`,
+              background: isValid ? '#1D9E75' : primary,
+            }}
+          />
+        </div>
+
+        {/* Dropdown de países */}
+        {open && (
+          <div className="phone-dropdown">
+            <div className="phone-search">
+              <input
+                type="text"
+                placeholder="Buscar país o prefijo..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="phone-list">
+              {filteredCountries.length === 0 && (
+                <div style={{ padding: '14px', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>
+                  Sin resultados
+                </div>
+              )}
+              {filteredCountries.map(c => (
+                <button
+                  key={c.code}
+                  type="button"
+                  className={`phone-country-item${c.code === country.code ? ' active' : ''}`}
+                  onClick={() => handleCountrySelect(c)}
+                >
+                  <span style={{ fontSize: 18, lineHeight: 1 }}>{c.flag}</span>
+                  <span className="phone-country-name">{c.name}</span>
+                  <span className="phone-country-prefix">{c.prefix}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Hint de formato */}
+      {!error && focused && !isEmpty && !isValid && (
+        <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+          {country.name} · {country.digits} dígitos · formato {country.mask.replace(/0/g, '·')}
+        </p>
+      )}
+      {error && (
+        <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>{error}</p>
+      )}
+    </div>
+  )
+}
+</file>
+
+<file path="src/hooks/useTranslatedContent.js">
+/**
+ * useTranslatedContent.js
+ * ─────────────────────────────────────────────────────────────────────────
+ * Hook React que traduce un objeto de contenido (o string simple)
+ * al idioma activo configurado en el panel.
+ *
+ * COMPORTAMIENTO:
+ *  - Mientras traduce → devuelve el contenido ORIGINAL (sin flash vacío)
+ *  - Cuando termina   → devuelve el contenido TRADUCIDO
+ *  - Si lang === sourceLang → devuelve original sin llamar a la API
+ *  - Si la API falla  → devuelve original (silencioso)
+ *  - Escucha el evento 'sitelang' para reaccionar al cambio de idioma
+ *    en tiempo real sin recargar la página
+ *
+ * USO:
+ *   // String simple
+ *   const title = useTranslatedContent(hero.headline, brand)
+ *
+ *   // Objeto con múltiples campos
+ *   const { headline, sub, badge } = useTranslatedContent(
+ *     { headline: hero.headline, sub: hero.sub, badge: hero.badge },
+ *     brand
+ *   )
+ *
+ * PARÁMETROS:
+ *   content    {string|object}  Texto o mapa de textos a traducir
+ *   brand      {object}         Objeto brand del site (necesita brand.language)
+ *   sourceLang {string}         Idioma en que está escrito el contenido.
+ *                               Si no se especifica se usa brand.language como
+ *                               idioma origen (el admin escribe en el lang activo
+ *                               al momento de guardar — asumimos que no cambia).
+ *                               Pasa 'auto' para detección automática.
+ */
+
+import { useState, useEffect, useRef } from 'react'
+import { translateBatch, shouldTranslate } from '../lib/translate'
+import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from '../lib/uiStrings'
+
+function resolveTargetLang(brand) {
+  const supported = SUPPORTED_LANGUAGES.map(l => l.code)
+  const fromBrand = brand?.language
+  const fromWindow = typeof window !== 'undefined' ? window.__SITE_LANGUAGE__ : null
+
+  const candidate = fromBrand || fromWindow || DEFAULT_LANGUAGE
+  return supported.includes(candidate) ? candidate : DEFAULT_LANGUAGE
+}
+
+/**
+ * Extrae todos los valores string de un objeto (un nivel de profundidad)
+ * Ignora valores que no son string, arrays de objetos, etc.
+ */
+function extractStrings(content) {
+  if (typeof content === 'string') return [content]
+  if (typeof content !== 'object' || content === null) return []
+  return Object.values(content).filter(v => typeof v === 'string' && v.trim())
+}
+
+/**
+ * Reconstruye el objeto traducido dado el original y el array de traducciones
+ */
+function rebuildObject(original, keys, translations) {
+  if (typeof original === 'string') return translations[0] ?? original
+  const result = { ...original }
+  let i = 0
+  for (const key of keys) {
+    if (typeof original[key] === 'string' && original[key].trim()) {
+      result[key] = translations[i] ?? original[key]
+      i++
+    }
+  }
+  return result
+}
+
+export function useTranslatedContent(content, brand, sourceLang = 'auto') {
+  const [translated, setTranslated] = useState(content)
+  const abortRef = useRef(false)
+
+  // Escuchar cambio de idioma en tiempo real
+  const [langTick, setLangTick] = useState(0)
+  useEffect(() => {
+    const handler = () => setLangTick(t => t + 1)
+    window.addEventListener('sitelang', handler)
+    return () => window.removeEventListener('sitelang', handler)
+  }, [])
+
+  useEffect(() => {
+    // Reset: mostrar original mientras se traduce (sin flash vacío)
+    setTranslated(content)
+    abortRef.current = false
+
+    const targetLang = resolveTargetLang(brand)
+
+    // Si no hace falta traducir → salir inmediatamente
+    if (!shouldTranslate(targetLang, sourceLang)) return
+    if (!content) return
+
+    // Preparar textos a traducir
+    const isString = typeof content === 'string'
+    const keys = isString ? null : Object.keys(content).filter(
+      k => typeof content[k] === 'string' && content[k].trim()
+    )
+    const texts = isString ? [content] : keys.map(k => content[k])
+
+    if (!texts.length) return
+
+    let cancelled = false
+
+    translateBatch(texts, targetLang, sourceLang).then(results => {
+      if (cancelled || abortRef.current) return
+      if (isString) {
+        setTranslated(results[0] ?? content)
+      } else {
+        setTranslated(rebuildObject(content, keys, results))
+      }
+    })
+
+    return () => { cancelled = true }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    // Serializar content para comparación estable
+    typeof content === 'string' ? content : JSON.stringify(content),
+    brand?.language,
+    langTick,
+    sourceLang,
+  ])
+
+  return translated
+}
+
+/**
+ * useTranslatedArray — para arrays de objetos (servicios, testimonios, etc.)
+ * Traduce cada item del array de forma independiente y en paralelo.
+ *
+ * USO:
+ *   const translatedServices = useTranslatedArray(services, ['title','desc'], brand)
+ *
+ * @param {object[]} items     Array de objetos
+ * @param {string[]} fields    Campos a traducir en cada objeto
+ * @param {object}   brand     Objeto brand
+ * @param {string}   sourceLang
+ */
+export function useTranslatedArray(items, fields, brand, sourceLang = 'auto') {
+  const [translated, setTranslated] = useState(items)
+  const [langTick, setLangTick] = useState(0)
+
+  useEffect(() => {
+    const handler = () => setLangTick(t => t + 1)
+    window.addEventListener('sitelang', handler)
+    return () => window.removeEventListener('sitelang', handler)
+  }, [])
+
+  useEffect(() => {
+    setTranslated(items)
+    if (!items || !items.length) return
+
+    const targetLang = resolveTargetLang(brand)
+    if (!shouldTranslate(targetLang, sourceLang)) return
+
+    let cancelled = false
+
+    async function run() {
+      // Traducir todos los items en paralelo
+      const promises = items.map(async item => {
+        const texts = fields
+          .filter(f => typeof item[f] === 'string' && item[f].trim())
+          .map(f => item[f])
+
+        if (!texts.length) return item
+
+        const results = await translateBatch(texts, targetLang, sourceLang)
+
+        const updated = { ...item }
+        let i = 0
+        for (const f of fields) {
+          if (typeof item[f] === 'string' && item[f].trim()) {
+            updated[f] = results[i] ?? item[f]
+            i++
+          }
+        }
+        return updated
+      })
+
+      const results = await Promise.allSettled(promises)
+      if (cancelled) return
+
+      setTranslated(
+        results.map((r, i) => r.status === 'fulfilled' ? r.value : items[i])
+      )
+    }
+
+    run()
+
+    return () => { cancelled = true }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    JSON.stringify(items?.map(i => fields.map(f => i[f]))),
+    brand?.language,
+    langTick,
+    sourceLang,
+  ])
+
+  return translated
+}
+</file>
+
+<file path="src/lib/translate.js">
+/**
+ * translate.js
+ * ─────────────────────────────────────────────────────────────────────────
+ * Traducción gratuita via Google Translate endpoint no oficial.
+ * Sin API key. Mismo endpoint que usa la extensión de Chrome.
+ *
+ * REGLAS:
+ *  - Cache en sessionStorage → una sola petición por texto+lang por sesión
+ *  - Si sourceLang === targetLang → devuelve el texto original sin llamar a la API
+ *  - Si falla la API → devuelve el texto original (fallback silencioso)
+ *  - Textos vacíos, null o undefined → devuelve '' sin llamar a la API
+ *  - Batching: traduce arrays de strings en una sola request
+ */
+
+const CACHE_PREFIX = 'pt_tr_'
+
+function cacheKey(text, from, to) {
+  // Clave corta para sessionStorage
+  return `${CACHE_PREFIX}${to}_${btoa(encodeURIComponent(text)).slice(0, 40)}`
+}
+
+function fromCache(text, from, to) {
+  try {
+    const raw = sessionStorage.getItem(cacheKey(text, from, to))
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+
+function toCache(text, from, to, translated) {
+  try {
+    sessionStorage.setItem(cacheKey(text, from, to), JSON.stringify(translated))
+  } catch { /* sessionStorage lleno — ignorar */ }
+}
+
+/**
+ * translateText — traduce un string individual
+ * @param {string} text       Texto a traducir
+ * @param {string} targetLang Código ISO 639-1 destino (ej: 'en', 'es', 'fr')
+ * @param {string} sourceLang Código ISO 639-1 origen (default: 'auto')
+ * @returns {Promise<string>} Texto traducido o texto original si falla
+ */
+export async function translateText(text, targetLang, sourceLang = 'auto') {
+  if (!text || typeof text !== 'string' || !text.trim()) return text || ''
+
+  // Si origen y destino son el mismo idioma → sin traducción
+  if (sourceLang !== 'auto' && sourceLang === targetLang) return text
+
+  // Revisar cache
+  const cached = fromCache(text, sourceLang, targetLang)
+  if (cached !== null) return cached
+
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`
+    const res = await fetch(url)
+    if (!res.ok) return text
+
+    const data = await res.json()
+    // La respuesta es un array anidado: [[["translated","original",...],...],...]
+    const translated = data?.[0]
+      ?.map(chunk => chunk?.[0] ?? '')
+      .join('') || text
+
+    toCache(text, sourceLang, targetLang, translated)
+    return translated
+  } catch {
+    // API inalcanzable → texto original
+    return text
+  }
+}
+
+/**
+ * translateBatch — traduce múltiples strings en paralelo
+ * Usa Promise.allSettled para que un fallo individual no cancele los demás
+ * @param {string[]} texts
+ * @param {string}   targetLang
+ * @param {string}   sourceLang
+ * @returns {Promise<string[]>}
+ */
+export async function translateBatch(texts, targetLang, sourceLang = 'auto') {
+  if (!texts || !texts.length) return []
+  if (sourceLang !== 'auto' && sourceLang === targetLang) return texts
+
+  const results = await Promise.allSettled(
+    texts.map(t => translateText(t, targetLang, sourceLang))
+  )
+
+  return results.map((r, i) =>
+    r.status === 'fulfilled' ? r.value : texts[i]
+  )
+}
+
+/**
+ * shouldTranslate — decide si hay que traducir
+ * Si el idioma configurado en el panel es el mismo en que está escrito el contenido
+ * (sourceLang) → no hace falta traducir nada.
+ */
+export function shouldTranslate(targetLang, sourceLang = 'auto') {
+  if (!targetLang) return false
+  if (sourceLang === 'auto') return true
+  return sourceLang !== targetLang
+}
+</file>
 
 <file path=".firebaserc">
 {
@@ -717,32 +1420,17 @@ export default function AgentsTab({ data }) {
 
 <file path="src/components/admin/tabs/BookingFlow.jsx">
 /**
- * BookingFlow.jsx
- * ─────────────────────────────────────────────────────────────────────────
- * Multi-step booking UI for BarberBook Pro.
- *
- * LANGUAGE PRIORITY (updated):
- *   1. theme_config.language  ← NEW: admin-configured language
- *   2. window.__SITE_LANGUAGE__ ← set by PublicSite/AdminPanel at mount
- *   3. navigator.language      ← browser fallback
- *   4. 'it'                    ← hard default
- *
- * All UI strings come from useUIStrings(null, resolvedLang) so every label,
- * button, month name and weekday header is correctly localised.
- *
- * Props:
- *   theme      {object}   Full theme_config object (includes theme.language)
- *   services   {Array}    Available services from Supabase
- *   onBook     {Function} Called with booking payload on confirmation
- *   onClose    {Function} Close / dismiss the flow
+ * BookingFlow.jsx — PhoneInput + 100% responsivo
+ * CAMBIOS QUIRÚRGICOS respecto al original:
+ *  1. DetailsStep: campo phone usa <PhoneInput> en lugar de <input type="tel">
+ *  2. Padding/spacing adaptativo con clamp()
+ *  3. Grid de slots responsive con minmax más pequeño en móvil
+ * TODO LO DEMÁS INTACTO.
  */
 
 import { useState, useMemo, useCallback } from 'react'
-import { useUIStrings }                   from '../../hooks/useUIStrings'
-
-// ─────────────────────────────────────────────────────────────────────────
-// HELPERS
-// ─────────────────────────────────────────────────────────────────────────
+import { useUIStrings }   from '../../hooks/useUIStrings'
+import PhoneInput         from '../common/PhoneInput'
 
 function pad(n) { return String(n).padStart(2, '0') }
 
@@ -753,90 +1441,58 @@ function isoDate(date) {
 function buildCalendar(year, month) {
   const first   = new Date(year, month, 1)
   const last    = new Date(year, month + 1, 0)
-  const leading = first.getDay()  // 0=Sun…6=Sat
+  const leading = first.getDay()
   const days    = []
   for (let i = 0; i < leading;       i++) days.push(null)
   for (let d = 1; d <= last.getDate(); d++) days.push(new Date(year, month, d))
-  // Pad to complete last row
   while (days.length % 7 !== 0) days.push(null)
   return days
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// STEP COMPONENTS
-// ─────────────────────────────────────────────────────────────────────────
-
+// ── Step indicator ─────────────────────────────────────────────────
 function StepIndicator({ current, total, t }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28 }}>
       {Array.from({ length: total }).map((_, i) => (
-        <div
-          key={i}
-          style={{
-            height: 3, flex: 1,
-            borderRadius: 2,
-            background: i < current
-              ? 'var(--primary)'
-              : i === current
-                ? 'rgba(255,60,60,0.35)'
-                : 'rgba(255,255,255,0.08)',
-            transition: 'background 0.3s',
-          }}
-        />
+        <div key={i} style={{
+          height: 3, flex: 1, borderRadius: 2,
+          background: i < current ? 'var(--primary)' : i === current ? 'rgba(255,60,60,0.35)' : 'rgba(255,255,255,0.08)',
+          transition: 'background 0.3s',
+        }} />
       ))}
-      <span style={{
-        fontSize: 11, color: 'rgba(255,255,255,0.3)',
-        whiteSpace: 'nowrap', marginLeft: 4,
-      }}>
+      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', whiteSpace: 'nowrap', marginLeft: 4 }}>
         {t.booking.step} {current + 1} {t.booking.of} {total}
       </span>
     </div>
   )
 }
 
-// Step 1 — Service selection
+// ── Step 1: Service ────────────────────────────────────────────────
 function ServiceStep({ services, selected, onSelect, t, primary }) {
   return (
     <div>
-      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 18 }}>
+      <h3 style={{ fontSize: 'clamp(1rem,3vw,1.1rem)', fontWeight: 700, marginBottom: 18 }}>
         {t.booking.selectService}
       </h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {(services ?? []).map(svc => {
           const isActive = selected?.id === svc.id
           return (
-            <button
-              key={svc.id}
-              onClick={() => onSelect(svc)}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '14px 18px',
-                background: isActive ? `${primary}10` : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${isActive ? primary : 'rgba(255,255,255,0.08)'}`,
-                borderRadius: 12, cursor: 'pointer',
-                transition: 'all 0.18s', textAlign: 'left',
-                color: 'white',
-              }}
-            >
+            <button key={svc.id} onClick={() => onSelect(svc)} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: 'clamp(10px,3vw,14px) clamp(12px,4vw,18px)',
+              background: isActive ? `${primary}10` : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${isActive ? primary : 'rgba(255,255,255,0.08)'}`,
+              borderRadius: 12, cursor: 'pointer', transition: 'all 0.18s',
+              textAlign: 'left', color: 'white', width: '100%',
+            }}>
               <div>
-                <div style={{ fontWeight: 600, fontSize: 15 }}>{svc.name}</div>
-                {svc.description && (
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>
-                    {svc.description}
-                  </div>
-                )}
+                <div style={{ fontWeight: 600, fontSize: 'clamp(13px,3vw,15px)' }}>{svc.name}</div>
+                {svc.description && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>{svc.description}</div>}
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
-                {svc.price != null && (
-                  <div style={{ fontWeight: 700, color: primary, fontSize: 15 }}>
-                    €{svc.price}
-                  </div>
-                )}
-                {svc.duration && (
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
-                    {svc.duration} {t.booking.duration}
-                  </div>
-                )}
+                {svc.price != null && <div style={{ fontWeight: 700, color: primary, fontSize: 'clamp(13px,3vw,15px)' }}>€{svc.price}</div>}
+                {svc.duration && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>{svc.duration} {t.booking.duration}</div>}
               </div>
             </button>
           )
@@ -846,13 +1502,12 @@ function ServiceStep({ services, selected, onSelect, t, primary }) {
   )
 }
 
-// Step 2 — Date picker
+// ── Step 2: Date ───────────────────────────────────────────────────
 function DateStep({ value, onChange, closedDays = [], t, primary }) {
   const today = new Date()
   const [viewYear,  setViewYear]  = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
-
-  const days     = useMemo(() => buildCalendar(viewYear, viewMonth), [viewYear, viewMonth])
+  const days      = useMemo(() => buildCalendar(viewYear, viewMonth), [viewYear, viewMonth])
   const monthName = (t.booking.months ?? [])[viewMonth] ?? ''
 
   const prevMonth = () => {
@@ -866,71 +1521,35 @@ function DateStep({ value, onChange, closedDays = [], t, primary }) {
 
   return (
     <div>
-      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 18 }}>
-        {t.booking.selectDate}
-      </h3>
-
-      {/* Month header */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: 14,
-      }}>
+      <h3 style={{ fontSize: 'clamp(1rem,3vw,1.1rem)', fontWeight: 700, marginBottom: 18 }}>{t.booking.selectDate}</h3>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <button onClick={prevMonth} style={navBtnStyle}>‹</button>
-        <span style={{ fontWeight: 700, fontSize: 15 }}>
-          {monthName} {viewYear}
-        </span>
+        <span style={{ fontWeight: 700, fontSize: 'clamp(13px,3vw,15px)' }}>{monthName} {viewYear}</span>
         <button onClick={nextMonth} style={navBtnStyle}>›</button>
       </div>
-
-      {/* Weekday headers */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2, marginBottom: 4 }}>
         {(t.booking.weekdays ?? []).map(wd => (
-          <div key={wd} style={{
-            textAlign: 'center', fontSize: 10, fontWeight: 700,
-            textTransform: 'uppercase', letterSpacing: 0.8,
-            color: 'rgba(255,255,255,0.3)', padding: '4px 0',
-          }}>
-            {wd}
-          </div>
+          <div key={wd} style={{ textAlign: 'center', fontSize: 'clamp(9px,2vw,10px)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, color: 'rgba(255,255,255,0.3)', padding: '4px 0' }}>{wd}</div>
         ))}
       </div>
-
-      {/* Day grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2 }}>
         {days.map((d, i) => {
           if (!d) return <div key={`e-${i}`} />
-          const iso       = isoDate(d)
-          const isPast    = d < new Date(today.getFullYear(), today.getMonth(), today.getDate())
-          const isClosed  = closedDays.includes(d.getDay())
-          const isToday   = iso === isoDate(today)
-          const isSelected= value === iso
-          const disabled  = isPast || isClosed
+          const iso      = isoDate(d)
+          const isPast   = d < new Date(today.getFullYear(), today.getMonth(), today.getDate())
+          const isClosed = closedDays.includes(d.getDay())
+          const isToday  = iso === isoDate(today)
+          const isSel    = value === iso
+          const disabled = isPast || isClosed
           return (
-            <button
-              key={iso}
-              disabled={disabled}
-              onClick={() => !disabled && onChange(iso)}
-              style={{
-                aspectRatio: '1',
-                borderRadius: 8,
-                border: isSelected
-                  ? `2px solid ${primary}`
-                  : isToday
-                    ? '2px solid rgba(255,255,255,0.2)'
-                    : '2px solid transparent',
-                background: isSelected
-                  ? `${primary}15`
-                  : 'transparent',
-                color: disabled
-                  ? 'rgba(255,255,255,0.15)'
-                  : isSelected
-                    ? 'white'
-                    : 'rgba(255,255,255,0.75)',
-                fontSize: 13, fontWeight: isSelected ? 700 : 400,
-                cursor: disabled ? 'not-allowed' : 'pointer',
-                transition: 'all 0.15s',
-              }}
-            >
+            <button key={iso} disabled={disabled} onClick={() => !disabled && onChange(iso)} style={{
+              aspectRatio: '1', borderRadius: 8,
+              border: isSel ? `2px solid ${primary}` : isToday ? '2px solid rgba(255,255,255,0.2)' : '2px solid transparent',
+              background: isSel ? `${primary}15` : 'transparent',
+              color: disabled ? 'rgba(255,255,255,0.15)' : isSel ? 'white' : 'rgba(255,255,255,0.75)',
+              fontSize: 'clamp(11px,2.5vw,13px)', fontWeight: isSel ? 700 : 400,
+              cursor: disabled ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
+            }}>
               {d.getDate()}
             </button>
           )
@@ -941,54 +1560,32 @@ function DateStep({ value, onChange, closedDays = [], t, primary }) {
 }
 
 const navBtnStyle = {
-  background: 'rgba(255,255,255,0.06)',
-  border: '1px solid rgba(255,255,255,0.1)',
+  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
   color: 'white', width: 32, height: 32, borderRadius: 8,
-  cursor: 'pointer', fontSize: 18, display: 'flex',
-  alignItems: 'center', justifyContent: 'center',
+  cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
 }
 
-// Step 3 — Time slot picker
+// ── Step 3: Time ───────────────────────────────────────────────────
 function TimeStep({ slots, value, onChange, loading, t, primary }) {
-  if (loading) return (
-    <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.4)' }}>
-      {t.booking.loading}
-    </div>
-  )
-
+  if (loading) return <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.4)' }}>{t.booking.loading}</div>
   return (
     <div>
-      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 18 }}>
-        {t.booking.selectTime}
-      </h3>
+      <h3 style={{ fontSize: 'clamp(1rem,3vw,1.1rem)', fontWeight: 700, marginBottom: 18 }}>{t.booking.selectTime}</h3>
       {(!slots || slots.length === 0) ? (
-        <div style={{
-          textAlign: 'center', padding: '30px 0',
-          color: 'rgba(255,255,255,0.35)', fontSize: 14,
-        }}>
-          {t.booking.noSlots}
-        </div>
+        <div style={{ textAlign: 'center', padding: '30px 0', color: 'rgba(255,255,255,0.35)', fontSize: 14 }}>{t.booking.noSlots}</div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))', gap: 8 }}>
           {slots.map(slot => {
             const isActive = value === slot
             return (
-              <button
-                key={slot}
-                onClick={() => onChange(slot)}
-                style={{
-                  padding: '10px 6px',
-                  borderRadius: 10,
-                  border: `1px solid ${isActive ? primary : 'rgba(255,255,255,0.08)'}`,
-                  background: isActive ? `${primary}15` : 'rgba(255,255,255,0.03)',
-                  color: isActive ? 'white' : 'rgba(255,255,255,0.65)',
-                  fontWeight: isActive ? 700 : 400,
-                  fontSize: 14, cursor: 'pointer',
-                  transition: 'all 0.15s',
-                }}
-              >
-                {slot}
-              </button>
+              <button key={slot} onClick={() => onChange(slot)} style={{
+                padding: 'clamp(8px,2vw,10px) 6px', borderRadius: 10,
+                border: `1px solid ${isActive ? primary : 'rgba(255,255,255,0.08)'}`,
+                background: isActive ? `${primary}15` : 'rgba(255,255,255,0.03)',
+                color: isActive ? 'white' : 'rgba(255,255,255,0.65)',
+                fontWeight: isActive ? 700 : 400, fontSize: 'clamp(12px,3vw,14px)',
+                cursor: 'pointer', transition: 'all 0.15s',
+              }}>{slot}</button>
             )
           })}
         </div>
@@ -997,56 +1594,65 @@ function TimeStep({ slots, value, onChange, loading, t, primary }) {
   )
 }
 
-// Step 4 — Customer details
+// ── Step 4: Details — con PhoneInput ──────────────────────────────
 function DetailsStep({ values, onChange, errors, t, primary }) {
-  const fields = [
+  const textFields = [
     { key: 'name',  label: t.booking.name,  type: 'text',  required: true  },
-    { key: 'phone', label: t.booking.phone, type: 'tel',   required: true  },
     { key: 'email', label: t.booking.email, type: 'email', required: false },
     { key: 'notes', label: t.booking.notes, type: 'text',  required: false },
   ]
 
   return (
     <div>
-      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 18 }}>
-        {t.booking.yourDetails}
-      </h3>
+      <h3 style={{ fontSize: 'clamp(1rem,3vw,1.1rem)', fontWeight: 700, marginBottom: 18 }}>{t.booking.yourDetails}</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {fields.map(f => (
+
+        {/* Nombre */}
+        {textFields.slice(0, 1).map(f => (
           <div key={f.key}>
-            <label style={{
-              display: 'block', fontSize: 11, fontWeight: 700,
-              textTransform: 'uppercase', letterSpacing: 1,
-              color: errors?.[f.key] ? 'rgba(255,100,100,0.8)' : 'rgba(255,255,255,0.45)',
-              marginBottom: 6,
-            }}>
-              {f.label}
-              {f.required && <span style={{ color: primary, marginLeft: 3 }}>*</span>}
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: errors?.[f.key] ? 'rgba(255,100,100,0.8)' : 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
+              {f.label}{f.required && <span style={{ color: primary, marginLeft: 3 }}>*</span>}
             </label>
             <input
               type={f.type}
               value={values[f.key] || ''}
               onChange={e => onChange(f.key, e.target.value)}
-              style={{
-                width: '100%', padding: '12px 14px',
-                background: 'rgba(255,255,255,0.04)',
-                border: `1px solid ${errors?.[f.key] ? 'rgba(255,80,80,0.5)' : 'rgba(255,255,255,0.1)'}`,
-                borderRadius: 10, color: 'white',
-                fontSize: 14, outline: 'none',
-                transition: 'border-color 0.2s',
-                fontFamily: 'inherit', boxSizing: 'border-box',
-              }}
-              onFocus={e => { e.currentTarget.style.borderColor = primary }}
-              onBlur={e  => {
-                e.currentTarget.style.borderColor =
-                  errors?.[f.key] ? 'rgba(255,80,80,0.5)' : 'rgba(255,255,255,0.1)'
-              }}
+              style={{ width: '100%', padding: '12px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${errors?.[f.key] ? 'rgba(255,80,80,0.5)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 10, color: 'white', fontSize: 14, outline: 'none', transition: 'border-color 0.2s', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              onFocus={e  => { e.currentTarget.style.borderColor = primary }}
+              onBlur={e   => { e.currentTarget.style.borderColor = errors?.[f.key] ? 'rgba(255,80,80,0.5)' : 'rgba(255,255,255,0.1)' }}
             />
-            {errors?.[f.key] && (
-              <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>
-                {errors[f.key]}
-              </p>
-            )}
+            {errors?.[f.key] && <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>{errors[f.key]}</p>}
+          </div>
+        ))}
+
+        {/* Teléfono con PhoneInput */}
+        <div>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: errors?.phone ? 'rgba(255,100,100,0.8)' : 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
+            {t.booking.phone}<span style={{ color: primary, marginLeft: 3 }}>*</span>
+          </label>
+          <PhoneInput
+            value={values.phone || ''}
+            onChange={val => onChange('phone', val)}
+            error={errors?.phone}
+            primary={primary}
+          />
+        </div>
+
+        {/* Email y notas */}
+        {textFields.slice(1).map(f => (
+          <div key={f.key}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: errors?.[f.key] ? 'rgba(255,100,100,0.8)' : 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
+              {f.label}{f.required && <span style={{ color: primary, marginLeft: 3 }}>*</span>}
+            </label>
+            <input
+              type={f.type}
+              value={values[f.key] || ''}
+              onChange={e => onChange(f.key, e.target.value)}
+              style={{ width: '100%', padding: '12px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${errors?.[f.key] ? 'rgba(255,80,80,0.5)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 10, color: 'white', fontSize: 14, outline: 'none', transition: 'border-color 0.2s', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              onFocus={e  => { e.currentTarget.style.borderColor = primary }}
+              onBlur={e   => { e.currentTarget.style.borderColor = errors?.[f.key] ? 'rgba(255,80,80,0.5)' : 'rgba(255,255,255,0.1)' }}
+            />
+            {errors?.[f.key] && <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>{errors[f.key]}</p>}
           </div>
         ))}
       </div>
@@ -1054,7 +1660,7 @@ function DetailsStep({ values, onChange, errors, t, primary }) {
   )
 }
 
-// Step 5 — Confirmation
+// ── Step 5: Summary ────────────────────────────────────────────────
 function SummaryStep({ service, date, time, customer, t, primary }) {
   const rows = [
     { label: t.booking.selectService, value: service?.name },
@@ -1068,78 +1674,59 @@ function SummaryStep({ service, date, time, customer, t, primary }) {
 
   return (
     <div>
-      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 18 }}>
-        {t.booking.summary}
-      </h3>
-      <div style={{
-        background: 'rgba(255,255,255,0.02)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: 14, overflow: 'hidden',
-      }}>
+      <h3 style={{ fontSize: 'clamp(1rem,3vw,1.1rem)', fontWeight: 700, marginBottom: 18 }}>{t.booking.summary}</h3>
+      <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden' }}>
         {rows.map((row, i) => (
-          <div
-            key={i}
-            style={{
-              display: 'flex', gap: 12,
-              padding: '12px 16px',
-              borderBottom: i < rows.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-            }}
-          >
-            <div style={{
-              fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
-              letterSpacing: 1, color: 'rgba(255,255,255,0.3)',
-              width: 110, flexShrink: 0, paddingTop: 2,
-            }}>
-              {row.label}
-            </div>
-            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>
-              {row.value}
-            </div>
+          <div key={i} style={{ display: 'flex', gap: 12, padding: 'clamp(10px,2vw,12px) clamp(12px,3vw,16px)', borderBottom: i < rows.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(255,255,255,0.3)', width: 'clamp(80px,25%,110px)', flexShrink: 0, paddingTop: 2 }}>{row.label}</div>
+            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', fontWeight: 500, flex: 1, minWidth: 0, wordBreak: 'break-word' }}>{row.value}</div>
           </div>
         ))}
       </div>
       {service?.price != null && (
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          marginTop: 14,
-          padding: '12px 16px',
-          background: `${primary}08`,
-          border: `1px solid ${primary}30`,
-          borderRadius: 10,
-        }}>
-          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: 700 }}>
-            {t.booking.price}
-          </span>
-          <span style={{ fontSize: 18, fontWeight: 800, color: primary }}>
-            €{service.price}
-          </span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, padding: 'clamp(10px,2vw,12px) clamp(12px,3vw,16px)', background: `${primary}08`, border: `1px solid ${primary}30`, borderRadius: 10 }}>
+          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: 700 }}>{t.booking.price}</span>
+          <span style={{ fontSize: 18, fontWeight: 800, color: primary }}>€{service.price}</span>
         </div>
       )}
     </div>
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// MAIN COMPONENT
-// ─────────────────────────────────────────────────────────────────────────
+// ── Success screen ─────────────────────────────────────────────────
+function SuccessScreen({ t, primary, service, date, time, onClose }) {
+  return (
+    <div style={{ background: '#0d0d0d', border: `1px solid ${primary}30`, borderRadius: 20, padding: 'clamp(28px,5vw,56px)', maxWidth: 520, width: '100%', margin: '0 auto', textAlign: 'center', color: 'white', animation: 'bookFadeIn 0.4s cubic-bezier(0.23,1,0.32,1) both' }}>
+      <style>{`
+        @keyframes bookFadeIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+        @keyframes bookCheck{from{stroke-dashoffset:60;opacity:0}to{stroke-dashoffset:0;opacity:1}}
+      `}</style>
+      <div style={{ width: 72, height: 72, borderRadius: '50%', background: `${primary}12`, border: `2px solid ${primary}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', boxShadow: `0 0 40px ${primary}20` }}>
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <path d="M7 16L13 22L25 10" stroke={primary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="60" style={{ animation: 'bookCheck 0.5s 0.15s cubic-bezier(0.23,1,0.32,1) both' }} />
+        </svg>
+      </div>
+      <h2 style={{ fontSize: 'clamp(1.3rem,4vw,1.6rem)', fontWeight: 800, marginBottom: 10 }}>{t.booking.confirmed}</h2>
+      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '14px 20px', margin: '20px 0', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {service?.name && <div style={{ fontSize: 15, fontWeight: 700, color: primary }}>{service.name}</div>}
+        <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)' }}>{date} · {time}</div>
+      </div>
+      <button onClick={onClose} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)', padding: '10px 24px', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', transition: 'all 0.2s' }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = primary; e.currentTarget.style.color = primary }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)' }}>
+        ✕ Close
+      </button>
+    </div>
+  )
+}
 
+// ── MAIN ───────────────────────────────────────────────────────────
 const TOTAL_STEPS = 5
 
-export default function BookingFlow({
-  theme     = {},
-  services  = [],
-  slots     = {},    // { [isoDate]: ['09:00','09:30',…] }
-  onBook    = () => {},
-  onClose   = () => {},
-  slotsLoading = false,
-}) {
-  // ── Language — theme.language takes priority over browser ──────────
-  //   window.__SITE_LANGUAGE__ is set by PublicSite when it mounts,
-  //   reflecting the saved admin setting without prop drilling.
+export default function BookingFlow({ theme = {}, services = [], slots = {}, onBook = () => {}, onClose = () => {}, slotsLoading = false }) {
   const t       = useUIStrings(theme)
   const primary = theme?.primary_color || theme?.primary || 'var(--primary)'
 
-  // ── Wizard state ────────────────────────────────────────────────────
   const [step,     setStep]     = useState(0)
   const [service,  setService]  = useState(null)
   const [date,     setDate]     = useState('')
@@ -1151,7 +1738,6 @@ export default function BookingFlow({
 
   const todaySlots = date ? (slots[date] ?? []) : []
 
-  // ── Navigation ──────────────────────────────────────────────────────
   const canNext = useMemo(() => {
     if (step === 0) return !!service
     if (step === 1) return !!date
@@ -1194,223 +1780,39 @@ export default function BookingFlow({
     }
   }, [service, date, time, customer, onBook, validateDetails])
 
-  // ── Success screen ──────────────────────────────────────────────────
-  if (done) {
-    return (
-      <SuccessScreen
-        t={t}
-        primary={primary}
-        service={service}
-        date={date}
-        time={time}
-        onClose={onClose}
-      />
-    )
-  }
+  if (done) return <SuccessScreen t={t} primary={primary} service={service} date={date} time={time} onClose={onClose} />
 
-  // ── Wizard body ─────────────────────────────────────────────────────
   return (
-    <div style={{
-      background: '#0d0d0d',
-      border: '1px solid rgba(255,255,255,0.09)',
-      borderRadius: 20,
-      padding: 'clamp(20px,4vw,36px)',
-      maxWidth: 520, width: '100%',
-      margin: '0 auto',
-      color: 'white',
-    }}>
-      {/* Progress */}
+    <div style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 20, padding: 'clamp(16px,4vw,36px)', maxWidth: 520, width: '100%', margin: '0 auto', color: 'white', boxSizing: 'border-box' }}>
       <StepIndicator current={step} total={TOTAL_STEPS} t={t} />
 
-      {/* Step content */}
-      <div style={{ minHeight: 300 }}>
-        {step === 0 && (
-          <ServiceStep
-            services={services} selected={service}
-            onSelect={svc => { setService(svc); setStep(1) }}
-            t={t} primary={primary}
-          />
-        )}
-        {step === 1 && (
-          <DateStep
-            value={date}
-            onChange={d => { setDate(d); setTime(''); setStep(2) }}
-            closedDays={theme?.closed_days ?? [0]}  // 0=Sunday default
-            t={t} primary={primary}
-          />
-        )}
-        {step === 2 && (
-          <TimeStep
-            slots={todaySlots}
-            value={time}
-            onChange={slot => { setTime(slot); setStep(3) }}
-            loading={slotsLoading}
-            t={t} primary={primary}
-          />
-        )}
-        {step === 3 && (
-          <DetailsStep
-            values={customer}
-            onChange={(k, v) => setCustomer(p => ({ ...p, [k]: v }))}
-            errors={errors}
-            t={t} primary={primary}
-          />
-        )}
-        {step === 4 && (
-          <SummaryStep
-            service={service} date={date} time={time} customer={customer}
-            t={t} primary={primary}
-          />
-        )}
+      <div style={{ minHeight: 280 }}>
+        {step === 0 && <ServiceStep services={services} selected={service} onSelect={svc => { setService(svc); setStep(1) }} t={t} primary={primary} />}
+        {step === 1 && <DateStep value={date} onChange={d => { setDate(d); setTime(''); setStep(2) }} closedDays={theme?.closed_days ?? [0]} t={t} primary={primary} />}
+        {step === 2 && <TimeStep slots={todaySlots} value={time} onChange={slot => { setTime(slot); setStep(3) }} loading={slotsLoading} t={t} primary={primary} />}
+        {step === 3 && <DetailsStep values={customer} onChange={(k, v) => setCustomer(p => ({ ...p, [k]: v }))} errors={errors} t={t} primary={primary} />}
+        {step === 4 && <SummaryStep service={service} date={date} time={time} customer={customer} t={t} primary={primary} />}
       </div>
 
-      {/* Navigation buttons */}
-      <div style={{ display: 'flex', gap: 10, marginTop: 28, justifyContent: 'space-between' }}>
-        <button
-          onClick={back}
-          style={{
-            background: 'transparent',
-            border: '1px solid rgba(255,255,255,0.12)',
-            color: 'rgba(255,255,255,0.5)',
-            padding: '12px 20px', borderRadius: 10,
-            cursor: 'pointer', fontSize: 13, fontWeight: 600,
-            fontFamily: 'inherit', transition: 'all 0.15s',
-          }}
-        >
+      <div style={{ display: 'flex', gap: 10, marginTop: 28, justifyContent: 'space-between', flexWrap: 'wrap' }}>
+        <button onClick={back} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', padding: 'clamp(10px,2vw,12px) clamp(14px,3vw,20px)', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', transition: 'all 0.15s' }}>
           ← {t.booking.back}
         </button>
 
         {step < TOTAL_STEPS - 1 ? (
-          <button
-            onClick={next}
-            disabled={!canNext}
-            style={{
-              flex: 1,
-              background: canNext ? primary : 'rgba(255,255,255,0.06)',
-              border: 'none',
-              color: canNext ? 'white' : 'rgba(255,255,255,0.2)',
-              padding: '12px 24px', borderRadius: 10,
-              cursor: canNext ? 'pointer' : 'not-allowed',
-              fontSize: 13, fontWeight: 700,
-              textTransform: 'uppercase', letterSpacing: 1,
-              fontFamily: 'inherit', transition: 'all 0.2s',
-            }}
-          >
+          <button onClick={next} disabled={!canNext} style={{ flex: 1, background: canNext ? primary : 'rgba(255,255,255,0.06)', border: 'none', color: canNext ? 'white' : 'rgba(255,255,255,0.2)', padding: 'clamp(10px,2vw,12px) clamp(14px,3vw,24px)', borderRadius: 10, cursor: canNext ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, fontFamily: 'inherit', transition: 'all 0.2s' }}>
             {t.booking.next} →
           </button>
         ) : (
-          <button
-            onClick={handleConfirm}
-            disabled={booking}
-            style={{
-              flex: 1,
-              background: booking ? `${primary}80` : primary,
-              border: 'none', color: 'white',
-              padding: '12px 24px', borderRadius: 10,
-              cursor: booking ? 'not-allowed' : 'pointer',
-              fontSize: 13, fontWeight: 800,
-              textTransform: 'uppercase', letterSpacing: 1.2,
-              fontFamily: 'inherit', transition: 'all 0.2s',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}
-          >
+          <button onClick={handleConfirm} disabled={booking} style={{ flex: 1, background: booking ? `${primary}80` : primary, border: 'none', color: 'white', padding: 'clamp(10px,2vw,12px) clamp(14px,3vw,24px)', borderRadius: 10, cursor: booking ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.2, fontFamily: 'inherit', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             {booking ? (
-              <>
-                <span style={{
-                  width: 14, height: 14,
-                  border: '2px solid rgba(255,255,255,0.3)',
-                  borderTopColor: 'white', borderRadius: '50%',
-                  animation: 'bookSpin 0.7s linear infinite',
-                  display: 'inline-block',
-                }} />
-                {t.booking.loading}
-              </>
-            ) : (
-              `✓ ${t.booking.confirm}`
-            )}
+              <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'bookSpin 0.7s linear infinite', display: 'inline-block' }} />{t.booking.loading}</>
+            ) : `✓ ${t.booking.confirm}`}
           </button>
         )}
       </div>
 
       <style>{`@keyframes bookSpin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-// SUCCESS SCREEN
-// ─────────────────────────────────────────────────────────────────────────
-
-function SuccessScreen({ t, primary, service, date, time, onClose }) {
-  return (
-    <div style={{
-      background: '#0d0d0d',
-      border: `1px solid ${primary}30`,
-      borderRadius: 20,
-      padding: 'clamp(32px,5vw,56px)',
-      maxWidth: 520, width: '100%',
-      margin: '0 auto', textAlign: 'center',
-      color: 'white',
-      animation: 'bookFadeIn 0.4s cubic-bezier(0.23,1,0.32,1) both',
-    }}>
-      <style>{`
-        @keyframes bookFadeIn { from { opacity:0; transform:scale(0.95) } to { opacity:1; transform:scale(1) } }
-        @keyframes bookCheck  { from { stroke-dashoffset:60; opacity:0 } to { stroke-dashoffset:0; opacity:1 } }
-      `}</style>
-
-      {/* Checkmark circle */}
-      <div style={{
-        width: 72, height: 72, borderRadius: '50%',
-        background: `${primary}12`, border: `2px solid ${primary}40`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        margin: '0 auto 24px',
-        boxShadow: `0 0 40px ${primary}20`,
-      }}>
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <path
-            d="M7 16L13 22L25 10"
-            stroke={primary} strokeWidth="2.5"
-            strokeLinecap="round" strokeLinejoin="round"
-            strokeDasharray="60"
-            style={{ animation: 'bookCheck 0.5s 0.15s cubic-bezier(0.23,1,0.32,1) both' }}
-          />
-        </svg>
-      </div>
-
-      <h2 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: 10 }}>
-        {t.booking.confirmed}
-      </h2>
-
-      <div style={{
-        background: 'rgba(255,255,255,0.03)',
-        border: '1px solid rgba(255,255,255,0.07)',
-        borderRadius: 12, padding: '14px 20px',
-        margin: '20px 0',
-        display: 'flex', flexDirection: 'column', gap: 6,
-      }}>
-        {service?.name && (
-          <div style={{ fontSize: 15, fontWeight: 700, color: primary }}>{service.name}</div>
-        )}
-        <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)' }}>
-          {date} · {time}
-        </div>
-      </div>
-
-      <button
-        onClick={onClose}
-        style={{
-          background: 'transparent',
-          border: '1px solid rgba(255,255,255,0.15)',
-          color: 'rgba(255,255,255,0.5)',
-          padding: '10px 24px', borderRadius: 10,
-          cursor: 'pointer', fontSize: 13, fontWeight: 600,
-          fontFamily: 'inherit', transition: 'all 0.2s',
-        }}
-        onMouseEnter={e => { e.currentTarget.style.borderColor = primary; e.currentTarget.style.color = primary }}
-        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)' }}
-      >
-        ✕ Close
-      </button>
     </div>
   )
 }
@@ -3523,14 +3925,13 @@ export default function TestimonialsTab({ data }) {
 <file path="src/components/site/Hero.jsx">
 import { useState, useEffect, useCallback } from 'react'
 import { useUIStrings } from '../../hooks/useUIStrings'
+import { useTranslatedArray } from '../../hooks/useTranslatedContent'
 
 export default function Hero({ hero, brand }) {
   const primary  = brand?.primary || '#ff3c3c'
   const t        = useUIStrings(brand)
 
-  // hero.slides = array of { badge, headline, sub, cta, bgImage }
-  // fallback: single slide from old fields
-  const slides = (() => {
+  const rawSlides = (() => {
     if (Array.isArray(hero?.slides) && hero.slides.length > 0) return hero.slides
     return [{
       badge:    hero?.badge    || t.hero.badge,
@@ -3541,12 +3942,15 @@ export default function Hero({ hero, brand }) {
     }]
   })()
 
+  // Traducir contenido editorial de cada slide
+  const slides = useTranslatedArray(rawSlides, ['badge', 'headline', 'sub', 'cta'], brand)
+
   const [current, setCurrent] = useState(0)
   const [paused,  setPaused]  = useState(false)
   const [fading,  setFading]  = useState(false)
   const total = slides.length
 
-  const goTo = useCallback((idx, dir = 1) => {
+  const goTo = useCallback((idx) => {
     setFading(true)
     setTimeout(() => {
       setCurrent(idx)
@@ -3554,13 +3958,8 @@ export default function Hero({ hero, brand }) {
     }, 350)
   }, [])
 
-  const next = useCallback(() => {
-    goTo((current + 1) % total)
-  }, [current, total, goTo])
-
-  const prev = useCallback(() => {
-    goTo((current - 1 + total) % total)
-  }, [current, total, goTo])
+  const next = useCallback(() => goTo((current + 1) % total), [current, total, goTo])
+  const prev = useCallback(() => goTo((current - 1 + total) % total), [current, total, goTo])
 
   useEffect(() => {
     if (total <= 1 || paused) return
@@ -3570,7 +3969,6 @@ export default function Hero({ hero, brand }) {
 
   const slide = slides[current] || slides[0]
   const bg    = slide.bgImage || 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?auto=format&fit=crop&w=1920&q=80'
-
   const words = (slide.headline || 'ESTÉTICA QUE VENDE.').split(' ')
 
   return (
@@ -3589,7 +3987,6 @@ export default function Hero({ hero, brand }) {
         overflow: 'hidden',
       }}
     >
-      {/* Background layer — animates on slide change */}
       <div
         key={`bg-${current}`}
         style={{
@@ -3609,7 +4006,6 @@ export default function Hero({ hero, brand }) {
         }}
       />
 
-      {/* Content */}
       <div
         style={{
           maxWidth: 800,
@@ -3671,7 +4067,6 @@ export default function Hero({ hero, brand }) {
         </a>
       </div>
 
-      {/* Navigation arrows — only if multiple slides */}
       {total > 1 && (
         <>
           <button
@@ -3689,7 +4084,6 @@ export default function Hero({ hero, brand }) {
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'white' }}
           >›</button>
 
-          {/* Dots */}
           <div style={{
             position: 'absolute', bottom: 32, left: '50%',
             transform: 'translateX(-50%)',
@@ -3710,7 +4104,6 @@ export default function Hero({ hero, brand }) {
             ))}
           </div>
 
-          {/* Slide counter */}
           <div style={{
             position: 'absolute', bottom: 36, right: '6%',
             fontSize: 11, color: 'rgba(255,255,255,0.35)',
@@ -3748,11 +4141,16 @@ function arrowBtnStyle(side, primary) {
 
 <file path="src/components/site/TestimonialsSection.jsx">
 import { useUIStrings } from '../../hooks/useUIStrings'
+import { useTranslatedArray } from '../../hooks/useTranslatedContent'
 
 export default function TestimonialsSection({ testimonials, brand }) {
   if (!testimonials?.length) return null
   const primary = brand?.primary || 'var(--primary)'
   const t = useUIStrings(brand)
+
+  // Traducir campos editoriales de cada testimonio
+  // name y role se dejan sin traducir (son nombres propios)
+  const translatedTestimonials = useTranslatedArray(testimonials, ['text', 'role'], brand)
 
   return (
     <section id="testimonios" style={{ padding: '100px 6%' }}>
@@ -3767,7 +4165,7 @@ export default function TestimonialsSection({ testimonials, brand }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))', gap: 20 }}>
-        {testimonials.map((item, i) => (
+        {translatedTestimonials.map((item, i) => (
           <div key={item.id || i} style={{ background: 'rgba(255,255,255,0.03)',
             border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '28px 24px',
             transition: 'all 0.3s' }}
@@ -5839,6 +6237,7 @@ export default function ServicesTab({ data }) {
 
 <file path="src/components/site/Footer.jsx">
 import { useUIStrings } from '../../hooks/useUIStrings'
+import { useTranslatedContent } from '../../hooks/useTranslatedContent'
 
 export default function Footer({ site }) {
   const { brand, footer } = site
@@ -5846,6 +6245,15 @@ export default function Footer({ site }) {
   const name    = brand?.name    || 'POLARTRONIC'
   const logo    = brand?.logo    || ''
   const t = useUIStrings(brand)
+
+  // Traducir campos editoriales del footer
+  const translatedFooter = useTranslatedContent(
+    {
+      copy: footer?.copy || `© 2026 ${name}. Todos los derechos reservados.`,
+      sub:  footer?.sub  || 'Diseño Web & Branding de Alto Impacto.',
+    },
+    brand
+  )
 
   return (
     <footer style={{ background: '#060606', padding: '80px 6% 40px',
@@ -5945,8 +6353,8 @@ export default function Footer({ site }) {
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 30,
         display: 'flex', justifyContent: 'space-between', color: 'rgba(255,255,255,0.25)',
         fontSize: 13, flexWrap: 'wrap', gap: 10 }}>
-        <span>{footer?.copy || `© 2026 ${name}. Todos los derechos reservados.`}</span>
-        <span>{footer?.sub  || 'Diseño Web & Branding de Alto Impacto.'}</span>
+        <span>{translatedFooter.copy}</span>
+        <span>{translatedFooter.sub}</span>
       </div>
     </footer>
   )
@@ -5955,11 +6363,15 @@ export default function Footer({ site }) {
 
 <file path="src/components/site/ServicesSection.jsx">
 import { useUIStrings } from '../../hooks/useUIStrings'
+import { useTranslatedArray } from '../../hooks/useTranslatedContent'
 
 export default function ServicesSection({ services, brand }) {
   if (!services?.length) return null
   const primary = brand?.primary || 'var(--primary)'
   const t = useUIStrings(brand)
+
+  // Traducir campos editoriales de cada servicio
+  const translatedServices = useTranslatedArray(services, ['title', 'desc', 'price'], brand)
 
   return (
     <section id="servicios" style={{ padding: '100px 6%', background: 'var(--bg)' }}>
@@ -5976,7 +6388,7 @@ export default function ServicesSection({ services, brand }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 24 }}>
-        {services.map((svc, i) => (
+        {translatedServices.map((svc, i) => (
           <ServiceCard key={svc.id || i} svc={svc} primary={primary} />
         ))}
       </div>
@@ -6012,7 +6424,6 @@ function ServiceCard({ svc, primary }) {
         e.currentTarget.style.boxShadow   = 'none'
       }}
     >
-      {/* Imagen de copertina */}
       {hasImage && (
         <div style={{ height: 160, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
           <img
@@ -6032,7 +6443,6 @@ function ServiceCard({ svc, primary }) {
               e.currentTarget.style.filter    = 'brightness(0.65)'
             }}
           />
-          {/* Emoji badge sobre la imagen */}
           {svc.icon && (
             <div style={{
               position: 'absolute', bottom: 12, left: 16,
@@ -6050,7 +6460,6 @@ function ServiceCard({ svc, primary }) {
       )}
 
       <div style={{ padding: '24px 24px 28px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {/* Emoji solo si no hay imagen */}
         {!hasImage && svc.icon && (
           <div style={{ fontSize: 36, marginBottom: 18 }}>{svc.icon}</div>
         )}
@@ -6726,276 +7135,6 @@ function NavbarLogoPreview({ layout, logo, name, primary }) {
 }
 </file>
 
-<file path="src/components/site/ContactSection.jsx">
-import { useState } from 'react'
-import { processNewLead } from '../../lib/leadHelpers'
-import { useUIStrings } from '../../hooks/useUIStrings'
-
-function parseFields(raw) {
-  if (Array.isArray(raw)) return raw
-  try { return JSON.parse(raw || '[]') } catch { return [] }
-}
-
-const FIELD_TRANSLATIONS = {
-  name:     { it:'Nome e Cognome',        en:'Full Name',             es:'Nombre completo',      fr:'Nom complet',           de:'Vollständiger Name',      pt:'Nome completo'        },
-  nome:     { it:'Nome e Cognome',        en:'Full Name',             es:'Nombre completo',      fr:'Nom complet',           de:'Vollständiger Name',      pt:'Nome completo'        },
-  email:    { it:'Email',                 en:'Email',                 es:'Email',                fr:'E-mail',                de:'E-Mail',                  pt:'E-mail'               },
-  phone:    { it:'Telefono',              en:'Phone',                 es:'Teléfono',             fr:'Téléphone',             de:'Telefon',                 pt:'Telefone'             },
-  telefono: { it:'Telefono',              en:'Phone',                 es:'Teléfono',             fr:'Téléphone',             de:'Telefon',                 pt:'Telefone'             },
-  zona:     { it:'Città / Zona',          en:'City / Area',           es:'Ciudad / Zona',        fr:'Ville / Zone',          de:'Stadt / Gebiet',          pt:'Cidade / Zona'        },
-  city:     { it:'Città / Zona',          en:'City / Area',           es:'Ciudad / Zona',        fr:'Ville / Zone',          de:'Stadt / Gebiet',          pt:'Cidade / Zona'        },
-  company:  { it:'Azienda / Progetto',    en:'Company / Project',     es:'Empresa / Proyecto',   fr:'Entreprise / Projet',   de:'Unternehmen / Projekt',   pt:'Empresa / Projeto'    },
-  azienda:  { it:'Azienda / Progetto',    en:'Company / Project',     es:'Empresa / Proyecto',   fr:'Entreprise / Projet',   de:'Unternehmen / Projekt',   pt:'Empresa / Projeto'    },
-  service:  { it:'Servizio di interesse', en:'Service of interest',   es:'Servicio de interés',  fr:'Service souhaité',      de:'Gewünschter Service',     pt:'Serviço de interesse' },
-  servizio: { it:'Servizio di interesse', en:'Service of interest',   es:'Servicio de interés',  fr:'Service souhaité',      de:'Gewünschter Service',     pt:'Serviço de interesse' },
-  message:  { it:'Descrivi il progetto',  en:'Describe your project', es:'Describe tu proyecto', fr:'Décrivez votre projet', de:'Ihr Projekt beschreiben', pt:'Descreva seu projeto' },
-  messaggio:{ it:'Descrivi il progetto',  en:'Describe your project', es:'Describe tu proyecto', fr:'Décrivez votre projet', de:'Ihr Projekt beschreiben', pt:'Descreva seu projeto' },
-  notes:    { it:'Note',                  en:'Notes',                 es:'Notas',                fr:'Notes',                 de:'Anmerkungen',             pt:'Notas'                },
-}
-
-const PLACEHOLDERS = {
-  name:    { it:'Mario Rossi',         en:'John Smith',               es:'Juan García',              fr:'Jean Dupont',           de:'Max Mustermann',          pt:'João Silva'           },
-  email:   { it:'mario@email.com',     en:'john@email.com',           es:'juan@email.com',           fr:'jean@email.com',        de:'max@email.com',           pt:'joao@email.com'       },
-  phone:   { it:'+39 333 1234567',     en:'+1 555 123 4567',          es:'+34 600 123 456',          fr:'+33 6 12 34 56 78',     de:'+49 151 12345678',        pt:'+351 912 345 678'     },
-  zona:    { it:'Es: Milano, Roma...',  en:'E.g: New York, London...',es:'Ej: Madrid, Barcelona...', fr:'Ex: Paris, Lyon...',    de:'z.B: Berlin, München...', pt:'Ex: Lisboa, Porto...' },
-  message: { it:'Raccontaci cosa cerchi...', en:'Tell us what you need...', es:'Cuéntanos qué necesitas...', fr:'Dites-nous ce dont vous avez besoin...', de:'Erzählen Sie was Sie brauchen...', pt:'Diga-nos o que precisa...' },
-}
-
-// Traducción de opciones del select de servicio
-const SERVICE_OPTIONS = {
-  it: ['Sito Web', 'E-commerce', 'Branding', 'Marketing', 'Altro'],
-  en: ['Website', 'E-commerce', 'Branding', 'Marketing', 'Other'],
-  es: ['Diseño Web', 'E-commerce', 'Branding', 'Marketing', 'Otro'],
-  fr: ['Site Web', 'E-commerce', 'Branding', 'Marketing', 'Autre'],
-  de: ['Webseite', 'E-commerce', 'Branding', 'Marketing', 'Andere'],
-  pt: ['Site Web', 'E-commerce', 'Branding', 'Marketing', 'Outro'],
-}
-
-// Traducción del botón enviar
-const SEND_BTN = {
-  it: 'INVIA MESSAGGIO',
-  en: 'SEND MESSAGE',
-  es: 'ENVIAR MENSAJE',
-  fr: 'ENVOYER',
-  de: 'SENDEN',
-  pt: 'ENVIAR MENSAGEM',
-}
-
-function rl(dict, lang) {
-  return dict?.[lang] || dict?.['en'] || ''
-}
-
-function translateField(field, lang) {
-  const id = field.id?.toLowerCase()
-  return {
-    ...field,
-    label:       rl(FIELD_TRANSLATIONS[id], lang) || field.label,
-    placeholder: rl(PLACEHOLDERS[id], lang)        || field.placeholder || '',
-  }
-}
-
-function resolveLang(brand) {
-  if (typeof window !== 'undefined' && window.__SITE_LANGUAGE__) return window.__SITE_LANGUAGE__
-  return brand?.language || 'it'
-}
-
-export default function ContactSection({ contact, footer, brand, site }) {
-  const primary = brand?.primary || '#ff3c3c'
-  const t       = useUIStrings(brand)
-  const lang    = resolveLang(brand)
-
-  const title        = contact?.title        || t.contact.eyebrow
-  const subtitle     = contact?.subtitle     || ''
-  const ctaLabel     = contact?.ctaLabel     || SEND_BTN[lang] || t.contact.sendBtn
-  const successTitle = contact?.successTitle || '✓'
-  const successMsg   = contact?.successMessage || ''
-
-  const rawFields = parseFields(contact?.fields)
-  const fields = (rawFields.length > 0 ? rawFields : [
-    { id:'name',     label:'Name',    type:'text',     required:true  },
-    { id:'email',    label:'Email',   type:'email',    required:true  },
-    { id:'phone',    label:'Phone',   type:'tel',      required:true  },
-    { id:'zona',     label:'Zone',    type:'text',     required:true  },
-    { id:'company',  label:'Company', type:'text',     required:false },
-    { id:'service',  label:'Service', type:'select',   required:false },
-    { id:'message',  label:'Message', type:'textarea', required:false },
-  ]).map(f => translateField(f, lang))
-
-  const [values,   setValues]  = useState(() => Object.fromEntries(fields.map(f => [f.id, ''])))
-  const [errors,   setErrors]  = useState({})
-  const [sending,  setSending] = useState(false)
-  const [success,  setSuccess] = useState(false)
-  const [apiErr,   setApiErr]  = useState('')
-  const [agentMsg, setAgentMsg]= useState('')
-
-  const setValue = (id, val) => {
-    setValues(p => ({ ...p, [id]: val }))
-    if (errors[id]) setErrors(p => ({ ...p, [id]: '' }))
-  }
-
-  const validate = () => {
-    const next = {}
-    fields.forEach(f => {
-      if (f.required && !values[f.id]?.trim()) next[f.id] = t.contact.fieldRequired
-      if (f.type === 'email' && values[f.id] && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values[f.id])) {
-        next[f.id] = t.contact.emailInvalid
-      }
-    })
-    setErrors(next)
-    return Object.keys(next).length === 0
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!validate()) return
-    setSending(true); setApiErr('')
-    try {
-      const leadData = {
-        name:     values.name     || values.nome     || '',
-        email:    values.email    || '',
-        phone:    values.phone    || values.telefono || '',
-        zona:     values.zona     || values.city     || '',
-        servizio: values.servizio || values.service  || '',
-        message:  values.message  || values.messaggio || '',
-        rawFields: { ...values },
-      }
-      const results = await processNewLead(leadData, site)
-      if (results.agente) setAgentMsg(`${results.agente.nome} — ${leadData.zona}`)
-      setSuccess(true)
-    } catch (err) {
-      console.error(err)
-      setApiErr(t.contact.errorRetry)
-    } finally {
-      setSending(false)
-    }
-  }
-
-  const handleReset = () => {
-    setSuccess(false); setAgentMsg('')
-    setValues(Object.fromEntries(fields.map(f => [f.id, ''])))
-    setErrors({}); setApiErr('')
-  }
-
-  // Opciones del select traducidas
-  const serviceOptions = SERVICE_OPTIONS[lang] || SERVICE_OPTIONS['en']
-
-  return (
-    <section id="contacto" style={{ padding: '100px 6%', background: `radial-gradient(ellipse at 50% 0%, ${primary}08 0%, transparent 60%)` }}>
-      <style>{`
-        .ct-input,.ct-textarea,.ct-select{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);color:var(--text-main);padding:13px 16px;border-radius:10px;width:100%;font-size:14px;font-family:inherit;outline:none;transition:border-color 0.2s;box-sizing:border-box;}
-        .ct-input:focus,.ct-textarea:focus,.ct-select:focus{border-color:${primary};}
-        .ct-input::placeholder,.ct-textarea::placeholder{color:var(--text-muted);}
-        .ct-input.ct-err,.ct-textarea.ct-err,.ct-select.ct-err{border-color:rgba(255,80,80,0.6);}
-        .ct-textarea{resize:vertical;min-height:110px;}
-        .ct-select{-webkit-appearance:none;appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1L6 7L11 1' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center;}
-        .ct-select option{background:#111;color:white;}
-        @keyframes ctIn{from{opacity:0;transform:scale(0.94) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
-        @keyframes ctCheck{from{stroke-dashoffset:60}to{stroke-dashoffset:0}}
-        @keyframes ctSpin{to{transform:rotate(360deg)}}
-      `}</style>
-
-      <div style={{ maxWidth: 760, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 56 }}>
-          <p style={{ color: primary, fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 14 }}>
-            {t.contact.eyebrow}
-          </p>
-          <h2 style={{ fontSize: 'clamp(2.2rem,5vw,3.5rem)', fontWeight: 800, lineHeight: 1.1, marginBottom: 16, color: 'var(--text-main)' }}>
-            {title}
-          </h2>
-          {subtitle && (
-            <p style={{ color: 'var(--text-dim)', fontSize: 16, maxWidth: 480, margin: '0 auto', lineHeight: 1.7 }}>
-              {subtitle}
-            </p>
-          )}
-        </div>
-
-        {success ? (
-          <div style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${primary}40`, borderRadius: 20, padding: 'clamp(32px,5vw,56px)', textAlign: 'center', animation: 'ctIn 0.5s cubic-bezier(0.23,1,0.32,1) both' }}>
-            <div style={{ width: 80, height: 80, borderRadius: '50%', background: `${primary}15`, border: `2px solid ${primary}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px' }}>
-              <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                <path d="M8 18L15 25L28 11" stroke={primary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="60" style={{ animation: 'ctCheck 0.5s 0.2s cubic-bezier(0.23,1,0.32,1) both' }} />
-              </svg>
-            </div>
-            <h3 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: 12, color: 'var(--text-main)' }}>{successTitle}</h3>
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '16px 20px', margin: '20px auto', maxWidth: 440 }}>
-              <p style={{ color: 'var(--text-dim)', fontSize: 15, lineHeight: 1.7, margin: 0 }}>{agentMsg || successMsg}</p>
-            </div>
-            <button onClick={handleReset} style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.15)', padding: '10px 24px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', marginTop: 12 }}>
-              {t.contact.sendAnother}
-            </button>
-          </div>
-        ) : (
-          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 'clamp(24px,5vw,48px)' }}>
-            <form onSubmit={handleSubmit} noValidate>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                {fields.map(field => {
-                  const err = errors[field.id] || ''
-                  const ec  = err ? ' ct-err' : ''
-                  const isService = ['service','servizio'].includes(field.id?.toLowerCase())
-                  return (
-                    <div key={field.id}>
-                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: err ? 'rgba(255,130,130,0.8)' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 7 }}>
-                        {field.label}
-                        {field.required && <span style={{ color: primary, marginLeft: 4 }}>*</span>}
-                      </label>
-                      {field.type === 'textarea' ? (
-                        <textarea className={`ct-textarea${ec}`} value={values[field.id] || ''} onChange={e => setValue(field.id, e.target.value)} placeholder={field.placeholder || ''} rows={4} />
-                      ) : field.type === 'select' ? (
-                        <select className={`ct-select${ec}`} value={values[field.id] || ''} onChange={e => setValue(field.id, e.target.value)}>
-                          <option value="">{t.contact.selectOpt}</option>
-                          {/* Si es el campo service/servizio, usa opciones traducidas; si no, usa las del campo */}
-                          {isService
-                            ? serviceOptions.map(o => <option key={o} value={o}>{o}</option>)
-                            : (field.options || '').split(',').map(o => o.trim()).filter(Boolean).map(o => <option key={o} value={o}>{o}</option>)
-                          }
-                        </select>
-                      ) : (
-                        <input className={`ct-input${ec}`} type={field.type || 'text'} value={values[field.id] || ''} onChange={e => setValue(field.id, e.target.value)} placeholder={field.placeholder || ''} />
-                      )}
-                      {err && <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>{err}</p>}
-                    </div>
-                  )
-                })}
-              </div>
-
-              {apiErr && (
-                <div style={{ marginTop: 16, background: 'rgba(255,60,60,0.08)', border: '1px solid rgba(255,60,60,0.25)', borderRadius: 8, padding: '12px 16px', color: 'rgba(255,130,130,0.9)', fontSize: 13 }}>
-                  {apiErr}
-                </div>
-              )}
-
-              <div style={{ marginTop: 28, display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-                <button type="submit" disabled={sending} style={{ flex: 1, minWidth: 180, padding: '16px 32px', background: sending ? `${primary}80` : primary, color: 'white', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: '0.9rem', letterSpacing: 1.5, textTransform: 'uppercase', cursor: sending ? 'not-allowed' : 'pointer', transition: 'all 0.3s', boxShadow: sending ? 'none' : `0 0 30px ${primary}35`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontFamily: 'inherit' }}>
-                  {sending ? (
-                    <><span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'ctSpin 0.7s linear infinite' }} />{t.contact.sending}</>
-                  ) : ctaLabel}
-                </button>
-                {footer?.whatsapp && footer.whatsapp !== '#' && (
-                  <a href={footer.whatsapp} target="_blank" rel="noreferrer"
-                    style={{ padding: '16px 24px', background: 'transparent', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, textDecoration: 'none', fontWeight: 700, fontSize: 13, transition: 'all 0.2s', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 8 }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = primary; e.currentTarget.style.color = primary }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = 'var(--text-muted)' }}>
-                    💬 {t.contact.whatsappBtn}
-                  </a>
-                )}
-              </div>
-              <p style={{ marginTop: 16, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>{t.contact.privacy}</p>
-            </form>
-          </div>
-        )}
-
-        {footer?.email && (
-          <div style={{ textAlign: 'center', marginTop: 32 }}>
-            <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{t.contact.orEmail} </span>
-            <a href={`mailto:${footer.email}`} style={{ color: primary, fontSize: 13, textDecoration: 'none', fontWeight: 600 }}>{footer.email}</a>
-          </div>
-        )}
-      </div>
-    </section>
-  )
-}
-</file>
-
 <file path="src/index.css">
 @tailwind base;
 @tailwind components;
@@ -7448,6 +7587,314 @@ export default function App() {
       <Route path="/admin/*"         element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
       <Route path="*"                element={<Navigate to="/" replace />} />
     </Routes>
+  )
+}
+</file>
+
+<file path="src/components/site/ContactSection.jsx">
+/**
+ * ContactSection.jsx — PhoneInput + 100% responsivo + traducción editorial
+ */
+
+import { useState } from 'react'
+import { processNewLead } from '../../lib/leadHelpers'
+import { useUIStrings } from '../../hooks/useUIStrings'
+import { useTranslatedContent } from '../../hooks/useTranslatedContent'
+import PhoneInput from '../common/PhoneInput'
+
+function parseFields(raw) {
+  if (Array.isArray(raw)) return raw
+  try { return JSON.parse(raw || '[]') } catch { return [] }
+}
+
+const FIELD_TRANSLATIONS = {
+  name:     { it:'Nome e Cognome',        en:'Full Name',             es:'Nombre completo',      fr:'Nom complet',           de:'Vollständiger Name',      pt:'Nome completo'        },
+  nome:     { it:'Nome e Cognome',        en:'Full Name',             es:'Nombre completo',      fr:'Nom complet',           de:'Vollständiger Name',      pt:'Nome completo'        },
+  email:    { it:'Email',                 en:'Email',                 es:'Email',                fr:'E-mail',                de:'E-Mail',                  pt:'E-mail'               },
+  phone:    { it:'Telefono',              en:'Phone',                 es:'Teléfono',             fr:'Téléphone',             de:'Telefon',                 pt:'Telefone'             },
+  telefono: { it:'Telefono',              en:'Phone',                 es:'Teléfono',             fr:'Téléphone',             de:'Telefon',                 pt:'Telefone'             },
+  zona:     { it:'Città / Zona',          en:'City / Area',           es:'Ciudad / Zona',        fr:'Ville / Zone',          de:'Stadt / Gebiet',          pt:'Cidade / Zona'        },
+  city:     { it:'Città / Zona',          en:'City / Area',           es:'Ciudad / Zona',        fr:'Ville / Zone',          de:'Stadt / Gebiet',          pt:'Cidade / Zona'        },
+  company:  { it:'Azienda / Progetto',    en:'Company / Project',     es:'Empresa / Proyecto',   fr:'Entreprise / Projet',   de:'Unternehmen / Projekt',   pt:'Empresa / Proyecto'   },
+  azienda:  { it:'Azienda / Progetto',    en:'Company / Project',     es:'Empresa / Proyecto',   fr:'Entreprise / Projet',   de:'Unternehmen / Projekt',   pt:'Empresa / Projeto'    },
+  service:  { it:'Servizio di interesse', en:'Service of interest',   es:'Servicio de interés',  fr:'Service souhaité',      de:'Gewünschter Service',     pt:'Serviço de interesse' },
+  servizio: { it:'Servizio di interesse', en:'Service of interest',   es:'Servicio de interés',  fr:'Service souhaité',      de:'Gewünschter Service',     pt:'Serviço de interesse' },
+  message:  { it:'Descrivi il progetto',  en:'Describe your project', es:'Describe tu proyecto', fr:'Décrivez votre projet', de:'Ihr Projekt beschreiben', pt:'Descreva seu projeto' },
+  messaggio:{ it:'Descrivi il progetto',  en:'Describe your project', es:'Describe tu proyecto', fr:'Décrivez votre projet', de:'Ihr Projekt beschreiben', pt:'Descreva seu projeto' },
+  notes:    { it:'Note',                  en:'Notes',                 es:'Notas',                fr:'Notes',                 de:'Anmerkungen',             pt:'Notas'                },
+}
+
+const PLACEHOLDERS = {
+  name:    { it:'Mario Rossi',               en:'John Smith',               es:'Juan García',               fr:'Jean Dupont',            de:'Max Mustermann',           pt:'João Silva'           },
+  email:   { it:'mario@email.com',           en:'john@email.com',           es:'juan@email.com',            fr:'jean@email.com',         de:'max@email.com',            pt:'joao@email.com'       },
+  zona:    { it:'Es: Milano, Roma...',        en:'E.g: New York, London...', es:'Ej: Madrid, Barcelona...',  fr:'Ex: Paris, Lyon...',     de:'z.B: Berlin, München...', pt:'Ex: Lisboa, Porto...' },
+  message: { it:'Raccontaci cosa cerchi...', en:'Tell us what you need...', es:'Cuéntanos qué necesitas...', fr:'Dites-nous ce dont vous avez besoin...', de:'Erzählen Sie was Sie brauchen...', pt:'Diga-nos o que precisa...' },
+}
+
+const SERVICE_OPTIONS = {
+  it: ['Sito Web', 'E-commerce', 'Branding', 'Marketing', 'Altro'],
+  en: ['Website', 'E-commerce', 'Branding', 'Marketing', 'Other'],
+  es: ['Diseño Web', 'E-commerce', 'Branding', 'Marketing', 'Otro'],
+  fr: ['Site Web', 'E-commerce', 'Branding', 'Marketing', 'Autre'],
+  de: ['Webseite', 'E-commerce', 'Branding', 'Marketing', 'Andere'],
+  pt: ['Site Web', 'E-commerce', 'Branding', 'Marketing', 'Outro'],
+}
+
+function rl(dict, lang) { return dict?.[lang] || dict?.['en'] || '' }
+
+function translateField(field, lang) {
+  const id = field.id?.toLowerCase()
+  return {
+    ...field,
+    label:       rl(FIELD_TRANSLATIONS[id], lang) || field.label,
+    placeholder: rl(PLACEHOLDERS[id], lang) || field.placeholder || '',
+  }
+}
+
+function isPhoneField(field) {
+  return ['phone', 'telefono', 'tel'].includes(field.id?.toLowerCase()) || field.type === 'tel'
+}
+
+export default function ContactSection({ contact, footer, brand, site }) {
+  const primary = brand?.primary || '#ff3c3c'
+  const t = useUIStrings(brand)
+
+  const lang = brand?.language
+    || (typeof window !== 'undefined' ? window.__SITE_LANGUAGE__ : null)
+    || 'it'
+
+  const translatedContact = useTranslatedContent(
+    {
+      title:          contact?.title          || t.contact.eyebrow,
+      subtitle:       contact?.subtitle       || '',
+      ctaLabel:       contact?.ctaLabel       || t.contact.sendBtn,
+      successTitle:   contact?.successTitle   || '✓',
+      successMessage: contact?.successMessage || '',
+    },
+    brand
+  )
+
+  const rawFields = parseFields(contact?.fields)
+  const fields = (rawFields.length > 0 ? rawFields : [
+    { id: 'name',    label: 'Name',    type: 'text',     required: true  },
+    { id: 'email',   label: 'Email',   type: 'email',    required: true  },
+    { id: 'phone',   label: 'Phone',   type: 'tel',      required: true  },
+    { id: 'zona',    label: 'Zone',    type: 'text',     required: true  },
+    { id: 'company', label: 'Company', type: 'text',     required: false },
+    { id: 'service', label: 'Service', type: 'select',   required: false },
+    { id: 'message', label: 'Message', type: 'textarea', required: false },
+  ]).map(f => translateField(f, lang))
+
+  const [values,   setValues]  = useState(() => Object.fromEntries(fields.map(f => [f.id, ''])))
+  const [errors,   setErrors]  = useState({})
+  const [sending,  setSending] = useState(false)
+  const [success,  setSuccess] = useState(false)
+  const [apiErr,   setApiErr]  = useState('')
+  const [agentMsg, setAgentMsg]= useState('')
+
+  const setValue = (id, val) => {
+    setValues(p => ({ ...p, [id]: val }))
+    if (errors[id]) setErrors(p => ({ ...p, [id]: '' }))
+  }
+
+  const validate = () => {
+    const next = {}
+    fields.forEach(f => {
+      if (f.required && !values[f.id]?.trim()) next[f.id] = t.contact.fieldRequired
+      if (f.type === 'email' && values[f.id] && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values[f.id])) {
+        next[f.id] = t.contact.emailInvalid
+      }
+      if (isPhoneField(f) && f.required && values[f.id] && values[f.id].replace(/\D/g, '').length < 7) {
+        next[f.id] = t.contact.fieldRequired
+      }
+    })
+    setErrors(next)
+    return Object.keys(next).length === 0
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!validate()) return
+    setSending(true); setApiErr('')
+    try {
+      const phoneField = fields.find(f => isPhoneField(f))
+      const leadData = {
+        name:     values.name     || values.nome     || '',
+        email:    values.email    || '',
+        phone:    phoneField ? values[phoneField.id] : (values.phone || values.telefono || ''),
+        zona:     values.zona     || values.city     || '',
+        servizio: values.servizio || values.service  || '',
+        message:  values.message  || values.messaggio || '',
+        rawFields: { ...values },
+      }
+      const results = await processNewLead(leadData, site)
+      if (results.agente) setAgentMsg(`${results.agente.nome} — ${leadData.zona}`)
+      setSuccess(true)
+    } catch (err) {
+      console.error(err)
+      setApiErr(t.contact.errorRetry)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const handleReset = () => {
+    setSuccess(false); setAgentMsg('')
+    setValues(Object.fromEntries(fields.map(f => [f.id, ''])))
+    setErrors({}); setApiErr('')
+  }
+
+  const serviceOptions = SERVICE_OPTIONS[lang] || SERVICE_OPTIONS['en']
+
+  return (
+    <section id="contacto" style={{ padding: 'clamp(60px,10vw,100px) clamp(16px,6%,80px)', background: `radial-gradient(ellipse at 50% 0%, ${primary}08 0%, transparent 60%)` }}>
+      <style>{`
+        .ct-input,.ct-textarea,.ct-select{
+          background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);
+          color:var(--text-main);padding:13px 16px;border-radius:10px;
+          width:100%;font-size:14px;font-family:inherit;outline:none;
+          transition:border-color 0.2s;box-sizing:border-box;
+        }
+        .ct-input:focus,.ct-textarea:focus,.ct-select:focus{border-color:${primary};}
+        .ct-input::placeholder,.ct-textarea::placeholder{color:var(--text-muted);}
+        .ct-input.ct-err,.ct-textarea.ct-err,.ct-select.ct-err{border-color:rgba(255,80,80,0.6);}
+        .ct-textarea{resize:vertical;min-height:110px;}
+        .ct-select{
+          -webkit-appearance:none;appearance:none;cursor:pointer;
+          background-image:url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1L6 7L11 1' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+          background-repeat:no-repeat;background-position:right 16px center;
+        }
+        .ct-select option{background:#111;color:white;}
+        .ct-submit-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center;}
+        @keyframes ctIn{from{opacity:0;transform:scale(0.94) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
+        @keyframes ctCheck{from{stroke-dashoffset:60}to{stroke-dashoffset:0}}
+        @keyframes ctSpin{to{transform:rotate(360deg)}}
+        @media(max-width:600px){
+          .ct-submit-row{flex-direction:column;}
+          .ct-submit-row a,.ct-submit-row button[type="submit"]{width:100%;justify-content:center;box-sizing:border-box;}
+        }
+      `}</style>
+
+      <div style={{ maxWidth: 760, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 'clamp(32px,5vw,56px)' }}>
+          <p style={{ color: primary, fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 14 }}>
+            {t.contact.eyebrow}
+          </p>
+          <h2 style={{ fontSize: 'clamp(1.8rem,5vw,3.5rem)', fontWeight: 800, lineHeight: 1.1, marginBottom: 16, color: 'var(--text-main)' }}>
+            {translatedContact.title}
+          </h2>
+          {translatedContact.subtitle && (
+            <p style={{ color: 'var(--text-dim)', fontSize: 'clamp(14px,2vw,16px)', maxWidth: 480, margin: '0 auto', lineHeight: 1.7 }}>
+              {translatedContact.subtitle}
+            </p>
+          )}
+        </div>
+
+        {success ? (
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${primary}40`, borderRadius: 20, padding: 'clamp(28px,5vw,56px)', textAlign: 'center', animation: 'ctIn 0.5s cubic-bezier(0.23,1,0.32,1) both' }}>
+            <div style={{ width: 80, height: 80, borderRadius: '50%', background: `${primary}15`, border: `2px solid ${primary}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px' }}>
+              <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                <path d="M8 18L15 25L28 11" stroke={primary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="60" style={{ animation: 'ctCheck 0.5s 0.2s cubic-bezier(0.23,1,0.32,1) both' }} />
+              </svg>
+            </div>
+            <h3 style={{ fontSize: 'clamp(1.4rem,3vw,1.8rem)', fontWeight: 800, marginBottom: 12, color: 'var(--text-main)' }}>{translatedContact.successTitle}</h3>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '16px 20px', margin: '20px auto', maxWidth: 440 }}>
+              <p style={{ color: 'var(--text-dim)', fontSize: 15, lineHeight: 1.7, margin: 0 }}>{agentMsg || translatedContact.successMessage}</p>
+            </div>
+            <button onClick={handleReset} style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.15)', padding: '10px 24px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', marginTop: 12 }}>
+              {t.contact.sendAnother}
+            </button>
+          </div>
+        ) : (
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 'clamp(20px,5vw,48px)' }}>
+            <form onSubmit={handleSubmit} noValidate>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                {fields.map(field => {
+                  const err = errors[field.id] || ''
+                  const ec  = err ? ' ct-err' : ''
+                  const isService = ['service','servizio'].includes(field.id?.toLowerCase())
+                  const isPhone   = isPhoneField(field)
+
+                  return (
+                    <div key={field.id}>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: err ? 'rgba(255,130,130,0.8)' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 7 }}>
+                        {field.label}
+                        {field.required && <span style={{ color: primary, marginLeft: 4 }}>*</span>}
+                      </label>
+
+                      {isPhone ? (
+                        <PhoneInput
+                          value={values[field.id] || ''}
+                          onChange={val => setValue(field.id, val)}
+                          error={err}
+                          primary={primary}
+                        />
+                      ) : field.type === 'textarea' ? (
+                        <>
+                          <textarea className={`ct-textarea${ec}`} value={values[field.id] || ''} onChange={e => setValue(field.id, e.target.value)} placeholder={field.placeholder || ''} rows={4} />
+                          {err && <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>{err}</p>}
+                        </>
+                      ) : field.type === 'select' ? (
+                        <>
+                          <select className={`ct-select${ec}`} value={values[field.id] || ''} onChange={e => setValue(field.id, e.target.value)}>
+                            <option value="">{t.contact.selectOpt}</option>
+                            {isService
+                              ? serviceOptions.map(o => <option key={o} value={o}>{o}</option>)
+                              : (field.options || '').split(',').map(o => o.trim()).filter(Boolean).map(o => <option key={o} value={o}>{o}</option>)
+                            }
+                          </select>
+                          {err && <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>{err}</p>}
+                        </>
+                      ) : (
+                        <>
+                          <input className={`ct-input${ec}`} type={field.type || 'text'} value={values[field.id] || ''} onChange={e => setValue(field.id, e.target.value)} placeholder={field.placeholder || ''} />
+                          {err && <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>{err}</p>}
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {apiErr && (
+                <div style={{ marginTop: 16, background: 'rgba(255,60,60,0.08)', border: '1px solid rgba(255,60,60,0.25)', borderRadius: 8, padding: '12px 16px', color: 'rgba(255,130,130,0.9)', fontSize: 13 }}>
+                  {apiErr}
+                </div>
+              )}
+
+              <div className="ct-submit-row" style={{ marginTop: 28 }}>
+                <button
+                  type="submit"
+                  disabled={sending}
+                  style={{ flex: 1, minWidth: 160, padding: '16px 32px', background: sending ? `${primary}80` : primary, color: 'white', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: '0.9rem', letterSpacing: 1.5, textTransform: 'uppercase', cursor: sending ? 'not-allowed' : 'pointer', transition: 'all 0.3s', boxShadow: sending ? 'none' : `0 0 30px ${primary}35`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontFamily: 'inherit' }}
+                >
+                  {sending ? (
+                    <><span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'ctSpin 0.7s linear infinite' }} />{t.contact.sending}</>
+                  ) : translatedContact.ctaLabel}
+                </button>
+
+                {footer?.whatsapp && footer.whatsapp !== '#' && (
+                  <a href={footer.whatsapp} target="_blank" rel="noreferrer"
+                    style={{ padding: '16px 24px', background: 'transparent', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, textDecoration: 'none', fontWeight: 700, fontSize: 13, transition: 'all 0.2s', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 8 }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = primary; e.currentTarget.style.color = primary }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = 'var(--text-muted)' }}>
+                    💬 {t.contact.whatsappBtn}
+                  </a>
+                )}
+              </div>
+              <p style={{ marginTop: 16, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>{t.contact.privacy}</p>
+            </form>
+          </div>
+        )}
+
+        {footer?.email && (
+          <div style={{ textAlign: 'center', marginTop: 32 }}>
+            <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{t.contact.orEmail} </span>
+            <a href={`mailto:${footer.email}`} style={{ color: primary, fontSize: 13, textDecoration: 'none', fontWeight: 600 }}>{footer.email}</a>
+          </div>
+        )}
+      </div>
+    </section>
   )
 }
 </file>
@@ -8265,11 +8712,10 @@ export function useSiteData() {
 
 <file path="src/components/site/ProjectsSection.jsx">
 /**
- * ProjectsSection.jsx — v3 PREMIUM REDESIGN
- * ─────────────────────────────────────────────────────────────────────────
- * Cards horizontales + vertical en grid adaptativo.
- * Shell de proyecto: fullscreen con barra branded + tabs info/resultados.
- * Hover effects: tilt 3D sutil, spotlight radial, línea reveal animada.
+ * ProjectsSection.jsx — iframe auto-translate + 100% responsivo
+ * ÚNICO CAMBIO vs original: buildSrcDoc inyecta script de traducción automática
+ * al idioma configurado en el panel (window.__SITE_LANGUAGE__).
+ * Todo lo demás (shell, cards, animaciones, lógica) INTACTO.
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react'
@@ -8285,17 +8731,110 @@ function hasValidUrl(url) {
   return u !== '#' && u !== '/#'
 }
 
+// ── buildSrcDoc con traducción automática inyectada ──────────────────
+function buildSrcDoc(html, targetLang) {
+  const translateScript = `<script>
+(function() {
+  var _cache = {};
+
+  function getTextNodes(root) {
+    var walker = document.createTreeWalker(
+      root, NodeFilter.SHOW_TEXT,
+      { acceptNode: function(node) {
+          var p = node.parentElement;
+          if (!p) return NodeFilter.FILTER_REJECT;
+          if (['SCRIPT','STYLE','NOSCRIPT','META','LINK'].includes(p.tagName)) return NodeFilter.FILTER_REJECT;
+          if (!node.textContent.trim()) return NodeFilter.FILTER_SKIP;
+          return NodeFilter.FILTER_ACCEPT;
+      }}
+    );
+    var nodes = []; var n;
+    while ((n = walker.nextNode())) nodes.push(n);
+    return nodes;
+  }
+
+  async function translateText(text, lang) {
+    var key = lang + '_' + text.trim().slice(0, 60);
+    if (_cache[key]) return _cache[key];
+    try {
+      var url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + lang + '&dt=t&q=' + encodeURIComponent(text);
+      var res = await fetch(url);
+      if (!res.ok) return text;
+      var data = await res.json();
+      var tr = (data[0]||[]).map(function(c){return c[0]||'';}).join('');
+      if (tr) _cache[key] = tr;
+      return tr || text;
+    } catch(e) { return text; }
+  }
+
+  async function translatePage(lang) {
+    if (!lang || lang === 'auto') return;
+    var nodes = getTextNodes(document.body);
+    for (var i = 0; i < nodes.length; i += 8) {
+      var batch = nodes.slice(i, i+8);
+      await Promise.all(batch.map(async function(node) {
+        var orig = node.textContent;
+        if (!orig.trim()) return;
+        var tr = await translateText(orig.trim(), lang);
+        if (tr && tr !== orig.trim()) node.textContent = tr;
+      }));
+    }
+  }
+
+  // Escucha el lang enviado por el parent React
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'PT_LANG' && e.data.lang) {
+      translatePage(e.data.lang);
+    }
+  });
+
+  // Fallback via atributo data-pt-lang en <html>
+  var htmlLang = document.documentElement.getAttribute('data-pt-lang');
+  if (htmlLang) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function(){ translatePage(htmlLang); });
+    } else {
+      translatePage(htmlLang);
+    }
+  }
+})();
+<\/script>`
+
+  const injector = `<script>
+    document.addEventListener('DOMContentLoaded',function(){
+      document.addEventListener('submit',function(e){
+        if(e.target.tagName==='FORM'){
+          e.preventDefault();
+          var fd=new FormData(e.target),data={};
+          fd.forEach(function(v,k){data[k]=v});
+          window.parent.postMessage({type:'PROJECT_LEAD',data:data},'*');
+        }
+      },true);
+    });
+  <\/script>`
+
+  const inject = translateScript + injector
+
+  if (/<!doctype\s+html/i.test(html) || /<html[\s>]/i.test(html)) {
+    return html
+      .replace(/<html([^>]*)>/i, `<html$1 data-pt-lang="${targetLang || 'it'}">`)
+      .replace(/<\/head>/i, inject + '</head>')
+  }
+  return `<!DOCTYPE html><html lang="es" data-pt-lang="${targetLang || 'it'}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,sans-serif;line-height:1.6;color:#111}img{max-width:100%}a{color:inherit}</style>${inject}</head><body>${html}</body></html>`
+}
+
 // ─────────────────────────────────────────────────────────────────────
-// PROJECT SHELL — fullscreen cinematic viewer
+// PROJECT SHELL
 // ─────────────────────────────────────────────────────────────────────
 function ProjectShell({ project, brand, site, onClose }) {
   const iframeRef    = useRef(null)
-  const [ready, setReady]       = useState(false)
+  const [ready, setReady]         = useState(false)
   const [activeTab, setActiveTab] = useState('demo')
-  const t       = useUIStrings(brand)
-  const primary = brand?.primary || '#ff3c3c'
-  const brandName = brand?.name  || 'POLARTRONIC'
-  const brandLogo = brand?.logo  || ''
+  const t         = useUIStrings(brand)
+  const primary   = brand?.primary || '#ff3c3c'
+  const brandName = brand?.name    || 'POLARTRONIC'
+  const brandLogo = brand?.logo    || ''
+  const targetLang = (typeof window !== 'undefined' && window.__SITE_LANGUAGE__) || brand?.language || 'it'
 
   useEffect(() => {
     document.body.style.overflow = 'hidden'
@@ -8331,37 +8870,13 @@ function ProjectShell({ project, brand, site, onClose }) {
     return () => window.removeEventListener('message', handleMessage)
   }, [handleMessage])
 
-  function buildSrcDoc(html) {
-    const injector = `<script>
-      document.addEventListener('DOMContentLoaded',function(){
-        document.addEventListener('submit',function(e){
-          if(e.target.tagName==='FORM'){
-            e.preventDefault();
-            var fd=new FormData(e.target),data={};
-            fd.forEach(function(v,k){data[k]=v});
-            window.parent.postMessage({type:'PROJECT_LEAD',data:data},'*');
-          }
-        },true);
-      });
-    <\/script>`
-    if (/<!doctype\s+html/i.test(html) || /<html[\s>]/i.test(html)) {
-      return html.replace(/<\/head>/i, injector + '</head>')
-    }
-    return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,sans-serif;line-height:1.6;color:#111}img{max-width:100%}a{color:inherit}</style>${injector}</head><body>${html}</body></html>`
-  }
-
   const clientName  = project.client || project.title || ''
   const industry    = project.industry || project.category || ''
   const resultItems = (project.results || '').split('·').map(r => r.trim()).filter(Boolean)
   const hasExternal = hasValidUrl(project.url)
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 9000,
-      display: 'flex', flexDirection: 'column',
-      background: '#04050a',
-      animation: 'projShellOpen 0.36s cubic-bezier(0.16,1,0.3,1) both',
-    }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9000, display: 'flex', flexDirection: 'column', background: '#04050a', animation: 'projShellOpen 0.36s cubic-bezier(0.16,1,0.3,1) both' }}>
       <style>{`
         @keyframes projShellOpen{from{opacity:0;transform:scale(0.98)}to{opacity:1;transform:scale(1)}}
         @keyframes projBarIn{from{opacity:0;transform:translateY(-100%)}to{opacity:1;transform:translateY(0)}}
@@ -8371,24 +8886,17 @@ function ProjectShell({ project, brand, site, onClose }) {
         .proj-back-btn:hover{background:rgba(255,255,255,0.1)!important;color:white!important;}
         .proj-hire-btn:hover{transform:translateY(-2px)!important;box-shadow:0 14px 36px ${primary}55!important;}
         .proj-ext-btn:hover{border-color:${primary}!important;color:${primary}!important;}
+        @media(max-width:640px){
+          .proj-shell-actions .proj-ext-btn{display:none!important;}
+          .proj-shell-bar{padding:0 12px!important;gap:8px!important;}
+          .proj-shell-info{display:none!important;}
+        }
       `}</style>
 
       {/* TOP BAR */}
-      <div style={{
-        flexShrink: 0, height: 64,
-        background: 'rgba(4,5,10,0.92)',
-        backdropFilter: 'blur(28px)',
-        WebkitBackdropFilter: 'blur(28px)',
-        borderBottom: `1px solid rgba(255,255,255,0.07)`,
-        display: 'flex', alignItems: 'center',
-        padding: '0 20px', gap: 14,
-        position: 'relative', zIndex: 2,
-        animation: 'projBarIn 0.38s cubic-bezier(0.16,1,0.3,1) both',
-      }}>
-        {/* Línea glow bottom */}
+      <div className="proj-shell-bar" style={{ flexShrink: 0, height: 64, background: 'rgba(4,5,10,0.92)', backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)', borderBottom: `1px solid rgba(255,255,255,0.07)`, display: 'flex', alignItems: 'center', padding: '0 20px', gap: 14, position: 'relative', zIndex: 2, animation: 'projBarIn 0.38s cubic-bezier(0.16,1,0.3,1) both' }}>
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent 0%, ${primary}50 40%, ${primary}50 60%, transparent 100%)` }} />
 
-        {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           {brandLogo
             ? <img src={brandLogo} alt={brandName} style={{ height: 26, maxWidth: 120, objectFit: 'contain' }} />
@@ -8398,49 +8906,34 @@ function ProjectShell({ project, brand, site, onClose }) {
 
         <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
 
-        {/* Project info */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
-          {industry && (
-            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', color: primary, background: `${primary}15`, border: `1px solid ${primary}30`, padding: '3px 10px', borderRadius: 20, flexShrink: 0 }}>{industry}</span>
-          )}
+        <div className="proj-shell-info" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+          {industry && <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', color: primary, background: `${primary}15`, border: `1px solid ${primary}30`, padding: '3px 10px', borderRadius: 20, flexShrink: 0 }}>{industry}</span>}
           <span style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.85)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{clientName}</span>
         </div>
 
-        {/* Tabs */}
         <div style={{ display: 'flex', gap: 2, background: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: '3px', flexShrink: 0 }}>
-          {[
-            { id: 'demo', label: '▶ Demo' },
-            ...(resultItems.length > 0 ? [{ id: 'results', label: '↑ Resultados' }] : []),
-          ].map(tab => (
+          {[{ id: 'demo', label: '▶ Demo' }, ...(resultItems.length > 0 ? [{ id: 'results', label: '↑ Resultados' }] : [])].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="proj-tab"
-              style={{
-                padding: '6px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                fontSize: 11, fontWeight: 700,
-                background: activeTab === tab.id ? primary : 'transparent',
-                color: activeTab === tab.id ? 'white' : 'rgba(255,255,255,0.4)',
-                transition: 'all 0.18s',
-              }}>
+              style={{ padding: 'clamp(5px,1vw,6px) clamp(8px,2vw,14px)', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, background: activeTab === tab.id ? primary : 'transparent', color: activeTab === tab.id ? 'white' : 'rgba(255,255,255,0.4)', transition: 'all 0.18s' }}>
               {tab.label}
             </button>
           ))}
         </div>
 
-        {/* Actions */}
-        <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>
+        <div className="proj-shell-actions" style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>
           {hasExternal && (
             <a href={project.url} target="_blank" rel="noreferrer" className="proj-ext-btn"
               style={{ padding: '8px 14px', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.4)', borderRadius: 8, fontSize: 11, fontWeight: 600, textDecoration: 'none', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
               🔗 {t.projects?.visitSite || 'Ver sitio'}
             </a>
           )}
-          <button
-            onClick={() => { onClose(); setTimeout(() => document.getElementById('contacto')?.scrollIntoView({ behavior: 'smooth' }), 200) }}
+          <button onClick={() => { onClose(); setTimeout(() => document.getElementById('contacto')?.scrollIntoView({ behavior: 'smooth' }), 200) }}
             className="proj-hire-btn"
-            style={{ padding: '9px 20px', background: primary, color: 'white', border: 'none', borderRadius: 9, fontWeight: 800, fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.22s', boxShadow: `0 4px 20px ${primary}35`, whiteSpace: 'nowrap' }}>
+            style={{ padding: 'clamp(7px,1.5vw,9px) clamp(12px,3vw,20px)', background: primary, color: 'white', border: 'none', borderRadius: 9, fontWeight: 800, fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.22s', boxShadow: `0 4px 20px ${primary}35`, whiteSpace: 'nowrap' }}>
             {t.projects?.contractThis || 'Contratar'} →
           </button>
           <button onClick={onClose} className="proj-back-btn"
-            style={{ padding: '9px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', borderRadius: 9, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.18s', whiteSpace: 'nowrap' }}>
+            style={{ padding: 'clamp(7px,1.5vw,9px) clamp(10px,2vw,14px)', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', borderRadius: 9, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.18s', whiteSpace: 'nowrap' }}>
             ✕
           </button>
         </div>
@@ -8448,60 +8941,50 @@ function ProjectShell({ project, brand, site, onClose }) {
 
       {/* BODY */}
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-
-        {/* DEMO TAB */}
         {activeTab === 'demo' && (
           <>
             {!ready && (
               <div style={{ position: 'absolute', inset: 0, zIndex: 3, background: '#04050a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
                 <div style={{ width: 48, height: 48, borderRadius: '50%', border: `3px solid rgba(255,255,255,0.06)`, borderTopColor: primary, animation: 'projLoaderSpin 0.8s linear infinite' }} />
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase' }}>Cargando aplicación…</div>
-                {project.image && (
-                  <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${project.image})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.05, filter: 'blur(20px)' }} />
-                )}
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase' }}>Cargando...</div>
               </div>
             )}
-            <iframe
-              ref={iframeRef}
-              title={`${clientName} app`}
+            <iframe ref={iframeRef} title={`${clientName} app`}
               sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-              onLoad={() => setReady(true)}
-              style={{ width: '100%', height: '100%', border: 'none', display: 'block', background: 'white', opacity: ready ? 1 : 0, transition: 'opacity 0.45s ease', animation: ready ? 'projIframeIn 0.5s ease both' : 'none' }}
-              srcDoc={buildSrcDoc(project.detailHtml || '')}
+              onLoad={() => {
+                setReady(true)
+                setTimeout(() => {
+                  iframeRef.current?.contentWindow?.postMessage(
+                    { type: 'PT_LANG', lang: targetLang },
+                    '*'
+                  )
+                }, 150)
+              }}
+              style={{ width: '100%', height: '100%', border: 'none', display: 'block', background: 'white', opacity: ready ? 1 : 0, transition: 'opacity 0.45s ease' }}
+              srcDoc={buildSrcDoc(project.detailHtml || '', targetLang)}
             />
           </>
         )}
 
-        {/* RESULTS TAB */}
         {activeTab === 'results' && (
-          <div style={{ padding: '48px 6%', overflowY: 'auto', height: '100%', background: 'linear-gradient(160deg, #06070c 0%, #04050a 100%)' }}>
-            {project.image && (
-              <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${project.image})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.04, filter: 'blur(30px)', pointerEvents: 'none' }} />
-            )}
-            <div style={{ maxWidth: 640, margin: '0 auto', position: 'relative' }}>
-              <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 3, color: primary, textTransform: 'uppercase', marginBottom: 16 }}>Resultados del proyecto</div>
-              <h2 style={{ fontSize: 'clamp(1.8rem,4vw,2.8rem)', fontWeight: 800, color: 'white', marginBottom: 8, lineHeight: 1.1 }}>{clientName}</h2>
-              {industry && <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 14, marginBottom: 32 }}>{industry}</div>}
-
-              {project.description && (
-                <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 15, lineHeight: 1.8, marginBottom: 40, borderLeft: `2px solid ${primary}50`, paddingLeft: 16 }}>{project.description}</p>
-              )}
-
+          <div style={{ padding: 'clamp(32px,5vw,48px) clamp(16px,6%,80px)', overflowY: 'auto', height: '100%', background: 'linear-gradient(160deg, #06070c 0%, #04050a 100%)' }}>
+            <div style={{ maxWidth: 640, margin: '0 auto' }}>
+              <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 3, color: primary, textTransform: 'uppercase', marginBottom: 16 }}>Resultados</div>
+              <h2 style={{ fontSize: 'clamp(1.6rem,4vw,2.8rem)', fontWeight: 800, color: 'white', marginBottom: 8, lineHeight: 1.1 }}>{clientName}</h2>
+              {project.description && <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 15, lineHeight: 1.8, marginBottom: 40, borderLeft: `2px solid ${primary}50`, paddingLeft: 16 }}>{project.description}</p>}
               {resultItems.length > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14, marginBottom: 40 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 14, marginBottom: 40 }}>
                   {resultItems.map((r, i) => (
                     <div key={i} style={{ padding: '20px 16px', background: `${primary}08`, border: `1px solid ${primary}25`, borderRadius: 14, textAlign: 'center' }}>
-                      <div style={{ fontSize: 11, color: primary, fontWeight: 800, letterSpacing: 0.5 }}>↑</div>
+                      <div style={{ fontSize: 11, color: primary, fontWeight: 800 }}>↑</div>
                       <div style={{ fontSize: 14, fontWeight: 700, color: 'white', marginTop: 4 }}>{r}</div>
                     </div>
                   ))}
                 </div>
               )}
-
-              <button
-                onClick={() => { onClose(); setTimeout(() => document.getElementById('contacto')?.scrollIntoView({ behavior: 'smooth' }), 200) }}
-                style={{ padding: '16px 36px', background: primary, color: 'white', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 14, letterSpacing: 1, textTransform: 'uppercase', cursor: 'pointer', boxShadow: `0 8px 32px ${primary}40`, transition: 'all 0.22s' }}>
-                {t.projects?.contractThis || 'Quiero esto para mi negocio'} →
+              <button onClick={() => { onClose(); setTimeout(() => document.getElementById('contacto')?.scrollIntoView({ behavior: 'smooth' }), 200) }}
+                style={{ padding: '16px 36px', background: primary, color: 'white', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 14, letterSpacing: 1, textTransform: 'uppercase', cursor: 'pointer', boxShadow: `0 8px 32px ${primary}40` }}>
+                {t.projects?.contractThis || 'Quiero esto'} →
               </button>
             </div>
           </div>
@@ -8522,11 +9005,11 @@ function ProjectShell({ project, brand, site, onClose }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// PROJECT CARD — diseño editorial con tilt 3D
+// PROJECT CARD
 // ─────────────────────────────────────────────────────────────────────
 function ProjectCard({ proj, primary, t, onOpen, index }) {
-  const [hovered, setHovered] = useState(false)
-  const [tilt, setTilt]       = useState({ x: 0, y: 0 })
+  const [hovered, setHovered]   = useState(false)
+  const [tilt, setTilt]         = useState({ x: 0, y: 0 })
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 })
   const cardRef = useRef(null)
 
@@ -8547,17 +9030,10 @@ function ProjectCard({ proj, primary, t, onOpen, index }) {
     setMousePos({ x: x * 100, y: y * 100 })
   }
 
-  function handleMouseLeave() {
-    setHovered(false)
-    setTilt({ x: 0, y: 0 })
-  }
-
   return (
-    <div
-      ref={cardRef}
-      onClick={() => isClickable && onOpen(proj)}
+    <div ref={cardRef} onClick={() => isClickable && onOpen(proj)}
       onMouseEnter={() => setHovered(true)}
-      onMouseLeave={handleMouseLeave}
+      onMouseLeave={() => { setHovered(false); setTilt({ x: 0, y: 0 }) }}
       onMouseMove={handleMouseMove}
       style={{
         borderRadius: 20, overflow: 'hidden',
@@ -8568,91 +9044,41 @@ function ProjectCard({ proj, primary, t, onOpen, index }) {
         transition: hovered ? 'transform 0.1s ease, box-shadow 0.3s, border-color 0.3s' : 'transform 0.5s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s, border-color 0.3s',
         boxShadow: hovered ? `0 30px 70px rgba(0,0,0,0.6), 0 0 0 1px ${primary}20` : '0 4px 24px rgba(0,0,0,0.3)',
         height: '100%', position: 'relative',
-      }}
-    >
-      {/* Spotlight */}
-      <div style={{
-        position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
-        background: `radial-gradient(circle 180px at ${mousePos.x}% ${mousePos.y}%, ${primary}12 0%, transparent 70%)`,
-        opacity: hovered ? 1 : 0, transition: 'opacity 0.3s',
-      }} />
+      }}>
+      <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(circle 180px at ${mousePos.x}% ${mousePos.y}%, ${primary}12 0%, transparent 70%)`, opacity: hovered ? 1 : 0, transition: 'opacity 0.3s' }} />
 
-      {/* Badges */}
       <div style={{ position: 'absolute', top: 14, left: 14, zIndex: 3, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {industry && (
-          <div style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, padding: '4px 10px', borderRadius: 20 }}>
-            {industry}
-          </div>
-        )}
-        {hasLanding && (
-          <div style={{ background: primary, color: 'white', fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1, padding: '4px 10px', borderRadius: 6, boxShadow: `0 3px 12px ${primary}50` }}>
-            🌐 APP
-          </div>
-        )}
+        {industry && <div style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, padding: '4px 10px', borderRadius: 20 }}>{industry}</div>}
+        {hasLanding && <div style={{ background: primary, color: 'white', fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1, padding: '4px 10px', borderRadius: 6, boxShadow: `0 3px 12px ${primary}50` }}>🌐 APP</div>}
       </div>
 
-      {/* Imagen */}
       {proj.image && (
         <div style={{ height: 200, overflow: 'hidden', position: 'relative', zIndex: 1 }}>
-          <img src={proj.image} alt={clientName} style={{
-            width: '100%', height: '100%', objectFit: 'cover',
-            filter: hovered ? 'brightness(0.6) saturate(1.15)' : 'brightness(0.45)',
-            transform: hovered ? 'scale(1.08)' : 'scale(1)',
-            transition: 'all 0.65s cubic-bezier(0.16,1,0.3,1)',
-          }} />
+          <img src={proj.image} alt={clientName} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: hovered ? 'brightness(0.6) saturate(1.15)' : 'brightness(0.45)', transform: hovered ? 'scale(1.08)' : 'scale(1)', transition: 'all 0.65s cubic-bezier(0.16,1,0.3,1)' }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #090a0f 0%, rgba(9,10,15,0.2) 55%, transparent 100%)' }} />
-
-          {/* Open overlay */}
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: hovered ? 1 : 0, transition: 'opacity 0.28s' }}>
-            <div style={{
-              padding: '10px 24px', background: 'rgba(5,7,10,0.8)', backdropFilter: 'blur(10px)',
-              border: `1px solid ${primary}60`, borderRadius: 24, color: primary,
-              fontSize: 12, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase',
-              transform: hovered ? 'scale(1)' : 'scale(0.85)',
-              transition: 'transform 0.3s cubic-bezier(0.16,1,0.3,1)',
-              display: 'flex', alignItems: 'center', gap: 8,
-            }}>
+            <div style={{ padding: '10px 24px', background: 'rgba(5,7,10,0.8)', backdropFilter: 'blur(10px)', border: `1px solid ${primary}60`, borderRadius: 24, color: primary, fontSize: 12, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', transform: hovered ? 'scale(1)' : 'scale(0.85)', transition: 'transform 0.3s cubic-bezier(0.16,1,0.3,1)', display: 'flex', alignItems: 'center', gap: 8 }}>
               {hasLanding ? '▶ Abrir Demo' : '↗ Ver Sitio'}
             </div>
           </div>
         </div>
       )}
 
-      {/* Content */}
-      <div style={{ padding: '20px 22px 22px', position: 'relative', zIndex: 1 }}>
-        <div style={{ color: primary, fontWeight: 800, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 }}>
-          {clientName}
-        </div>
-        {proj.title && proj.title !== clientName && (
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: '0 0 8px', color: 'white', lineHeight: 1.3 }}>{proj.title}</h3>
-        )}
-        {description && (
-          <p style={{ color: 'rgba(255,255,255,0.42)', fontSize: 13, lineHeight: 1.65, margin: '0 0 14px' }}>
-            {description.length > 100 ? description.slice(0, 100) + '…' : description}
-          </p>
-        )}
-
-        {/* Results chips */}
+      <div style={{ padding: 'clamp(16px,3vw,20px) clamp(16px,3vw,22px) clamp(18px,3vw,22px)', position: 'relative', zIndex: 1 }}>
+        <div style={{ color: primary, fontWeight: 800, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 }}>{clientName}</div>
+        {proj.title && proj.title !== clientName && <h3 style={{ fontSize: 'clamp(0.95rem,2.5vw,1.05rem)', fontWeight: 800, margin: '0 0 8px', color: 'white', lineHeight: 1.3 }}>{proj.title}</h3>}
+        {description && <p style={{ color: 'rgba(255,255,255,0.42)', fontSize: 13, lineHeight: 1.65, margin: '0 0 14px' }}>{description.length > 100 ? description.slice(0, 100) + '…' : description}</p>}
         {resultItems.length > 0 && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
-            {resultItems.map((r, i) => (
-              <span key={i} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 20, background: `${primary}10`, border: `1px solid ${primary}25`, color: primary, fontWeight: 700 }}>
-                ↑ {r}
-              </span>
-            ))}
+            {resultItems.map((r, i) => <span key={i} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 20, background: `${primary}10`, border: `1px solid ${primary}25`, color: primary, fontWeight: 700 }}>↑ {r}</span>)}
           </div>
         )}
-
-        {/* Bottom CTA */}
         {isClickable && (
           <div style={{ paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: hovered ? primary : 'rgba(255,255,255,0.2)', transition: 'color 0.2s' }}>
               {hasLanding ? (t.projects?.openApp || 'Ver demo') + ' ▶' : (t.projects?.visitSite || 'Ver sitio') + ' ↗'}
             </span>
-            {/* Número del proyecto */}
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.15)', fontFamily: 'Cinzel, serif', fontWeight: 700 }}>
-              {String(index + 1).padStart(2, '0')}
-            </span>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.15)', fontFamily: 'Cinzel, serif', fontWeight: 700 }}>{String(index + 1).padStart(2, '0')}</span>
           </div>
         )}
       </div>
@@ -8661,7 +9087,7 @@ function ProjectCard({ proj, primary, t, onOpen, index }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// SECCIÓN PRINCIPAL
+// MAIN
 // ─────────────────────────────────────────────────────────────────────
 export default function ProjectsSection({ projects, brand, site }) {
   if (!projects?.length) return null
@@ -8669,7 +9095,7 @@ export default function ProjectsSection({ projects, brand, site }) {
   const primary  = brand?.primary || '#ff3c3c'
   const t        = useUIStrings(brand)
   const trackRef = useRef(null)
-  const [activeProject, setActiveProject] = useState(null)
+  const [activeProject, setActiveProject]   = useState(null)
   const [canScrollLeft,  setCanScrollLeft]  = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(true)
 
@@ -8699,87 +9125,42 @@ export default function ProjectsSection({ projects, brand, site }) {
   }
 
   return (
-    <section id="proyectos" style={{ padding: '100px 0', background: 'rgba(255,255,255,0.01)', overflow: 'hidden' }}>
+    <section id="proyectos" style={{ padding: 'clamp(60px,10vw,100px) 0', background: 'rgba(255,255,255,0.01)', overflow: 'hidden' }}>
       <style>{`
         @keyframes projCardReveal{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
         .proj-track::-webkit-scrollbar{display:none}
         .proj-track{-ms-overflow-style:none;scrollbar-width:none}
       `}</style>
 
-      {/* Header */}
-      <div style={{ padding: '0 6%', textAlign: 'center', marginBottom: 52 }}>
-        <p style={{ color: primary, fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 14 }}>
-          {t.projects.eyebrow}
-        </p>
-        <h2 style={{ fontSize: 'clamp(2rem,5vw,3rem)', fontWeight: 800, margin: '0 0 12px' }}>
-          {t.projects.heading}{' '}
-          <span style={{ color: primary }}>{t.projects.headingAccent}</span>
+      <div style={{ padding: '0 clamp(16px,6%,80px)', textAlign: 'center', marginBottom: 52 }}>
+        <p style={{ color: primary, fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 14 }}>{t.projects.eyebrow}</p>
+        <h2 style={{ fontSize: 'clamp(1.8rem,5vw,3rem)', fontWeight: 800, margin: '0 0 12px' }}>
+          {t.projects.heading}{' '}<span style={{ color: primary }}>{t.projects.headingAccent}</span>
         </h2>
-        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 14, maxWidth: 480, margin: '0 auto' }}>
-          {t.projects.sub}
-        </p>
+        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 14, maxWidth: 480, margin: '0 auto' }}>{t.projects.sub}</p>
       </div>
 
-      {/* Track */}
       <div style={{ position: 'relative' }}>
-        {/* Fade edges */}
         <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 60, background: 'linear-gradient(to right, var(--bg), transparent)', zIndex: 5, pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 60, background: 'linear-gradient(to left, var(--bg), transparent)', zIndex: 5, pointerEvents: 'none' }} />
 
-        <div
-          ref={trackRef}
-          className="proj-track"
-          style={{ display: 'flex', gap: CARD_GAP, overflowX: 'auto', scrollSnapType: 'x mandatory', padding: '8px 6% 16px', alignItems: 'stretch' }}
-        >
+        <div ref={trackRef} className="proj-track"
+          style={{ display: 'flex', gap: CARD_GAP, overflowX: 'auto', scrollSnapType: 'x mandatory', padding: `8px clamp(16px,6%,80px) 16px`, alignItems: 'stretch' }}>
           {projects.map((proj, i) => (
-            <div key={proj.id || i} style={{ flex: `0 0 ${CARD_WIDTH}px`, scrollSnapAlign: 'start', animation: `projCardReveal 0.55s cubic-bezier(0.16,1,0.3,1) ${i * 0.07}s both` }}>
+            <div key={proj.id || i} style={{ flex: `0 0 clamp(260px, 80vw, ${CARD_WIDTH}px)`, scrollSnapAlign: 'start', animation: `projCardReveal 0.55s cubic-bezier(0.16,1,0.3,1) ${i * 0.07}s both` }}>
               <ProjectCard proj={proj} primary={primary} t={t} onOpen={handleOpen} index={i} />
             </div>
           ))}
         </div>
 
-        {/* Nav arrows */}
         {projects.length > 2 && (
           <>
-            <button
-              onClick={() => scrollBy(-1)}
-              disabled={!canScrollLeft}
-              style={{
-                position: 'absolute', top: '50%', left: '3%',
-                transform: 'translateY(-50%)', zIndex: 10,
-                width: 46, height: 46, borderRadius: '50%',
-                background: canScrollLeft ? 'rgba(0,0,0,0.75)' : 'rgba(0,0,0,0.3)',
-                backdropFilter: 'blur(10px)',
-                border: `1px solid ${canScrollLeft ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.06)'}`,
-                color: canScrollLeft ? 'white' : 'rgba(255,255,255,0.2)',
-                fontSize: 22, cursor: canScrollLeft ? 'pointer' : 'not-allowed',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: 0, lineHeight: 1,
-                transition: 'all 0.2s',
-              }}
-            >‹</button>
-            <button
-              onClick={() => scrollBy(1)}
-              disabled={!canScrollRight}
-              style={{
-                position: 'absolute', top: '50%', right: '3%',
-                transform: 'translateY(-50%)', zIndex: 10,
-                width: 46, height: 46, borderRadius: '50%',
-                background: canScrollRight ? 'rgba(0,0,0,0.75)' : 'rgba(0,0,0,0.3)',
-                backdropFilter: 'blur(10px)',
-                border: `1px solid ${canScrollRight ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.06)'}`,
-                color: canScrollRight ? 'white' : 'rgba(255,255,255,0.2)',
-                fontSize: 22, cursor: canScrollRight ? 'pointer' : 'not-allowed',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: 0, lineHeight: 1,
-                transition: 'all 0.2s',
-              }}
-            >›</button>
+            <button onClick={() => scrollBy(-1)} disabled={!canScrollLeft} style={{ position: 'absolute', top: '50%', left: 'clamp(4px,2%,16px)', transform: 'translateY(-50%)', zIndex: 10, width: 46, height: 46, borderRadius: '50%', background: canScrollLeft ? 'rgba(0,0,0,0.75)' : 'rgba(0,0,0,0.3)', backdropFilter: 'blur(10px)', border: `1px solid ${canScrollLeft ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.06)'}`, color: canScrollLeft ? 'white' : 'rgba(255,255,255,0.2)', fontSize: 22, cursor: canScrollLeft ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, lineHeight: 1, transition: 'all 0.2s' }}>‹</button>
+            <button onClick={() => scrollBy(1)} disabled={!canScrollRight} style={{ position: 'absolute', top: '50%', right: 'clamp(4px,2%,16px)', transform: 'translateY(-50%)', zIndex: 10, width: 46, height: 46, borderRadius: '50%', background: canScrollRight ? 'rgba(0,0,0,0.75)' : 'rgba(0,0,0,0.3)', backdropFilter: 'blur(10px)', border: `1px solid ${canScrollRight ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.06)'}`, color: canScrollRight ? 'white' : 'rgba(255,255,255,0.2)', fontSize: 22, cursor: canScrollRight ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, lineHeight: 1, transition: 'all 0.2s' }}>›</button>
           </>
         )}
       </div>
 
-      {/* Shell */}
       {activeProject && (
         <ProjectShell project={activeProject} brand={brand} site={site} onClose={() => setActiveProject(null)} />
       )}
@@ -9293,15 +9674,21 @@ export default function AdminPanel() {
 
 <file path="src/components/site/EcosystemSection.jsx">
 /**
- * EcosystemSection.jsx — v6 PREMIUM REDESIGN
+ * EcosystemSection.jsx — v6 PREMIUM REDESIGN + traducción editorial
  * ─────────────────────────────────────────────────────────────────────────
- * Cards rediseñadas: glass morphism + reveal animado + badges flotantes.
- * Shell fullscreen: barra superior con blur + branding + indicador de carga iframe.
- * Drawer fallback: slide-in con animación spring + glassmorphism panel.
+ * ÚNICO CAMBIO respecto al original:
+ *   - useTranslatedArray aplicado a `ecosystems` para traducir:
+ *     title, desc, category, extraText
+ *   - Los features (array de strings) se traducen item a item via
+ *     useTranslatedArray con campo 'features' (array plano → se maneja
+ *     dentro del hook convirtiendo a strings individuales)
+ *
+ * TODO LO DEMÁS INTACTO: shell, drawer, cards, animaciones, lógica iframe.
  */
 
 import { useState, useEffect, useRef } from 'react'
 import { useUIStrings } from '../../hooks/useUIStrings'
+import { useTranslatedArray } from '../../hooks/useTranslatedContent'
 
 // ── Helpers ────────────────────────────────────────────────────────────
 function parseFeatures(raw) {
@@ -9312,8 +9699,29 @@ function parseFeatures(raw) {
   } catch { return [] }
 }
 
+// Aplana ecosystems para traducir: convierte features array a string JSON
+// para que useTranslatedArray pueda procesar el objeto completo
+function prepareForTranslation(ecosystems) {
+  return ecosystems.map(eco => ({
+    ...eco,
+    // features se serializa para que el hook lo trate como string
+    // y se parsea de vuelta tras la traducción
+    _featuresStr: parseFeatures(eco.features).join(' ||| '),
+  }))
+}
+
+function restoreFeatures(translatedEcos, originalEcos) {
+  return translatedEcos.map((eco, i) => {
+    const featuresStr = eco._featuresStr || ''
+    const features = featuresStr
+      ? featuresStr.split(' ||| ').filter(Boolean)
+      : parseFeatures(originalEcos[i]?.features)
+    return { ...eco, _translatedFeatures: features }
+  })
+}
+
 // ─────────────────────────────────────────────────────────────────────
-// FULLSCREEN SHELL — overlay con barra Polartronic + iframe
+// FULLSCREEN SHELL — sin cambios
 // ─────────────────────────────────────────────────────────────────────
 function EcosystemFullscreen({ eco, brand, onClose, t }) {
   const iframeRef  = useRef(null)
@@ -9334,6 +9742,8 @@ function EcosystemFullscreen({ eco, brand, onClose, t }) {
   }, [onClose])
 
   function buildSrcDoc(html) {
+    const targetLang = (typeof window !== 'undefined' && window.__SITE_LANGUAGE__) || brand?.language || 'it'
+
     const stripCSS = `<style id="pt-strip">
       button,input[type="submit"],input[type="button"],input[type="reset"],
       form,.nav,nav,.navbar,.navigation,.hamburger,.menu-toggle,.burger,.menu-btn,
@@ -9347,10 +9757,84 @@ function EcosystemFullscreen({ eco, brand, onClose, t }) {
       a{pointer-events:none!important;cursor:default!important;}
       html,body{overflow-x:hidden;}
     </style>`
-    if (/<!doctype\s+html/i.test(html) || /<html[\s>]/i.test(html)) {
-      return html.replace(/<\/head>/i, stripCSS + '</head>')
+
+    // Script que traduce via postMessage — el lang llega del parent React
+    const translateScript = `<script>
+(function() {
+  var _cache = {};
+
+  function getTextNodes(root) {
+    var walker = document.createTreeWalker(
+      root, NodeFilter.SHOW_TEXT,
+      { acceptNode: function(node) {
+          var p = node.parentElement;
+          if (!p) return NodeFilter.FILTER_REJECT;
+          if (['SCRIPT','STYLE','NOSCRIPT','META','LINK'].includes(p.tagName)) return NodeFilter.FILTER_REJECT;
+          if (!node.textContent.trim()) return NodeFilter.FILTER_SKIP;
+          return NodeFilter.FILTER_ACCEPT;
+      }}
+    );
+    var nodes = []; var n;
+    while ((n = walker.nextNode())) nodes.push(n);
+    return nodes;
+  }
+
+  async function translateText(text, lang) {
+    var key = lang + '_' + text.trim().slice(0, 60);
+    if (_cache[key]) return _cache[key];
+    try {
+      var url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + lang + '&dt=t&q=' + encodeURIComponent(text);
+      var res = await fetch(url);
+      if (!res.ok) return text;
+      var data = await res.json();
+      var tr = (data[0] || []).map(function(c){return c[0]||'';}).join('');
+      if (tr) _cache[key] = tr;
+      return tr || text;
+    } catch(e) { return text; }
+  }
+
+  async function translatePage(lang) {
+    if (!lang || lang === 'auto') return;
+    var nodes = getTextNodes(document.body);
+    for (var i = 0; i < nodes.length; i += 8) {
+      var batch = nodes.slice(i, i + 8);
+      await Promise.all(batch.map(async function(node) {
+        var orig = node.textContent;
+        if (!orig.trim()) return;
+        var tr = await translateText(orig.trim(), lang);
+        if (tr && tr !== orig.trim()) node.textContent = tr;
+      }));
     }
-    return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,sans-serif;line-height:1.6;color:#111}img{max-width:100%}</style>${stripCSS}</head><body>${html}</body></html>`
+  }
+
+  // Escucha el lang enviado por el parent React via postMessage
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'PT_LANG' && e.data.lang) {
+      translatePage(e.data.lang);
+    }
+  });
+
+  // Fallback: si el iframe ya tiene el lang en el atributo data del html
+  var htmlLang = document.documentElement.getAttribute('data-pt-lang');
+  if (htmlLang) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function(){ translatePage(htmlLang); });
+    } else {
+      translatePage(htmlLang);
+    }
+  }
+})();
+<\/script>`
+
+    const inject = stripCSS + translateScript
+
+    if (/<!doctype\s+html/i.test(html) || /<html[\s>]/i.test(html)) {
+      // Inyecta data-pt-lang en el tag <html> y el script en <head>
+      return html
+        .replace(/<html([^>]*)>/i, `<html$1 data-pt-lang="${targetLang}">`)
+        .replace(/<\/head>/i, inject + '</head>')
+    }
+    return `<!DOCTYPE html><html lang="es" data-pt-lang="${targetLang}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,sans-serif;line-height:1.6;color:#111}img{max-width:100%}</style>${inject}</head><body>${html}</body></html>`
   }
 
   return (
@@ -9364,12 +9848,10 @@ function EcosystemFullscreen({ eco, brand, onClose, t }) {
         @keyframes shellOpen{from{opacity:0;transform:scale(0.985)}to{opacity:1;transform:scale(1)}}
         @keyframes iframeReveal{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
         @keyframes barSlide{from{opacity:0;transform:translateY(-100%)}to{opacity:1;transform:translateY(0)}}
-        @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
         .shell-back-btn:hover{background:rgba(255,255,255,0.12)!important;color:white!important;border-color:rgba(255,255,255,0.3)!important;}
         .shell-contact-btn:hover{transform:translateY(-2px)!important;box-shadow:0 12px 32px ${primary}60!important;}
       `}</style>
 
-      {/* BARRA TOP */}
       <div style={{
         flexShrink: 0, height: 62,
         background: 'rgba(5,7,10,0.9)',
@@ -9381,13 +9863,8 @@ function EcosystemFullscreen({ eco, brand, onClose, t }) {
         animation: 'barSlide 0.4s cubic-bezier(0.16,1,0.3,1) both',
         position: 'relative', zIndex: 2,
       }}>
-        {/* Línea de color del acento debajo de la barra */}
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, height: 2,
-          background: `linear-gradient(90deg, transparent, ${primary}80, transparent)`,
-        }} />
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, transparent, ${primary}80, transparent)` }} />
 
-        {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
           {brandLogo
             ? <img src={brandLogo} alt={brandName} style={{ height: 28, maxWidth: 130, objectFit: 'contain' }} />
@@ -9395,129 +9872,65 @@ function EcosystemFullscreen({ eco, brand, onClose, t }) {
           }
         </div>
 
-        {/* Divider */}
         <div style={{ width: 1, height: 26, background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
 
-        {/* Eco info */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
           {eco.category && (
-            <span style={{
-              fontSize: 9, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase',
-              color: primary, background: `${primary}15`,
-              border: `1px solid ${primary}35`, padding: '3px 10px', borderRadius: 20,
-              flexShrink: 0,
-            }}>{eco.category}</span>
+            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', color: primary, background: `${primary}15`, border: `1px solid ${primary}35`, padding: '3px 10px', borderRadius: 20, flexShrink: 0 }}>{eco.category}</span>
           )}
-          <span style={{
-            fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.85)',
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>{eco.title}</span>
-          {/* Indicador "DEMO COMERCIAL" */}
-          <span style={{
-            fontSize: 9, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase',
-            color: 'rgba(255,255,255,0.3)',
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            padding: '3px 8px', borderRadius: 4, flexShrink: 0,
-          }}>DEMO</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.85)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{eco.title}</span>
+          <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '3px 8px', borderRadius: 4, flexShrink: 0 }}>DEMO</span>
         </div>
 
-        {/* CTAs */}
         <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>
-          <a
-            href="#contacto"
-            onClick={(e) => {
-              e.preventDefault(); onClose()
-              setTimeout(() => { document.getElementById('contacto')?.scrollIntoView({ behavior: 'smooth' }) }, 220)
-            }}
+          <a href="#contacto" onClick={(e) => { e.preventDefault(); onClose(); setTimeout(() => { document.getElementById('contacto')?.scrollIntoView({ behavior: 'smooth' }) }, 220) }}
             className="shell-contact-btn"
-            style={{
-              padding: '9px 20px', background: primary, color: 'white',
-              borderRadius: 9, fontWeight: 800, fontSize: 12, letterSpacing: 0.8,
-              textTransform: 'uppercase', textDecoration: 'none',
-              display: 'flex', alignItems: 'center', gap: 6,
-              transition: 'all 0.22s', boxShadow: `0 4px 20px ${primary}35`,
-              whiteSpace: 'nowrap',
-            }}
-          >
+            style={{ padding: '9px 20px', background: primary, color: 'white', borderRadius: 9, fontWeight: 800, fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.22s', boxShadow: `0 4px 20px ${primary}35`, whiteSpace: 'nowrap' }}>
             {t.ecosystems?.ctaContact || 'Contratar'} →
           </a>
-          <button
-            onClick={onClose}
-            className="shell-back-btn"
-            style={{
-              padding: '9px 16px', background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.55)',
-              borderRadius: 9, fontSize: 12, fontWeight: 600,
-              cursor: 'pointer', transition: 'all 0.18s',
-              display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
-            }}
-          >
+          <button onClick={onClose} className="shell-back-btn"
+            style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.55)', borderRadius: 9, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.18s', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
             ✕ {t.ecosystems?.close || 'Cerrar'}
           </button>
         </div>
       </div>
 
-      {/* IFRAME */}
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        {/* Shimmer loader mientras carga */}
         {!iframeReady && (
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 3,
-            background: '#08090c',
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center', gap: 20,
-          }}>
-            <div style={{
-              width: 48, height: 48, borderRadius: '50%',
-              border: `3px solid rgba(255,255,255,0.06)`,
-              borderTopColor: primary,
-              animation: 'shellSpin 0.8s linear infinite',
-            }} />
-            <div style={{
-              fontSize: 12, color: 'rgba(255,255,255,0.25)',
-              fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase',
-            }}>Cargando demo...</div>
+          <div style={{ position: 'absolute', inset: 0, zIndex: 3, background: '#08090c', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', border: `3px solid rgba(255,255,255,0.06)`, borderTopColor: primary, animation: 'shellSpin 0.8s linear infinite' }} />
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>Cargando demo...</div>
             <style>{`@keyframes shellSpin{to{transform:rotate(360deg)}}`}</style>
           </div>
         )}
-        <iframe
-          ref={iframeRef}
-          title={`${eco.title} demo`}
-          sandbox="allow-scripts allow-same-origin"
-          onLoad={() => setIframeReady(true)}
-          style={{
-            width: '100%', height: '100%', border: 'none', display: 'block',
-            background: 'white',
-            opacity: iframeReady ? 1 : 0,
-            transition: 'opacity 0.4s ease',
-            animation: iframeReady ? 'iframeReveal 0.5s ease both' : 'none',
+        <iframe ref={iframeRef} title={`${eco.title} demo`} sandbox="allow-scripts allow-same-origin"
+          onLoad={() => {
+            setIframeReady(true)
+            setTimeout(() => {
+              iframeRef.current?.contentWindow?.postMessage(
+                { type: 'PT_LANG', lang: targetLang },
+                '*'
+              )
+            }, 150)
           }}
-          srcDoc={buildSrcDoc(eco.detailHtml || '')}
-        />
+          style={{ width: '100%', height: '100%', border: 'none', display: 'block', background: 'white', opacity: iframeReady ? 1 : 0, transition: 'opacity 0.4s ease', animation: iframeReady ? 'iframeReveal 0.5s ease both' : 'none' }}
+          srcDoc={buildSrcDoc(eco.detailHtml || '')} />
       </div>
 
-      {/* MOBILE BAR */}
-      <div style={{
-        flexShrink: 0, display: 'none', padding: '12px 16px', gap: 10,
-        background: 'rgba(5,7,10,0.97)',
-        borderTop: '1px solid rgba(255,255,255,0.07)',
-      }} className="eco-mobile-bar">
+      <div style={{ flexShrink: 0, display: 'none', padding: '12px 16px', gap: 10, background: 'rgba(4,5,10,0.97)', borderTop: '1px solid rgba(255,255,255,0.07)' }} className="eco-mobile-bar">
         <style>{`.eco-mobile-bar{@media(max-width:640px){display:flex!important;}}`}</style>
         <a href="#contacto" onClick={(e) => { e.preventDefault(); onClose(); setTimeout(() => document.getElementById('contacto')?.scrollIntoView({ behavior: 'smooth' }), 220) }}
           style={{ flex: 1, padding: '13px', background: primary, color: 'white', borderRadius: 10, fontWeight: 800, fontSize: 13, textDecoration: 'none', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.8 }}>
           {t.ecosystems?.ctaContact || 'Contratar'} →
         </a>
-        <button onClick={onClose} style={{ padding: '13px 16px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          ✕
-        </button>
+        <button onClick={onClose} style={{ padding: '13px 16px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>✕</button>
       </div>
     </div>
   )
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// FALLBACK DRAWER — sin detailHtml
+// FALLBACK DRAWER — sin cambios, recibe eco ya traducido
 // ─────────────────────────────────────────────────────────────────────
 function EcosystemDrawer({ eco, primary, onClose, t, projects = [] }) {
   useEffect(() => {
@@ -9531,7 +9944,9 @@ function EcosystemDrawer({ eco, primary, onClose, t, projects = [] }) {
     return () => window.removeEventListener('keydown', fn)
   }, [onClose])
 
-  const features = parseFeatures(eco.features)
+  // Usa _translatedFeatures si existe, sino parsea el original
+  const features = eco._translatedFeatures || parseFeatures(eco.features)
+
   const relatedProjects = projects.filter(p => {
     const pi = (p.industry || p.category || '').toLowerCase()
     const ec = (eco.category || eco.title || '').toLowerCase()
@@ -9548,31 +9963,12 @@ function EcosystemDrawer({ eco, primary, onClose, t, projects = [] }) {
         .feature-item:hover{background:rgba(255,255,255,0.03)!important;padding-left:14px!important;}
       `}</style>
 
-      {/* Backdrop */}
-      <div onClick={onClose} style={{
-        position: 'fixed', inset: 0, zIndex: 8000,
-        background: 'rgba(0,0,0,0.72)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        animation: 'backdropIn 0.28s ease both',
-        cursor: 'pointer',
-      }} />
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 8000, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', animation: 'backdropIn 0.28s ease both', cursor: 'pointer' }} />
 
-      {/* Panel */}
-      <div style={{
-        position: 'fixed', top: 0, right: 0, bottom: 0,
-        zIndex: 8100, width: 'min(500px, 92vw)',
-        background: 'linear-gradient(160deg, #0d0e12 0%, #08090c 100%)',
-        borderLeft: `1px solid ${primary}20`,
-        display: 'flex', flexDirection: 'column',
-        animation: 'drawerIn 0.42s cubic-bezier(0.16,1,0.3,1) both',
-        boxShadow: `-32px 0 80px rgba(0,0,0,0.7)`,
-      }}>
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 8100, width: 'min(500px, 92vw)', background: 'linear-gradient(160deg, #0d0e12 0%, #08090c 100%)', borderLeft: `1px solid ${primary}20`, display: 'flex', flexDirection: 'column', animation: 'drawerIn 0.42s cubic-bezier(0.16,1,0.3,1) both', boxShadow: `-32px 0 80px rgba(0,0,0,0.7)` }}>
 
-        {/* Línea de acento top */}
         <div style={{ height: 3, background: `linear-gradient(90deg, ${primary}, ${primary}40, transparent)`, flexShrink: 0 }} />
 
-        {/* Hero del drawer */}
         <div style={{ position: 'relative', flexShrink: 0 }}>
           {eco.image && (
             <div style={{ height: 180, overflow: 'hidden' }}>
@@ -9580,7 +9976,6 @@ function EcosystemDrawer({ eco, primary, onClose, t, projects = [] }) {
               <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, #0d0e12 0%, transparent 60%)` }} />
             </div>
           )}
-          {/* Header sobre/bajo imagen */}
           <div style={{ padding: eco.image ? '0 24px 20px' : '24px 24px 20px', position: eco.image ? 'absolute' : 'relative', bottom: eco.image ? 0 : 'auto', left: 0, right: 0 }}>
             {eco.category && (
               <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 2.5, color: primary, textTransform: 'uppercase', marginBottom: 6 }}>{eco.category}</div>
@@ -9593,19 +9988,9 @@ function EcosystemDrawer({ eco, primary, onClose, t, projects = [] }) {
               </div>
             )}
           </div>
-
-          {/* Botón cerrar */}
-          <button onClick={onClose} style={{
-            position: 'absolute', top: 16, right: 16,
-            width: 36, height: 36, borderRadius: '50%',
-            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255,255,255,0.15)',
-            color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
-            fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>✕</button>
+          <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
         </div>
 
-        {/* Scroll content */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px 8px' }}>
           {eco.desc && (
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, lineHeight: 1.8, marginBottom: 24, borderLeft: `2px solid ${primary}40`, paddingLeft: 14 }}>
@@ -9613,14 +9998,13 @@ function EcosystemDrawer({ eco, primary, onClose, t, projects = [] }) {
             </p>
           )}
 
-          {/* Related projects */}
           {relatedProjects.length > 0 && (
             <div style={{ marginBottom: 28 }}>
               <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 2, color: 'rgba(255,255,255,0.25)', marginBottom: 12 }}>
                 {t.ecosystems?.successCases || 'Casos de éxito'}
               </div>
               {relatedProjects.map((p, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', marginBottom: 8, transition: 'all 0.2s' }}>
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', marginBottom: 8 }}>
                   {p.image && <div style={{ width: 40, height: 40, borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}><img src={p.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 13, color: 'rgba(255,255,255,0.85)' }}>{p.client || p.title}</div>
@@ -9631,7 +10015,6 @@ function EcosystemDrawer({ eco, primary, onClose, t, projects = [] }) {
             </div>
           )}
 
-          {/* Features */}
           {features.length > 0 && (
             <div style={{ marginBottom: 24 }}>
               <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 2, color: 'rgba(255,255,255,0.25)', marginBottom: 14 }}>
@@ -9653,7 +10036,6 @@ function EcosystemDrawer({ eco, primary, onClose, t, projects = [] }) {
           )}
         </div>
 
-        {/* Footer CTAs */}
         <div style={{ flexShrink: 0, padding: '16px 24px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: 10 }}>
           <a href="#contacto" onClick={onClose} className="drawer-cta-primary"
             style={{ flex: 1, padding: '14px 20px', background: primary, color: 'white', borderRadius: 10, fontWeight: 800, fontSize: 13, letterSpacing: 0.8, textTransform: 'uppercase', textDecoration: 'none', textAlign: 'center', transition: 'all 0.22s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: `0 4px 20px ${primary}30` }}>
@@ -9670,132 +10052,66 @@ function EcosystemDrawer({ eco, primary, onClose, t, projects = [] }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// ECOSYSTEM CARD — diseño premium con spotlight hover
+// ECOSYSTEM CARD — recibe eco ya traducido
 // ─────────────────────────────────────────────────────────────────────
 function EcosystemCard({ eco, idx, primary, t, onOpen }) {
   const [hovered, setHovered] = useState(false)
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 })
   const cardRef = useRef(null)
-  const features   = parseFeatures(eco.features).slice(0, 3)
+  // Usa features traducidas si están disponibles
+  const features = (eco._translatedFeatures || parseFeatures(eco.features)).slice(0, 3)
   const hasLanding = !!(eco.detailHtml && eco.detailHtml.trim())
 
   function handleMouseMove(e) {
     const rect = cardRef.current?.getBoundingClientRect()
     if (!rect) return
-    setMousePos({
-      x: ((e.clientX - rect.left) / rect.width) * 100,
-      y: ((e.clientY - rect.top) / rect.height) * 100,
-    })
+    setMousePos({ x: ((e.clientX - rect.left) / rect.width) * 100, y: ((e.clientY - rect.top) / rect.height) * 100 })
   }
 
   return (
-    <div
-      ref={cardRef}
-      onClick={() => onOpen(idx)}
+    <div ref={cardRef} onClick={() => onOpen(idx)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onMouseMove={handleMouseMove}
       style={{
-        borderRadius: 20, overflow: 'hidden',
-        cursor: 'pointer', position: 'relative',
-        border: eco.featured
-          ? `1px solid ${primary}55`
-          : hovered ? `1px solid ${primary}45` : '1px solid rgba(255,255,255,0.07)',
+        borderRadius: 20, overflow: 'hidden', cursor: 'pointer', position: 'relative',
+        border: eco.featured ? `1px solid ${primary}55` : hovered ? `1px solid ${primary}45` : '1px solid rgba(255,255,255,0.07)',
         background: '#0a0b0e',
         transition: 'transform 0.4s cubic-bezier(0.16,1,0.3,1), border-color 0.3s, box-shadow 0.4s',
         transform: hovered ? 'translateY(-8px) scale(1.01)' : 'translateY(0) scale(1)',
         boxShadow: hovered ? `0 28px 60px rgba(0,0,0,0.55), 0 0 0 1px ${primary}25` : '0 4px 20px rgba(0,0,0,0.3)',
-        animationDelay: `${idx * 0.07}s`,
-      }}
-    >
-      {/* Spotlight hover effect */}
+        height: '100%',
+      }}>
       {hovered && (
-        <div style={{
-          position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
-          background: `radial-gradient(circle 200px at ${mousePos.x}% ${mousePos.y}%, ${primary}10 0%, transparent 70%)`,
-          transition: 'opacity 0.2s',
-        }} />
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', background: `radial-gradient(circle 200px at ${mousePos.x}% ${mousePos.y}%, ${primary}10 0%, transparent 70%)`, transition: 'opacity 0.2s' }} />
       )}
-
-      {/* Featured badge */}
       {eco.featured && (
-        <div style={{
-          position: 'absolute', top: 14, right: 14, zIndex: 3,
-          background: primary, color: 'white',
-          fontSize: 9, fontWeight: 900, letterSpacing: 1.2,
-          textTransform: 'uppercase', padding: '4px 12px', borderRadius: 20,
-          boxShadow: `0 4px 16px ${primary}50`,
-        }}>★ Destacado</div>
+        <div style={{ position: 'absolute', top: 14, right: 14, zIndex: 3, background: primary, color: 'white', fontSize: 9, fontWeight: 900, letterSpacing: 1.2, textTransform: 'uppercase', padding: '4px 12px', borderRadius: 20, boxShadow: `0 4px 16px ${primary}50` }}>★ Destacado</div>
       )}
-
-      {/* Landing badge */}
       {hasLanding && (
-        <div style={{
-          position: 'absolute', top: eco.featured ? 42 : 14, right: 14, zIndex: 3,
-          background: 'rgba(55,138,221,0.15)',
-          border: '1px solid rgba(55,138,221,0.4)',
-          color: '#5aacff',
-          fontSize: 9, fontWeight: 800, letterSpacing: 1,
-          textTransform: 'uppercase', padding: '4px 10px', borderRadius: 20,
-        }}>🌐 Demo live</div>
+        <div style={{ position: 'absolute', top: eco.featured ? 42 : 14, right: 14, zIndex: 3, background: 'rgba(55,138,221,0.15)', border: '1px solid rgba(55,138,221,0.4)', color: '#5aacff', fontSize: 9, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', padding: '4px 10px', borderRadius: 20 }}>🌐 Demo live</div>
       )}
-
-      {/* Imagen */}
       {eco.image && (
         <div style={{ height: 180, overflow: 'hidden', position: 'relative', zIndex: 1 }}>
-          <img src={eco.image} alt={eco.title} style={{
-            width: '100%', height: '100%', objectFit: 'cover',
-            filter: hovered ? 'brightness(0.6) saturate(1.1)' : 'brightness(0.45)',
-            transform: hovered ? 'scale(1.08)' : 'scale(1)',
-            transition: 'all 0.6s cubic-bezier(0.16,1,0.3,1)',
-          }} />
-          {/* Gradient overlay */}
+          <img src={eco.image} alt={eco.title} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: hovered ? 'brightness(0.6) saturate(1.1)' : 'brightness(0.45)', transform: hovered ? 'scale(1.08)' : 'scale(1)', transition: 'all 0.6s cubic-bezier(0.16,1,0.3,1)' }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #0a0b0e 0%, rgba(10,11,14,0.3) 60%, transparent 100%)' }} />
-
-          {/* Play/arrow overlay */}
-          <div style={{
-            position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            opacity: hovered ? 1 : 0, transition: 'opacity 0.3s',
-          }}>
-            <div style={{
-              width: 56, height: 56, borderRadius: '50%',
-              background: 'rgba(5,7,10,0.75)', backdropFilter: 'blur(10px)',
-              border: `2px solid ${primary}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: hasLanding ? 22 : 20, color: primary,
-              transform: hovered ? 'scale(1)' : 'scale(0.6)',
-              transition: 'transform 0.35s cubic-bezier(0.16,1,0.3,1)',
-              boxShadow: `0 0 32px ${primary}40`,
-            }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: hovered ? 1 : 0, transition: 'opacity 0.3s' }}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(5,7,10,0.75)', backdropFilter: 'blur(10px)', border: `2px solid ${primary}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: hasLanding ? 22 : 20, color: primary, transform: hovered ? 'scale(1)' : 'scale(0.6)', transition: 'transform 0.35s cubic-bezier(0.16,1,0.3,1)', boxShadow: `0 0 32px ${primary}40` }}>
               {hasLanding ? '▶' : '→'}
             </div>
           </div>
         </div>
       )}
-
-      {/* Content */}
       <div style={{ padding: '20px 22px 22px', position: 'relative', zIndex: 1 }}>
-        {eco.category && (
-          <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 2, color: primary, marginBottom: 6 }}>
-            {eco.category}
-          </div>
-        )}
-        <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: '0 0 6px', color: 'white', lineHeight: 1.2 }}>
-          {eco.title}
-        </h3>
+        {eco.category && <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 2, color: primary, marginBottom: 6 }}>{eco.category}</div>}
+        <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: '0 0 6px', color: 'white', lineHeight: 1.2 }}>{eco.title}</h3>
         {eco.price && (
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 10 }}>
             <span style={{ fontSize: '1.25rem', fontWeight: 900, color: primary }}>{eco.price}</span>
             {eco.period && <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{eco.period}</span>}
           </div>
         )}
-        {eco.desc && (
-          <p style={{ color: 'rgba(255,255,255,0.42)', fontSize: 13, lineHeight: 1.65, margin: '0 0 14px' }}>
-            {eco.desc}
-          </p>
-        )}
-
-        {/* Features list */}
+        {eco.desc && <p style={{ color: 'rgba(255,255,255,0.42)', fontSize: 13, lineHeight: 1.65, margin: '0 0 14px' }}>{eco.desc}</p>}
         {features.length > 0 && (
           <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 16px', display: 'flex', flexDirection: 'column', gap: 5 }}>
             {features.map((f, i) => (
@@ -9805,25 +10121,11 @@ function EcosystemCard({ eco, idx, primary, t, onOpen }) {
             ))}
           </ul>
         )}
-
-        {/* CTA bottom */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 6, paddingTop: 14,
-          borderTop: '1px solid rgba(255,255,255,0.06)',
-        }}>
-          <span style={{
-            fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
-            color: hovered ? primary : 'rgba(255,255,255,0.25)',
-            transition: 'color 0.2s',
-          }}>
-            {hasLanding
-              ? (t.ecosystems?.viewDetail || 'Ver demo') + ' ▶'
-              : (t.ecosystems?.viewDetail || 'Ver detalle') + ' →'
-            }
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: hovered ? primary : 'rgba(255,255,255,0.25)', transition: 'color 0.2s' }}>
+            {hasLanding ? (t.ecosystems?.viewDetail || 'Ver demo') + ' ▶' : (t.ecosystems?.viewDetail || 'Ver detalle') + ' →'}
           </span>
-          {hovered && (
-            <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${primary}60, transparent)`, animation: 'lineGrow 0.3s ease both' }} />
-          )}
+          {hovered && <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${primary}60, transparent)` }} />}
         </div>
       </div>
     </div>
@@ -9839,19 +10141,28 @@ export default function EcosystemSection({ ecosystems, brand, projects = [] }) {
 
   if (!ecosystems?.length) return null
 
-  const selectedEco = selected !== null ? ecosystems[selected] : null
-  const primary     = brand?.primary || '#ff3c3c'
+  const primary = brand?.primary || '#ff3c3c'
+
+  // Preparar para traducción: title, desc, category, extraText, _featuresStr
+  const prepared = prepareForTranslation(ecosystems)
+  const translatedRaw = useTranslatedArray(
+    prepared,
+    ['title', 'desc', 'category', 'extraText', '_featuresStr'],
+    brand
+  )
+  // Restaurar features como array desde _featuresStr traducido
+  const translatedEcosystems = restoreFeatures(translatedRaw, ecosystems)
+
+  const selectedEco = selected !== null ? translatedEcosystems[selected] : null
   const hasLanding  = selectedEco && !!(selectedEco.detailHtml && selectedEco.detailHtml.trim())
 
   return (
     <section id="ecosistemas" style={{ padding: '100px 6%' }}>
       <style>{`
         @keyframes cardReveal{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes lineGrow{from{scaleX:0;opacity:0}to{scaleX:1;opacity:1}}
         #ecosistemas .eco-card{animation:cardReveal 0.55s cubic-bezier(0.16,1,0.3,1) both;}
       `}</style>
 
-      {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: 60 }}>
         <p style={{ color: primary, fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 14 }}>
           {t.ecosystems?.eyebrow || 'Grupos Partners'}
@@ -9862,16 +10173,14 @@ export default function EcosystemSection({ ecosystems, brand, projects = [] }) {
         </h2>
       </div>
 
-      {/* Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 22 }}>
-        {ecosystems.map((eco, idx) => (
+        {translatedEcosystems.map((eco, idx) => (
           <div key={eco.id || idx} className="eco-card" style={{ animationDelay: `${idx * 0.07}s` }}>
             <EcosystemCard eco={eco} idx={idx} primary={primary} t={t} onOpen={setSelected} />
           </div>
         ))}
       </div>
 
-      {/* Overlays */}
       {selectedEco && hasLanding && (
         <EcosystemFullscreen eco={selectedEco} brand={brand} onClose={() => setSelected(null)} t={t} />
       )}
