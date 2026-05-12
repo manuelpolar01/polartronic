@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /admin/
-Sitemap: https://polartronic.com/sitemap.xml
+Sitemap: https://polartronic.app-customer.com/sitemap.xml
