@@ -99,706 +99,6 @@ vite.config.js
 <files>
 This section contains the contents of the repository's files.
 
-<file path="src/components/common/PhoneInput.jsx">
-/**
- * PhoneInput.jsx
- * ─────────────────────────────────────────────────────────────────────────
- * Input de teléfono con:
- *  - Selector de país con bandera + prefijo
- *  - Validación de longitud exacta por país
- *  - Máscara de formato automática
- *  - 100% responsivo
- *  - Sin dependencias externas
- *
- * Props:
- *   value       {string}   Número completo con prefijo (ej: "+39 333 123 4567")
- *   onChange    {Function} (fullNumber: string) => void
- *   error       {string}   Mensaje de error opcional
- *   primary     {string}   Color primario del tema
- *   placeholder {string}   Placeholder personalizado
- */
-
-// ─── Países: [código, bandera, prefijo, longitud dígitos sin prefijo, máscara] ──
-// máscara: '0' = dígito, ' '/'-'/'(' = literal
-const COUNTRIES = [
-  { code: 'IT', flag: '🇮🇹', prefix: '+39',  digits: 10, mask: '000 000 0000',     name: 'Italia'          },
-  { code: 'ES', flag: '🇪🇸', prefix: '+34',  digits: 9,  mask: '000 000 000',      name: 'España'          },
-  { code: 'FR', flag: '🇫🇷', prefix: '+33',  digits: 9,  mask: '0 00 00 00 00',    name: 'France'          },
-  { code: 'DE', flag: '🇩🇪', prefix: '+49',  digits: 10, mask: '0000 0000000',     name: 'Deutschland'     },
-  { code: 'PT', flag: '🇵🇹', prefix: '+351', digits: 9,  mask: '000 000 000',      name: 'Portugal'        },
-  { code: 'CH', flag: '🇨🇭', prefix: '+41',  digits: 9,  mask: '00 000 00 00',     name: 'Schweiz'         },
-  { code: 'GB', flag: '🇬🇧', prefix: '+44',  digits: 10, mask: '0000 000000',      name: 'United Kingdom'  },
-  { code: 'US', flag: '🇺🇸', prefix: '+1',   digits: 10, mask: '(000) 000-0000',   name: 'United States'   },
-  { code: 'AR', flag: '🇦🇷', prefix: '+54',  digits: 10, mask: '(000) 000-0000',   name: 'Argentina'       },
-  { code: 'MX', flag: '🇲🇽', prefix: '+52',  digits: 10, mask: '(000) 000-0000',   name: 'México'          },
-  { code: 'BR', flag: '🇧🇷', prefix: '+55',  digits: 11, mask: '(00) 00000-0000',  name: 'Brasil'          },
-  { code: 'CO', flag: '🇨🇴', prefix: '+57',  digits: 10, mask: '000 000 0000',     name: 'Colombia'        },
-  { code: 'NL', flag: '🇳🇱', prefix: '+31',  digits: 9,  mask: '00 000 0000',      name: 'Nederland'       },
-  { code: 'BE', flag: '🇧🇪', prefix: '+32',  digits: 9,  mask: '000 00 00 00',     name: 'Belgique'        },
-  { code: 'AT', flag: '🇦🇹', prefix: '+43',  digits: 10, mask: '000 000 0000',     name: 'Österreich'      },
-  { code: 'PL', flag: '🇵🇱', prefix: '+48',  digits: 9,  mask: '000 000 000',      name: 'Polska'          },
-  { code: 'RO', flag: '🇷🇴', prefix: '+40',  digits: 9,  mask: '000 000 000',      name: 'România'         },
-  { code: 'RU', flag: '🇷🇺', prefix: '+7',   digits: 10, mask: '(000) 000-00-00',  name: 'Россия'          },
-  { code: 'TR', flag: '🇹🇷', prefix: '+90',  digits: 10, mask: '(000) 000 0000',   name: 'Türkiye'         },
-  { code: 'AE', flag: '🇦🇪', prefix: '+971', digits: 9,  mask: '00 000 0000',      name: 'الإمارات'        },
-  { code: 'SA', flag: '🇸🇦', prefix: '+966', digits: 9,  mask: '00 000 0000',      name: 'السعودية'        },
-  { code: 'CN', flag: '🇨🇳', prefix: '+86',  digits: 11, mask: '000 0000 0000',    name: '中国'            },
-  { code: 'JP', flag: '🇯🇵', prefix: '+81',  digits: 10, mask: '00-0000-0000',     name: '日本'            },
-  { code: 'IN', flag: '🇮🇳', prefix: '+91',  digits: 10, mask: '00000 00000',      name: 'India'           },
-  { code: 'AU', flag: '🇦🇺', prefix: '+61',  digits: 9,  mask: '000 000 000',      name: 'Australia'       },
-  { code: 'CA', flag: '🇨🇦', prefix: '+1',   digits: 10, mask: '(000) 000-0000',   name: 'Canada'          },
-  { code: 'ZA', flag: '🇿🇦', prefix: '+27',  digits: 9,  mask: '00 000 0000',      name: 'South Africa'    },
-  { code: 'NG', flag: '🇳🇬', prefix: '+234', digits: 10, mask: '000 000 0000',     name: 'Nigeria'         },
-  { code: 'MA', flag: '🇲🇦', prefix: '+212', digits: 9,  mask: '000-000000',       name: 'المغرب'          },
-]
-
-/**
- * Aplica la máscara al string de dígitos
- * Ejemplo: digits="3331234567", mask="000 000 0000" → "333 123 4567"
- */
-function applyMask(digits, mask) {
-  let result = ''
-  let di = 0
-  for (let i = 0; i < mask.length && di < digits.length; i++) {
-    if (mask[i] === '0') {
-      result += digits[di++]
-    } else {
-      result += mask[i]
-      // Si el siguiente char de la máscara es un dígito y aún hay dígitos, seguir
-    }
-  }
-  return result
-}
-
-/**
- * Detecta país por prefijo desde un número completo guardado
- */
-function detectCountryFromValue(value) {
-  if (!value) return COUNTRIES[0]
-  const clean = value.replace(/\s/g, '')
-  // Ordenar por longitud de prefijo desc para evitar falsos positivos (+1 vs +12)
-  const sorted = [...COUNTRIES].sort((a, b) => b.prefix.length - a.prefix.length)
-  return sorted.find(c => clean.startsWith(c.prefix)) || COUNTRIES[0]
-}
-
-/**
- * Extrae solo los dígitos locales de un valor completo
- */
-function extractLocalDigits(value, country) {
-  if (!value) return ''
-  const withoutPrefix = value.replace(/\s/g, '').replace(country.prefix, '')
-  return withoutPrefix.replace(/\D/g, '')
-}
-
-import { useState, useRef, useEffect } from 'react'
-
-export default function PhoneInput({ value, onChange, error, primary = '#ff3c3c', placeholder }) {
-  const [country,   setCountry]   = useState(() => detectCountryFromValue(value))
-  const [localRaw,  setLocalRaw]  = useState(() => extractLocalDigits(value, detectCountryFromValue(value)))
-  const [open,      setOpen]      = useState(false)
-  const [search,    setSearch]    = useState('')
-  const [focused,   setFocused]   = useState(false)
-  const dropRef  = useRef(null)
-  const inputRef = useRef(null)
-
-  // Sync hacia fuera cada vez que cambia country o localRaw
-  useEffect(() => {
-    const digits = localRaw.replace(/\D/g, '').slice(0, country.digits)
-    const masked = applyMask(digits, country.mask)
-    const full   = masked ? `${country.prefix} ${masked}` : ''
-    onChange(full)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [country, localRaw])
-
-  // Cerrar dropdown al click fuera
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (dropRef.current && !dropRef.current.contains(e.target)) {
-        setOpen(false)
-        setSearch('')
-      }
-    }
-    if (open) document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [open])
-
-  function handleCountrySelect(c) {
-    setCountry(c)
-    setLocalRaw('')
-    setOpen(false)
-    setSearch('')
-    setTimeout(() => inputRef.current?.focus(), 50)
-  }
-
-  function handleLocalInput(e) {
-    // Solo dígitos, máximo según país
-    const digits = e.target.value.replace(/\D/g, '').slice(0, country.digits)
-    setLocalRaw(digits)
-  }
-
-  const digits  = localRaw.replace(/\D/g, '').slice(0, country.digits)
-  const masked  = applyMask(digits, country.mask)
-  const isValid = digits.length === country.digits
-  const isEmpty = digits.length === 0
-
-  const filteredCountries = search
-    ? COUNTRIES.filter(c =>
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.prefix.includes(search) ||
-        c.code.toLowerCase().includes(search.toLowerCase())
-      )
-    : COUNTRIES
-
-  const borderColor = error
-    ? 'rgba(255,80,80,0.6)'
-    : focused
-      ? primary
-      : 'rgba(255,255,255,0.12)'
-
-  // Placeholder dinámico basado en la máscara del país
-  const dynamicPlaceholder = placeholder || country.mask.replace(/0/g, '·')
-
-  return (
-    <div style={{ position: 'relative', width: '100%' }}>
-      <style>{`
-        .phone-input-wrap {
-          display: flex;
-          align-items: stretch;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid ${borderColor};
-          border-radius: 10px;
-          overflow: visible;
-          transition: border-color 0.2s;
-          position: relative;
-        }
-        .phone-flag-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 0 12px;
-          background: rgba(255,255,255,0.04);
-          border: none;
-          border-right: 1px solid rgba(255,255,255,0.08);
-          cursor: pointer;
-          flex-shrink: 0;
-          transition: background 0.15s;
-          border-radius: 10px 0 0 10px;
-          min-width: 90px;
-        }
-        .phone-flag-btn:hover { background: rgba(255,255,255,0.08); }
-        .phone-flag-emoji { font-size: 20px; line-height: 1; }
-        .phone-prefix { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.7); }
-        .phone-chevron { font-size: 10px; color: rgba(255,255,255,0.3); transition: transform 0.2s; }
-        .phone-number-input {
-          flex: 1;
-          background: transparent;
-          border: none;
-          outline: none;
-          color: white;
-          font-size: 14px;
-          font-family: inherit;
-          padding: 13px 14px;
-          letter-spacing: 0.5px;
-          min-width: 0;
-        }
-        .phone-number-input::placeholder { color: rgba(255,255,255,0.25); }
-        .phone-validity {
-          display: flex;
-          align-items: center;
-          padding: 0 12px;
-          flex-shrink: 0;
-          font-size: 13px;
-          transition: all 0.2s;
-        }
-        /* Dropdown */
-        .phone-dropdown {
-          position: absolute;
-          top: calc(100% + 6px);
-          left: 0;
-          right: 0;
-          z-index: 9999;
-          background: #111318;
-          border: 1px solid rgba(255,255,255,0.12);
-          border-radius: 12px;
-          box-shadow: 0 16px 40px rgba(0,0,0,0.6);
-          overflow: hidden;
-          animation: phoneDropIn 0.18s cubic-bezier(0.16,1,0.3,1) both;
-        }
-        @keyframes phoneDropIn {
-          from { opacity:0; transform:translateY(-6px) scale(0.98); }
-          to   { opacity:1; transform:translateY(0) scale(1); }
-        }
-        .phone-search {
-          padding: 10px 14px;
-          border-bottom: 1px solid rgba(255,255,255,0.07);
-        }
-        .phone-search input {
-          width: 100%;
-          background: rgba(255,255,255,0.06);
-          border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 7px;
-          color: white;
-          font-size: 13px;
-          padding: 8px 12px;
-          outline: none;
-          font-family: inherit;
-          box-sizing: border-box;
-        }
-        .phone-search input::placeholder { color: rgba(255,255,255,0.3); }
-        .phone-list {
-          max-height: 220px;
-          overflow-y: auto;
-          scrollbar-width: thin;
-          scrollbar-color: rgba(255,255,255,0.1) transparent;
-        }
-        .phone-list::-webkit-scrollbar { width: 4px; }
-        .phone-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
-        .phone-country-item {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 10px 14px;
-          cursor: pointer;
-          transition: background 0.12s;
-          border: none;
-          background: transparent;
-          width: 100%;
-          text-align: left;
-        }
-        .phone-country-item:hover { background: rgba(255,255,255,0.06); }
-        .phone-country-item.active { background: rgba(255,60,60,0.08); }
-        .phone-country-name { font-size: 13px; color: rgba(255,255,255,0.75); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .phone-country-prefix { font-size: 12px; color: rgba(255,255,255,0.35); font-weight: 700; flex-shrink: 0; }
-        /* Progress bar de dígitos */
-        .phone-progress-wrap {
-          height: 2px;
-          background: rgba(255,255,255,0.06);
-          border-radius: 0 0 10px 10px;
-          overflow: hidden;
-          margin-top: 0;
-        }
-        .phone-progress-bar {
-          height: 100%;
-          border-radius: 2px;
-          transition: width 0.2s, background 0.2s;
-        }
-        @media (max-width: 480px) {
-          .phone-flag-btn { min-width: 76px; padding: 0 8px; gap: 4px; }
-          .phone-prefix { font-size: 12px; }
-          .phone-number-input { font-size: 14px; padding: 13px 10px; }
-        }
-      `}</style>
-
-      <div ref={dropRef}>
-        <div className="phone-input-wrap">
-          {/* Selector de país */}
-          <button
-            type="button"
-            className="phone-flag-btn"
-            onClick={() => setOpen(p => !p)}
-            aria-label="Seleccionar país"
-          >
-            <span className="phone-flag-emoji">{country.flag}</span>
-            <span className="phone-prefix">{country.prefix}</span>
-            <span className="phone-chevron" style={{ transform: open ? 'rotate(180deg)' : 'none' }}>▼</span>
-          </button>
-
-          {/* Input numérico */}
-          <input
-            ref={inputRef}
-            type="tel"
-            inputMode="numeric"
-            className="phone-number-input"
-            value={masked}
-            onChange={handleLocalInput}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            placeholder={dynamicPlaceholder}
-            autoComplete="tel-national"
-          />
-
-          {/* Indicador válido/inválido */}
-          <div className="phone-validity">
-            {!isEmpty && (
-              isValid
-                ? <span style={{ color: '#1D9E75', fontSize: 16 }}>✓</span>
-                : <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>{digits.length}/{country.digits}</span>
-            )}
-          </div>
-        </div>
-
-        {/* Barra de progreso */}
-        <div className="phone-progress-wrap">
-          <div
-            className="phone-progress-bar"
-            style={{
-              width: `${(digits.length / country.digits) * 100}%`,
-              background: isValid ? '#1D9E75' : primary,
-            }}
-          />
-        </div>
-
-        {/* Dropdown de países */}
-        {open && (
-          <div className="phone-dropdown">
-            <div className="phone-search">
-              <input
-                type="text"
-                placeholder="Buscar país o prefijo..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                autoFocus
-              />
-            </div>
-            <div className="phone-list">
-              {filteredCountries.length === 0 && (
-                <div style={{ padding: '14px', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>
-                  Sin resultados
-                </div>
-              )}
-              {filteredCountries.map(c => (
-                <button
-                  key={c.code}
-                  type="button"
-                  className={`phone-country-item${c.code === country.code ? ' active' : ''}`}
-                  onClick={() => handleCountrySelect(c)}
-                >
-                  <span style={{ fontSize: 18, lineHeight: 1 }}>{c.flag}</span>
-                  <span className="phone-country-name">{c.name}</span>
-                  <span className="phone-country-prefix">{c.prefix}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Hint de formato */}
-      {!error && focused && !isEmpty && !isValid && (
-        <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
-          {country.name} · {country.digits} dígitos · formato {country.mask.replace(/0/g, '·')}
-        </p>
-      )}
-      {error && (
-        <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>{error}</p>
-      )}
-    </div>
-  )
-}
-</file>
-
-<file path="src/hooks/useTranslatedContent.js">
-/**
- * useTranslatedContent.js
- * ─────────────────────────────────────────────────────────────────────────
- * Hook React que traduce un objeto de contenido (o string simple)
- * al idioma activo configurado en el panel.
- *
- * COMPORTAMIENTO:
- *  - Mientras traduce → devuelve el contenido ORIGINAL (sin flash vacío)
- *  - Cuando termina   → devuelve el contenido TRADUCIDO
- *  - Si lang === sourceLang → devuelve original sin llamar a la API
- *  - Si la API falla  → devuelve original (silencioso)
- *  - Escucha el evento 'sitelang' para reaccionar al cambio de idioma
- *    en tiempo real sin recargar la página
- *
- * USO:
- *   // String simple
- *   const title = useTranslatedContent(hero.headline, brand)
- *
- *   // Objeto con múltiples campos
- *   const { headline, sub, badge } = useTranslatedContent(
- *     { headline: hero.headline, sub: hero.sub, badge: hero.badge },
- *     brand
- *   )
- *
- * PARÁMETROS:
- *   content    {string|object}  Texto o mapa de textos a traducir
- *   brand      {object}         Objeto brand del site (necesita brand.language)
- *   sourceLang {string}         Idioma en que está escrito el contenido.
- *                               Si no se especifica se usa brand.language como
- *                               idioma origen (el admin escribe en el lang activo
- *                               al momento de guardar — asumimos que no cambia).
- *                               Pasa 'auto' para detección automática.
- */
-
-import { useState, useEffect, useRef } from 'react'
-import { translateBatch, shouldTranslate } from '../lib/translate'
-import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from '../lib/uiStrings'
-
-function resolveTargetLang(brand) {
-  const supported = SUPPORTED_LANGUAGES.map(l => l.code)
-  const fromBrand = brand?.language
-  const fromWindow = typeof window !== 'undefined' ? window.__SITE_LANGUAGE__ : null
-
-  const candidate = fromBrand || fromWindow || DEFAULT_LANGUAGE
-  return supported.includes(candidate) ? candidate : DEFAULT_LANGUAGE
-}
-
-/**
- * Extrae todos los valores string de un objeto (un nivel de profundidad)
- * Ignora valores que no son string, arrays de objetos, etc.
- */
-function extractStrings(content) {
-  if (typeof content === 'string') return [content]
-  if (typeof content !== 'object' || content === null) return []
-  return Object.values(content).filter(v => typeof v === 'string' && v.trim())
-}
-
-/**
- * Reconstruye el objeto traducido dado el original y el array de traducciones
- */
-function rebuildObject(original, keys, translations) {
-  if (typeof original === 'string') return translations[0] ?? original
-  const result = { ...original }
-  let i = 0
-  for (const key of keys) {
-    if (typeof original[key] === 'string' && original[key].trim()) {
-      result[key] = translations[i] ?? original[key]
-      i++
-    }
-  }
-  return result
-}
-
-export function useTranslatedContent(content, brand, sourceLang = 'auto') {
-  const [translated, setTranslated] = useState(content)
-  const abortRef = useRef(false)
-
-  // Escuchar cambio de idioma en tiempo real
-  const [langTick, setLangTick] = useState(0)
-  useEffect(() => {
-    const handler = () => setLangTick(t => t + 1)
-    window.addEventListener('sitelang', handler)
-    return () => window.removeEventListener('sitelang', handler)
-  }, [])
-
-  useEffect(() => {
-    // Reset: mostrar original mientras se traduce (sin flash vacío)
-    setTranslated(content)
-    abortRef.current = false
-
-    const targetLang = resolveTargetLang(brand)
-
-    // Si no hace falta traducir → salir inmediatamente
-    if (!shouldTranslate(targetLang, sourceLang)) return
-    if (!content) return
-
-    // Preparar textos a traducir
-    const isString = typeof content === 'string'
-    const keys = isString ? null : Object.keys(content).filter(
-      k => typeof content[k] === 'string' && content[k].trim()
-    )
-    const texts = isString ? [content] : keys.map(k => content[k])
-
-    if (!texts.length) return
-
-    let cancelled = false
-
-    translateBatch(texts, targetLang, sourceLang).then(results => {
-      if (cancelled || abortRef.current) return
-      if (isString) {
-        setTranslated(results[0] ?? content)
-      } else {
-        setTranslated(rebuildObject(content, keys, results))
-      }
-    })
-
-    return () => { cancelled = true }
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    // Serializar content para comparación estable
-    typeof content === 'string' ? content : JSON.stringify(content),
-    brand?.language,
-    langTick,
-    sourceLang,
-  ])
-
-  return translated
-}
-
-/**
- * useTranslatedArray — para arrays de objetos (servicios, testimonios, etc.)
- * Traduce cada item del array de forma independiente y en paralelo.
- *
- * USO:
- *   const translatedServices = useTranslatedArray(services, ['title','desc'], brand)
- *
- * @param {object[]} items     Array de objetos
- * @param {string[]} fields    Campos a traducir en cada objeto
- * @param {object}   brand     Objeto brand
- * @param {string}   sourceLang
- */
-export function useTranslatedArray(items, fields, brand, sourceLang = 'auto') {
-  const [translated, setTranslated] = useState(items)
-  const [langTick, setLangTick] = useState(0)
-
-  useEffect(() => {
-    const handler = () => setLangTick(t => t + 1)
-    window.addEventListener('sitelang', handler)
-    return () => window.removeEventListener('sitelang', handler)
-  }, [])
-
-  useEffect(() => {
-    setTranslated(items)
-    if (!items || !items.length) return
-
-    const targetLang = resolveTargetLang(brand)
-    if (!shouldTranslate(targetLang, sourceLang)) return
-
-    let cancelled = false
-
-    async function run() {
-      // Traducir todos los items en paralelo
-      const promises = items.map(async item => {
-        const texts = fields
-          .filter(f => typeof item[f] === 'string' && item[f].trim())
-          .map(f => item[f])
-
-        if (!texts.length) return item
-
-        const results = await translateBatch(texts, targetLang, sourceLang)
-
-        const updated = { ...item }
-        let i = 0
-        for (const f of fields) {
-          if (typeof item[f] === 'string' && item[f].trim()) {
-            updated[f] = results[i] ?? item[f]
-            i++
-          }
-        }
-        return updated
-      })
-
-      const results = await Promise.allSettled(promises)
-      if (cancelled) return
-
-      setTranslated(
-        results.map((r, i) => r.status === 'fulfilled' ? r.value : items[i])
-      )
-    }
-
-    run()
-
-    return () => { cancelled = true }
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    JSON.stringify(items?.map(i => fields.map(f => i[f]))),
-    brand?.language,
-    langTick,
-    sourceLang,
-  ])
-
-  return translated
-}
-</file>
-
-<file path="src/lib/translate.js">
-/**
- * translate.js
- * ─────────────────────────────────────────────────────────────────────────
- * Traducción gratuita via Google Translate endpoint no oficial.
- * Sin API key. Mismo endpoint que usa la extensión de Chrome.
- *
- * REGLAS:
- *  - Cache en sessionStorage → una sola petición por texto+lang por sesión
- *  - Si sourceLang === targetLang → devuelve el texto original sin llamar a la API
- *  - Si falla la API → devuelve el texto original (fallback silencioso)
- *  - Textos vacíos, null o undefined → devuelve '' sin llamar a la API
- *  - Batching: traduce arrays de strings en una sola request
- */
-
-const CACHE_PREFIX = 'pt_tr_'
-
-function cacheKey(text, from, to) {
-  // Clave corta para sessionStorage
-  return `${CACHE_PREFIX}${to}_${btoa(encodeURIComponent(text)).slice(0, 40)}`
-}
-
-function fromCache(text, from, to) {
-  try {
-    const raw = sessionStorage.getItem(cacheKey(text, from, to))
-    return raw ? JSON.parse(raw) : null
-  } catch { return null }
-}
-
-function toCache(text, from, to, translated) {
-  try {
-    sessionStorage.setItem(cacheKey(text, from, to), JSON.stringify(translated))
-  } catch { /* sessionStorage lleno — ignorar */ }
-}
-
-/**
- * translateText — traduce un string individual
- * @param {string} text       Texto a traducir
- * @param {string} targetLang Código ISO 639-1 destino (ej: 'en', 'es', 'fr')
- * @param {string} sourceLang Código ISO 639-1 origen (default: 'auto')
- * @returns {Promise<string>} Texto traducido o texto original si falla
- */
-export async function translateText(text, targetLang, sourceLang = 'auto') {
-  if (!text || typeof text !== 'string' || !text.trim()) return text || ''
-
-  // Si origen y destino son el mismo idioma → sin traducción
-  if (sourceLang !== 'auto' && sourceLang === targetLang) return text
-
-  // Revisar cache
-  const cached = fromCache(text, sourceLang, targetLang)
-  if (cached !== null) return cached
-
-  try {
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`
-    const res = await fetch(url)
-    if (!res.ok) return text
-
-    const data = await res.json()
-    // La respuesta es un array anidado: [[["translated","original",...],...],...]
-    const translated = data?.[0]
-      ?.map(chunk => chunk?.[0] ?? '')
-      .join('') || text
-
-    toCache(text, sourceLang, targetLang, translated)
-    return translated
-  } catch {
-    // API inalcanzable → texto original
-    return text
-  }
-}
-
-/**
- * translateBatch — traduce múltiples strings en paralelo
- * Usa Promise.allSettled para que un fallo individual no cancele los demás
- * @param {string[]} texts
- * @param {string}   targetLang
- * @param {string}   sourceLang
- * @returns {Promise<string[]>}
- */
-export async function translateBatch(texts, targetLang, sourceLang = 'auto') {
-  if (!texts || !texts.length) return []
-  if (sourceLang !== 'auto' && sourceLang === targetLang) return texts
-
-  const results = await Promise.allSettled(
-    texts.map(t => translateText(t, targetLang, sourceLang))
-  )
-
-  return results.map((r, i) =>
-    r.status === 'fulfilled' ? r.value : texts[i]
-  )
-}
-
-/**
- * shouldTranslate — decide si hay que traducir
- * Si el idioma configurado en el panel es el mismo en que está escrito el contenido
- * (sourceLang) → no hace falta traducir nada.
- */
-export function shouldTranslate(targetLang, sourceLang = 'auto') {
-  if (!targetLang) return false
-  if (sourceLang === 'auto') return true
-  return sourceLang !== targetLang
-}
-</file>
-
 <file path=".firebaserc">
 {
   "projects": {
@@ -1413,406 +713,6 @@ export default function AgentsTab({ data }) {
           dalla sezione Inbox Lead.
         </div>
       )}
-    </div>
-  )
-}
-</file>
-
-<file path="src/components/admin/tabs/BookingFlow.jsx">
-/**
- * BookingFlow.jsx — PhoneInput + 100% responsivo
- * CAMBIOS QUIRÚRGICOS respecto al original:
- *  1. DetailsStep: campo phone usa <PhoneInput> en lugar de <input type="tel">
- *  2. Padding/spacing adaptativo con clamp()
- *  3. Grid de slots responsive con minmax más pequeño en móvil
- * TODO LO DEMÁS INTACTO.
- */
-
-import { useState, useMemo, useCallback } from 'react'
-import { useUIStrings }   from '../../hooks/useUIStrings'
-import PhoneInput         from '../common/PhoneInput'
-
-function pad(n) { return String(n).padStart(2, '0') }
-
-function isoDate(date) {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-}
-
-function buildCalendar(year, month) {
-  const first   = new Date(year, month, 1)
-  const last    = new Date(year, month + 1, 0)
-  const leading = first.getDay()
-  const days    = []
-  for (let i = 0; i < leading;       i++) days.push(null)
-  for (let d = 1; d <= last.getDate(); d++) days.push(new Date(year, month, d))
-  while (days.length % 7 !== 0) days.push(null)
-  return days
-}
-
-// ── Step indicator ─────────────────────────────────────────────────
-function StepIndicator({ current, total, t }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28 }}>
-      {Array.from({ length: total }).map((_, i) => (
-        <div key={i} style={{
-          height: 3, flex: 1, borderRadius: 2,
-          background: i < current ? 'var(--primary)' : i === current ? 'rgba(255,60,60,0.35)' : 'rgba(255,255,255,0.08)',
-          transition: 'background 0.3s',
-        }} />
-      ))}
-      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', whiteSpace: 'nowrap', marginLeft: 4 }}>
-        {t.booking.step} {current + 1} {t.booking.of} {total}
-      </span>
-    </div>
-  )
-}
-
-// ── Step 1: Service ────────────────────────────────────────────────
-function ServiceStep({ services, selected, onSelect, t, primary }) {
-  return (
-    <div>
-      <h3 style={{ fontSize: 'clamp(1rem,3vw,1.1rem)', fontWeight: 700, marginBottom: 18 }}>
-        {t.booking.selectService}
-      </h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {(services ?? []).map(svc => {
-          const isActive = selected?.id === svc.id
-          return (
-            <button key={svc.id} onClick={() => onSelect(svc)} style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: 'clamp(10px,3vw,14px) clamp(12px,4vw,18px)',
-              background: isActive ? `${primary}10` : 'rgba(255,255,255,0.03)',
-              border: `1px solid ${isActive ? primary : 'rgba(255,255,255,0.08)'}`,
-              borderRadius: 12, cursor: 'pointer', transition: 'all 0.18s',
-              textAlign: 'left', color: 'white', width: '100%',
-            }}>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 'clamp(13px,3vw,15px)' }}>{svc.name}</div>
-                {svc.description && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>{svc.description}</div>}
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
-                {svc.price != null && <div style={{ fontWeight: 700, color: primary, fontSize: 'clamp(13px,3vw,15px)' }}>€{svc.price}</div>}
-                {svc.duration && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>{svc.duration} {t.booking.duration}</div>}
-              </div>
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-// ── Step 2: Date ───────────────────────────────────────────────────
-function DateStep({ value, onChange, closedDays = [], t, primary }) {
-  const today = new Date()
-  const [viewYear,  setViewYear]  = useState(today.getFullYear())
-  const [viewMonth, setViewMonth] = useState(today.getMonth())
-  const days      = useMemo(() => buildCalendar(viewYear, viewMonth), [viewYear, viewMonth])
-  const monthName = (t.booking.months ?? [])[viewMonth] ?? ''
-
-  const prevMonth = () => {
-    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11) }
-    else setViewMonth(m => m - 1)
-  }
-  const nextMonth = () => {
-    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0) }
-    else setViewMonth(m => m + 1)
-  }
-
-  return (
-    <div>
-      <h3 style={{ fontSize: 'clamp(1rem,3vw,1.1rem)', fontWeight: 700, marginBottom: 18 }}>{t.booking.selectDate}</h3>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <button onClick={prevMonth} style={navBtnStyle}>‹</button>
-        <span style={{ fontWeight: 700, fontSize: 'clamp(13px,3vw,15px)' }}>{monthName} {viewYear}</span>
-        <button onClick={nextMonth} style={navBtnStyle}>›</button>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2, marginBottom: 4 }}>
-        {(t.booking.weekdays ?? []).map(wd => (
-          <div key={wd} style={{ textAlign: 'center', fontSize: 'clamp(9px,2vw,10px)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, color: 'rgba(255,255,255,0.3)', padding: '4px 0' }}>{wd}</div>
-        ))}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2 }}>
-        {days.map((d, i) => {
-          if (!d) return <div key={`e-${i}`} />
-          const iso      = isoDate(d)
-          const isPast   = d < new Date(today.getFullYear(), today.getMonth(), today.getDate())
-          const isClosed = closedDays.includes(d.getDay())
-          const isToday  = iso === isoDate(today)
-          const isSel    = value === iso
-          const disabled = isPast || isClosed
-          return (
-            <button key={iso} disabled={disabled} onClick={() => !disabled && onChange(iso)} style={{
-              aspectRatio: '1', borderRadius: 8,
-              border: isSel ? `2px solid ${primary}` : isToday ? '2px solid rgba(255,255,255,0.2)' : '2px solid transparent',
-              background: isSel ? `${primary}15` : 'transparent',
-              color: disabled ? 'rgba(255,255,255,0.15)' : isSel ? 'white' : 'rgba(255,255,255,0.75)',
-              fontSize: 'clamp(11px,2.5vw,13px)', fontWeight: isSel ? 700 : 400,
-              cursor: disabled ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
-            }}>
-              {d.getDate()}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-const navBtnStyle = {
-  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-  color: 'white', width: 32, height: 32, borderRadius: 8,
-  cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
-}
-
-// ── Step 3: Time ───────────────────────────────────────────────────
-function TimeStep({ slots, value, onChange, loading, t, primary }) {
-  if (loading) return <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.4)' }}>{t.booking.loading}</div>
-  return (
-    <div>
-      <h3 style={{ fontSize: 'clamp(1rem,3vw,1.1rem)', fontWeight: 700, marginBottom: 18 }}>{t.booking.selectTime}</h3>
-      {(!slots || slots.length === 0) ? (
-        <div style={{ textAlign: 'center', padding: '30px 0', color: 'rgba(255,255,255,0.35)', fontSize: 14 }}>{t.booking.noSlots}</div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))', gap: 8 }}>
-          {slots.map(slot => {
-            const isActive = value === slot
-            return (
-              <button key={slot} onClick={() => onChange(slot)} style={{
-                padding: 'clamp(8px,2vw,10px) 6px', borderRadius: 10,
-                border: `1px solid ${isActive ? primary : 'rgba(255,255,255,0.08)'}`,
-                background: isActive ? `${primary}15` : 'rgba(255,255,255,0.03)',
-                color: isActive ? 'white' : 'rgba(255,255,255,0.65)',
-                fontWeight: isActive ? 700 : 400, fontSize: 'clamp(12px,3vw,14px)',
-                cursor: 'pointer', transition: 'all 0.15s',
-              }}>{slot}</button>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Step 4: Details — con PhoneInput ──────────────────────────────
-function DetailsStep({ values, onChange, errors, t, primary }) {
-  const textFields = [
-    { key: 'name',  label: t.booking.name,  type: 'text',  required: true  },
-    { key: 'email', label: t.booking.email, type: 'email', required: false },
-    { key: 'notes', label: t.booking.notes, type: 'text',  required: false },
-  ]
-
-  return (
-    <div>
-      <h3 style={{ fontSize: 'clamp(1rem,3vw,1.1rem)', fontWeight: 700, marginBottom: 18 }}>{t.booking.yourDetails}</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-        {/* Nombre */}
-        {textFields.slice(0, 1).map(f => (
-          <div key={f.key}>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: errors?.[f.key] ? 'rgba(255,100,100,0.8)' : 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
-              {f.label}{f.required && <span style={{ color: primary, marginLeft: 3 }}>*</span>}
-            </label>
-            <input
-              type={f.type}
-              value={values[f.key] || ''}
-              onChange={e => onChange(f.key, e.target.value)}
-              style={{ width: '100%', padding: '12px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${errors?.[f.key] ? 'rgba(255,80,80,0.5)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 10, color: 'white', fontSize: 14, outline: 'none', transition: 'border-color 0.2s', fontFamily: 'inherit', boxSizing: 'border-box' }}
-              onFocus={e  => { e.currentTarget.style.borderColor = primary }}
-              onBlur={e   => { e.currentTarget.style.borderColor = errors?.[f.key] ? 'rgba(255,80,80,0.5)' : 'rgba(255,255,255,0.1)' }}
-            />
-            {errors?.[f.key] && <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>{errors[f.key]}</p>}
-          </div>
-        ))}
-
-        {/* Teléfono con PhoneInput */}
-        <div>
-          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: errors?.phone ? 'rgba(255,100,100,0.8)' : 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
-            {t.booking.phone}<span style={{ color: primary, marginLeft: 3 }}>*</span>
-          </label>
-          <PhoneInput
-            value={values.phone || ''}
-            onChange={val => onChange('phone', val)}
-            error={errors?.phone}
-            primary={primary}
-          />
-        </div>
-
-        {/* Email y notas */}
-        {textFields.slice(1).map(f => (
-          <div key={f.key}>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: errors?.[f.key] ? 'rgba(255,100,100,0.8)' : 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
-              {f.label}{f.required && <span style={{ color: primary, marginLeft: 3 }}>*</span>}
-            </label>
-            <input
-              type={f.type}
-              value={values[f.key] || ''}
-              onChange={e => onChange(f.key, e.target.value)}
-              style={{ width: '100%', padding: '12px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${errors?.[f.key] ? 'rgba(255,80,80,0.5)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 10, color: 'white', fontSize: 14, outline: 'none', transition: 'border-color 0.2s', fontFamily: 'inherit', boxSizing: 'border-box' }}
-              onFocus={e  => { e.currentTarget.style.borderColor = primary }}
-              onBlur={e   => { e.currentTarget.style.borderColor = errors?.[f.key] ? 'rgba(255,80,80,0.5)' : 'rgba(255,255,255,0.1)' }}
-            />
-            {errors?.[f.key] && <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>{errors[f.key]}</p>}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ── Step 5: Summary ────────────────────────────────────────────────
-function SummaryStep({ service, date, time, customer, t, primary }) {
-  const rows = [
-    { label: t.booking.selectService, value: service?.name },
-    { label: t.booking.selectDate,    value: date           },
-    { label: t.booking.selectTime,    value: time           },
-    { label: t.booking.name,          value: customer.name  },
-    { label: t.booking.phone,         value: customer.phone },
-    customer.email && { label: t.booking.email, value: customer.email },
-    customer.notes && { label: t.booking.notes, value: customer.notes },
-  ].filter(Boolean)
-
-  return (
-    <div>
-      <h3 style={{ fontSize: 'clamp(1rem,3vw,1.1rem)', fontWeight: 700, marginBottom: 18 }}>{t.booking.summary}</h3>
-      <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden' }}>
-        {rows.map((row, i) => (
-          <div key={i} style={{ display: 'flex', gap: 12, padding: 'clamp(10px,2vw,12px) clamp(12px,3vw,16px)', borderBottom: i < rows.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', flexWrap: 'wrap' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(255,255,255,0.3)', width: 'clamp(80px,25%,110px)', flexShrink: 0, paddingTop: 2 }}>{row.label}</div>
-            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', fontWeight: 500, flex: 1, minWidth: 0, wordBreak: 'break-word' }}>{row.value}</div>
-          </div>
-        ))}
-      </div>
-      {service?.price != null && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, padding: 'clamp(10px,2vw,12px) clamp(12px,3vw,16px)', background: `${primary}08`, border: `1px solid ${primary}30`, borderRadius: 10 }}>
-          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: 700 }}>{t.booking.price}</span>
-          <span style={{ fontSize: 18, fontWeight: 800, color: primary }}>€{service.price}</span>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Success screen ─────────────────────────────────────────────────
-function SuccessScreen({ t, primary, service, date, time, onClose }) {
-  return (
-    <div style={{ background: '#0d0d0d', border: `1px solid ${primary}30`, borderRadius: 20, padding: 'clamp(28px,5vw,56px)', maxWidth: 520, width: '100%', margin: '0 auto', textAlign: 'center', color: 'white', animation: 'bookFadeIn 0.4s cubic-bezier(0.23,1,0.32,1) both' }}>
-      <style>{`
-        @keyframes bookFadeIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
-        @keyframes bookCheck{from{stroke-dashoffset:60;opacity:0}to{stroke-dashoffset:0;opacity:1}}
-      `}</style>
-      <div style={{ width: 72, height: 72, borderRadius: '50%', background: `${primary}12`, border: `2px solid ${primary}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', boxShadow: `0 0 40px ${primary}20` }}>
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <path d="M7 16L13 22L25 10" stroke={primary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="60" style={{ animation: 'bookCheck 0.5s 0.15s cubic-bezier(0.23,1,0.32,1) both' }} />
-        </svg>
-      </div>
-      <h2 style={{ fontSize: 'clamp(1.3rem,4vw,1.6rem)', fontWeight: 800, marginBottom: 10 }}>{t.booking.confirmed}</h2>
-      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '14px 20px', margin: '20px 0', display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {service?.name && <div style={{ fontSize: 15, fontWeight: 700, color: primary }}>{service.name}</div>}
-        <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)' }}>{date} · {time}</div>
-      </div>
-      <button onClick={onClose} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)', padding: '10px 24px', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', transition: 'all 0.2s' }}
-        onMouseEnter={e => { e.currentTarget.style.borderColor = primary; e.currentTarget.style.color = primary }}
-        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)' }}>
-        ✕ Close
-      </button>
-    </div>
-  )
-}
-
-// ── MAIN ───────────────────────────────────────────────────────────
-const TOTAL_STEPS = 5
-
-export default function BookingFlow({ theme = {}, services = [], slots = {}, onBook = () => {}, onClose = () => {}, slotsLoading = false }) {
-  const t       = useUIStrings(theme)
-  const primary = theme?.primary_color || theme?.primary || 'var(--primary)'
-
-  const [step,     setStep]     = useState(0)
-  const [service,  setService]  = useState(null)
-  const [date,     setDate]     = useState('')
-  const [time,     setTime]     = useState('')
-  const [customer, setCustomer] = useState({ name: '', phone: '', email: '', notes: '' })
-  const [errors,   setErrors]   = useState({})
-  const [booking,  setBooking]  = useState(false)
-  const [done,     setDone]     = useState(false)
-
-  const todaySlots = date ? (slots[date] ?? []) : []
-
-  const canNext = useMemo(() => {
-    if (step === 0) return !!service
-    if (step === 1) return !!date
-    if (step === 2) return !!time
-    if (step === 3) return !!(customer.name?.trim() && customer.phone?.trim())
-    return true
-  }, [step, service, date, time, customer])
-
-  const validateDetails = useCallback(() => {
-    const errs = {}
-    if (!customer.name?.trim())  errs.name  = t.contact.fieldRequired
-    if (!customer.phone?.trim()) errs.phone = t.contact.fieldRequired
-    if (customer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) {
-      errs.email = t.contact.emailInvalid
-    }
-    setErrors(errs)
-    return Object.keys(errs).length === 0
-  }, [customer, t])
-
-  const next = useCallback(() => {
-    if (step === 3 && !validateDetails()) return
-    if (step < TOTAL_STEPS - 1) setStep(s => s + 1)
-  }, [step, validateDetails])
-
-  const back = useCallback(() => {
-    if (step > 0) setStep(s => s - 1)
-    else onClose()
-  }, [step, onClose])
-
-  const handleConfirm = useCallback(async () => {
-    if (!validateDetails()) { setStep(3); return }
-    setBooking(true)
-    try {
-      await onBook({ service, date, time, customer })
-      setDone(true)
-    } catch (e) {
-      console.error('[BookingFlow] confirm error', e)
-    } finally {
-      setBooking(false)
-    }
-  }, [service, date, time, customer, onBook, validateDetails])
-
-  if (done) return <SuccessScreen t={t} primary={primary} service={service} date={date} time={time} onClose={onClose} />
-
-  return (
-    <div style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 20, padding: 'clamp(16px,4vw,36px)', maxWidth: 520, width: '100%', margin: '0 auto', color: 'white', boxSizing: 'border-box' }}>
-      <StepIndicator current={step} total={TOTAL_STEPS} t={t} />
-
-      <div style={{ minHeight: 280 }}>
-        {step === 0 && <ServiceStep services={services} selected={service} onSelect={svc => { setService(svc); setStep(1) }} t={t} primary={primary} />}
-        {step === 1 && <DateStep value={date} onChange={d => { setDate(d); setTime(''); setStep(2) }} closedDays={theme?.closed_days ?? [0]} t={t} primary={primary} />}
-        {step === 2 && <TimeStep slots={todaySlots} value={time} onChange={slot => { setTime(slot); setStep(3) }} loading={slotsLoading} t={t} primary={primary} />}
-        {step === 3 && <DetailsStep values={customer} onChange={(k, v) => setCustomer(p => ({ ...p, [k]: v }))} errors={errors} t={t} primary={primary} />}
-        {step === 4 && <SummaryStep service={service} date={date} time={time} customer={customer} t={t} primary={primary} />}
-      </div>
-
-      <div style={{ display: 'flex', gap: 10, marginTop: 28, justifyContent: 'space-between', flexWrap: 'wrap' }}>
-        <button onClick={back} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', padding: 'clamp(10px,2vw,12px) clamp(14px,3vw,20px)', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', transition: 'all 0.15s' }}>
-          ← {t.booking.back}
-        </button>
-
-        {step < TOTAL_STEPS - 1 ? (
-          <button onClick={next} disabled={!canNext} style={{ flex: 1, background: canNext ? primary : 'rgba(255,255,255,0.06)', border: 'none', color: canNext ? 'white' : 'rgba(255,255,255,0.2)', padding: 'clamp(10px,2vw,12px) clamp(14px,3vw,24px)', borderRadius: 10, cursor: canNext ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, fontFamily: 'inherit', transition: 'all 0.2s' }}>
-            {t.booking.next} →
-          </button>
-        ) : (
-          <button onClick={handleConfirm} disabled={booking} style={{ flex: 1, background: booking ? `${primary}80` : primary, border: 'none', color: 'white', padding: 'clamp(10px,2vw,12px) clamp(14px,3vw,24px)', borderRadius: 10, cursor: booking ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.2, fontFamily: 'inherit', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            {booking ? (
-              <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'bookSpin 0.7s linear infinite', display: 'inline-block' }} />{t.booking.loading}</>
-            ) : `✓ ${t.booking.confirm}`}
-          </button>
-        )}
-      </div>
-
-      <style>{`@keyframes bookSpin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }
@@ -2722,6 +1622,602 @@ export default function NotificationsTab({ data }) {
 }
 </file>
 
+<file path="src/components/common/PhoneInput.jsx">
+/**
+ * PhoneInput.jsx
+ * ─────────────────────────────────────────────────────────────────────────
+ * Input de teléfono con:
+ *  - Selector de país con bandera + prefijo
+ *  - Validación de longitud exacta por país
+ *  - Máscara de formato automática
+ *  - 100% responsivo
+ *  - Sin dependencias externas
+ *
+ * Props:
+ *   value       {string}   Número completo con prefijo (ej: "+39 333 123 4567")
+ *   onChange    {Function} (fullNumber: string) => void
+ *   error       {string}   Mensaje de error opcional
+ *   primary     {string}   Color primario del tema
+ *   placeholder {string}   Placeholder personalizado
+ */
+
+// ─── Países: [código, bandera, prefijo, longitud dígitos sin prefijo, máscara] ──
+// máscara: '0' = dígito, ' '/'-'/'(' = literal
+const COUNTRIES = [
+  { code: 'IT', flag: '🇮🇹', prefix: '+39',  digits: 10, mask: '000 000 0000',     name: 'Italia'          },
+  { code: 'ES', flag: '🇪🇸', prefix: '+34',  digits: 9,  mask: '000 000 000',      name: 'España'          },
+  { code: 'FR', flag: '🇫🇷', prefix: '+33',  digits: 9,  mask: '0 00 00 00 00',    name: 'France'          },
+  { code: 'DE', flag: '🇩🇪', prefix: '+49',  digits: 10, mask: '0000 0000000',     name: 'Deutschland'     },
+  { code: 'PT', flag: '🇵🇹', prefix: '+351', digits: 9,  mask: '000 000 000',      name: 'Portugal'        },
+  { code: 'CH', flag: '🇨🇭', prefix: '+41',  digits: 9,  mask: '00 000 00 00',     name: 'Schweiz'         },
+  { code: 'GB', flag: '🇬🇧', prefix: '+44',  digits: 10, mask: '0000 000000',      name: 'United Kingdom'  },
+  { code: 'US', flag: '🇺🇸', prefix: '+1',   digits: 10, mask: '(000) 000-0000',   name: 'United States'   },
+  { code: 'AR', flag: '🇦🇷', prefix: '+54',  digits: 10, mask: '(000) 000-0000',   name: 'Argentina'       },
+  { code: 'MX', flag: '🇲🇽', prefix: '+52',  digits: 10, mask: '(000) 000-0000',   name: 'México'          },
+  { code: 'BR', flag: '🇧🇷', prefix: '+55',  digits: 11, mask: '(00) 00000-0000',  name: 'Brasil'          },
+  { code: 'CO', flag: '🇨🇴', prefix: '+57',  digits: 10, mask: '000 000 0000',     name: 'Colombia'        },
+  { code: 'NL', flag: '🇳🇱', prefix: '+31',  digits: 9,  mask: '00 000 0000',      name: 'Nederland'       },
+  { code: 'BE', flag: '🇧🇪', prefix: '+32',  digits: 9,  mask: '000 00 00 00',     name: 'Belgique'        },
+  { code: 'AT', flag: '🇦🇹', prefix: '+43',  digits: 10, mask: '000 000 0000',     name: 'Österreich'      },
+  { code: 'PL', flag: '🇵🇱', prefix: '+48',  digits: 9,  mask: '000 000 000',      name: 'Polska'          },
+  { code: 'RO', flag: '🇷🇴', prefix: '+40',  digits: 9,  mask: '000 000 000',      name: 'România'         },
+  { code: 'RU', flag: '🇷🇺', prefix: '+7',   digits: 10, mask: '(000) 000-00-00',  name: 'Россия'          },
+  { code: 'TR', flag: '🇹🇷', prefix: '+90',  digits: 10, mask: '(000) 000 0000',   name: 'Türkiye'         },
+  { code: 'AE', flag: '🇦🇪', prefix: '+971', digits: 9,  mask: '00 000 0000',      name: 'الإمارات'        },
+  { code: 'SA', flag: '🇸🇦', prefix: '+966', digits: 9,  mask: '00 000 0000',      name: 'السعودية'        },
+  { code: 'CN', flag: '🇨🇳', prefix: '+86',  digits: 11, mask: '000 0000 0000',    name: '中国'            },
+  { code: 'JP', flag: '🇯🇵', prefix: '+81',  digits: 10, mask: '00-0000-0000',     name: '日本'            },
+  { code: 'IN', flag: '🇮🇳', prefix: '+91',  digits: 10, mask: '00000 00000',      name: 'India'           },
+  { code: 'AU', flag: '🇦🇺', prefix: '+61',  digits: 9,  mask: '000 000 000',      name: 'Australia'       },
+  { code: 'CA', flag: '🇨🇦', prefix: '+1',   digits: 10, mask: '(000) 000-0000',   name: 'Canada'          },
+  { code: 'ZA', flag: '🇿🇦', prefix: '+27',  digits: 9,  mask: '00 000 0000',      name: 'South Africa'    },
+  { code: 'NG', flag: '🇳🇬', prefix: '+234', digits: 10, mask: '000 000 0000',     name: 'Nigeria'         },
+  { code: 'MA', flag: '🇲🇦', prefix: '+212', digits: 9,  mask: '000-000000',       name: 'المغرب'          },
+]
+
+/**
+ * Aplica la máscara al string de dígitos
+ * Ejemplo: digits="3331234567", mask="000 000 0000" → "333 123 4567"
+ */
+function applyMask(digits, mask) {
+  let result = ''
+  let di = 0
+  for (let i = 0; i < mask.length && di < digits.length; i++) {
+    if (mask[i] === '0') {
+      result += digits[di++]
+    } else {
+      result += mask[i]
+      // Si el siguiente char de la máscara es un dígito y aún hay dígitos, seguir
+    }
+  }
+  return result
+}
+
+/**
+ * Detecta país por prefijo desde un número completo guardado
+ */
+function detectCountryFromValue(value) {
+  if (!value) return COUNTRIES[0]
+  const clean = value.replace(/\s/g, '')
+  // Ordenar por longitud de prefijo desc para evitar falsos positivos (+1 vs +12)
+  const sorted = [...COUNTRIES].sort((a, b) => b.prefix.length - a.prefix.length)
+  return sorted.find(c => clean.startsWith(c.prefix)) || COUNTRIES[0]
+}
+
+/**
+ * Extrae solo los dígitos locales de un valor completo
+ */
+function extractLocalDigits(value, country) {
+  if (!value) return ''
+  const withoutPrefix = value.replace(/\s/g, '').replace(country.prefix, '')
+  return withoutPrefix.replace(/\D/g, '')
+}
+
+import { useState, useRef, useEffect } from 'react'
+
+export default function PhoneInput({ value, onChange, error, primary = '#ff3c3c', placeholder }) {
+  const [country,   setCountry]   = useState(() => detectCountryFromValue(value))
+  const [localRaw,  setLocalRaw]  = useState(() => extractLocalDigits(value, detectCountryFromValue(value)))
+  const [open,      setOpen]      = useState(false)
+  const [search,    setSearch]    = useState('')
+  const [focused,   setFocused]   = useState(false)
+  const dropRef  = useRef(null)
+  const inputRef = useRef(null)
+
+  // Sync hacia fuera cada vez que cambia country o localRaw
+  useEffect(() => {
+    const digits = localRaw.replace(/\D/g, '').slice(0, country.digits)
+    const masked = applyMask(digits, country.mask)
+    const full   = masked ? `${country.prefix} ${masked}` : ''
+    onChange(full)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [country, localRaw])
+
+  // Cerrar dropdown al click fuera
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropRef.current && !dropRef.current.contains(e.target)) {
+        setOpen(false)
+        setSearch('')
+      }
+    }
+    if (open) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [open])
+
+  function handleCountrySelect(c) {
+    setCountry(c)
+    setLocalRaw('')
+    setOpen(false)
+    setSearch('')
+    setTimeout(() => inputRef.current?.focus(), 50)
+  }
+
+  function handleLocalInput(e) {
+    // Solo dígitos, máximo según país
+    const digits = e.target.value.replace(/\D/g, '').slice(0, country.digits)
+    setLocalRaw(digits)
+  }
+
+  const digits  = localRaw.replace(/\D/g, '').slice(0, country.digits)
+  const masked  = applyMask(digits, country.mask)
+  const isValid = digits.length === country.digits
+  const isEmpty = digits.length === 0
+
+  const filteredCountries = search
+    ? COUNTRIES.filter(c =>
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.prefix.includes(search) ||
+        c.code.toLowerCase().includes(search.toLowerCase())
+      )
+    : COUNTRIES
+
+  const borderColor = error
+    ? 'rgba(255,80,80,0.6)'
+    : focused
+      ? primary
+      : 'rgba(255,255,255,0.12)'
+
+  // Placeholder dinámico basado en la máscara del país
+  const dynamicPlaceholder = placeholder || country.mask.replace(/0/g, '·')
+
+  return (
+    <div style={{ position: 'relative', width: '100%' }}>
+      <style>{`
+        .phone-input-wrap {
+          display: flex;
+          align-items: stretch;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid ${borderColor};
+          border-radius: 10px;
+          overflow: visible;
+          transition: border-color 0.2s;
+          position: relative;
+        }
+        .phone-flag-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 0 12px;
+          background: rgba(255,255,255,0.04);
+          border: none;
+          border-right: 1px solid rgba(255,255,255,0.08);
+          cursor: pointer;
+          flex-shrink: 0;
+          transition: background 0.15s;
+          border-radius: 10px 0 0 10px;
+          min-width: 90px;
+        }
+        .phone-flag-btn:hover { background: rgba(255,255,255,0.08); }
+        .phone-flag-emoji { font-size: 20px; line-height: 1; }
+        .phone-prefix { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.7); }
+        .phone-chevron { font-size: 10px; color: rgba(255,255,255,0.3); transition: transform 0.2s; }
+        .phone-number-input {
+          flex: 1;
+          background: transparent;
+          border: none;
+          outline: none;
+          color: white;
+          font-size: 14px;
+          font-family: inherit;
+          padding: 13px 14px;
+          letter-spacing: 0.5px;
+          min-width: 0;
+        }
+        .phone-number-input::placeholder { color: rgba(255,255,255,0.25); }
+        .phone-validity {
+          display: flex;
+          align-items: center;
+          padding: 0 12px;
+          flex-shrink: 0;
+          font-size: 13px;
+          transition: all 0.2s;
+        }
+        /* Dropdown */
+        .phone-dropdown {
+          position: absolute;
+          top: calc(100% + 6px);
+          left: 0;
+          right: 0;
+          z-index: 9999;
+          background: #111318;
+          border: 1px solid rgba(255,255,255,0.12);
+          border-radius: 12px;
+          box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+          overflow: hidden;
+          animation: phoneDropIn 0.18s cubic-bezier(0.16,1,0.3,1) both;
+        }
+        @keyframes phoneDropIn {
+          from { opacity:0; transform:translateY(-6px) scale(0.98); }
+          to   { opacity:1; transform:translateY(0) scale(1); }
+        }
+        .phone-search {
+          padding: 10px 14px;
+          border-bottom: 1px solid rgba(255,255,255,0.07);
+        }
+        .phone-search input {
+          width: 100%;
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 7px;
+          color: white;
+          font-size: 13px;
+          padding: 8px 12px;
+          outline: none;
+          font-family: inherit;
+          box-sizing: border-box;
+        }
+        .phone-search input::placeholder { color: rgba(255,255,255,0.3); }
+        .phone-list {
+          max-height: 220px;
+          overflow-y: auto;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255,255,255,0.1) transparent;
+        }
+        .phone-list::-webkit-scrollbar { width: 4px; }
+        .phone-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+        .phone-country-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 14px;
+          cursor: pointer;
+          transition: background 0.12s;
+          border: none;
+          background: transparent;
+          width: 100%;
+          text-align: left;
+        }
+        .phone-country-item:hover { background: rgba(255,255,255,0.06); }
+        .phone-country-item.active { background: rgba(255,60,60,0.08); }
+        .phone-country-name { font-size: 13px; color: rgba(255,255,255,0.75); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .phone-country-prefix { font-size: 12px; color: rgba(255,255,255,0.35); font-weight: 700; flex-shrink: 0; }
+        /* Progress bar de dígitos */
+        .phone-progress-wrap {
+          height: 2px;
+          background: rgba(255,255,255,0.06);
+          border-radius: 0 0 10px 10px;
+          overflow: hidden;
+          margin-top: 0;
+        }
+        .phone-progress-bar {
+          height: 100%;
+          border-radius: 2px;
+          transition: width 0.2s, background 0.2s;
+        }
+        @media (max-width: 480px) {
+          .phone-flag-btn { min-width: 76px; padding: 0 8px; gap: 4px; }
+          .phone-prefix { font-size: 12px; }
+          .phone-number-input { font-size: 14px; padding: 13px 10px; }
+        }
+      `}</style>
+
+      <div ref={dropRef}>
+        <div className="phone-input-wrap">
+          {/* Selector de país */}
+          <button
+            type="button"
+            className="phone-flag-btn"
+            onClick={() => setOpen(p => !p)}
+            aria-label="Seleccionar país"
+          >
+            <span className="phone-flag-emoji">{country.flag}</span>
+            <span className="phone-prefix">{country.prefix}</span>
+            <span className="phone-chevron" style={{ transform: open ? 'rotate(180deg)' : 'none' }}>▼</span>
+          </button>
+
+          {/* Input numérico */}
+          <input
+            ref={inputRef}
+            type="tel"
+            inputMode="numeric"
+            className="phone-number-input"
+            value={masked}
+            onChange={handleLocalInput}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder={dynamicPlaceholder}
+            autoComplete="tel-national"
+          />
+
+          {/* Indicador válido/inválido */}
+          <div className="phone-validity">
+            {!isEmpty && (
+              isValid
+                ? <span style={{ color: '#1D9E75', fontSize: 16 }}>✓</span>
+                : <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>{digits.length}/{country.digits}</span>
+            )}
+          </div>
+        </div>
+
+        {/* Barra de progreso */}
+        <div className="phone-progress-wrap">
+          <div
+            className="phone-progress-bar"
+            style={{
+              width: `${(digits.length / country.digits) * 100}%`,
+              background: isValid ? '#1D9E75' : primary,
+            }}
+          />
+        </div>
+
+        {/* Dropdown de países */}
+        {open && (
+          <div className="phone-dropdown">
+            <div className="phone-search">
+              <input
+                type="text"
+                placeholder="Buscar país o prefijo..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="phone-list">
+              {filteredCountries.length === 0 && (
+                <div style={{ padding: '14px', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>
+                  Sin resultados
+                </div>
+              )}
+              {filteredCountries.map(c => (
+                <button
+                  key={c.code}
+                  type="button"
+                  className={`phone-country-item${c.code === country.code ? ' active' : ''}`}
+                  onClick={() => handleCountrySelect(c)}
+                >
+                  <span style={{ fontSize: 18, lineHeight: 1 }}>{c.flag}</span>
+                  <span className="phone-country-name">{c.name}</span>
+                  <span className="phone-country-prefix">{c.prefix}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Hint de formato */}
+      {!error && focused && !isEmpty && !isValid && (
+        <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+          {country.name} · {country.digits} dígitos · formato {country.mask.replace(/0/g, '·')}
+        </p>
+      )}
+      {error && (
+        <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>{error}</p>
+      )}
+    </div>
+  )
+}
+</file>
+
+<file path="src/hooks/useTranslatedContent.js">
+/**
+ * useTranslatedContent.js
+ * ─────────────────────────────────────────────────────────────────────────
+ * Hook React que traduce un objeto de contenido (o string simple)
+ * al idioma activo configurado en el panel.
+ *
+ * COMPORTAMIENTO:
+ *  - Mientras traduce → devuelve el contenido ORIGINAL (sin flash vacío)
+ *  - Cuando termina   → devuelve el contenido TRADUCIDO
+ *  - Si lang === sourceLang → devuelve original sin llamar a la API
+ *  - Si la API falla  → devuelve original (silencioso)
+ *  - Escucha el evento 'sitelang' para reaccionar al cambio de idioma
+ *    en tiempo real sin recargar la página
+ *
+ * USO:
+ *   // String simple
+ *   const title = useTranslatedContent(hero.headline, brand)
+ *
+ *   // Objeto con múltiples campos
+ *   const { headline, sub, badge } = useTranslatedContent(
+ *     { headline: hero.headline, sub: hero.sub, badge: hero.badge },
+ *     brand
+ *   )
+ *
+ * PARÁMETROS:
+ *   content    {string|object}  Texto o mapa de textos a traducir
+ *   brand      {object}         Objeto brand del site (necesita brand.language)
+ *   sourceLang {string}         Idioma en que está escrito el contenido.
+ *                               Si no se especifica se usa brand.language como
+ *                               idioma origen (el admin escribe en el lang activo
+ *                               al momento de guardar — asumimos que no cambia).
+ *                               Pasa 'auto' para detección automática.
+ */
+
+import { useState, useEffect, useRef } from 'react'
+import { translateBatch, shouldTranslate } from '../lib/translate'
+import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from '../lib/uiStrings'
+
+function resolveTargetLang(brand) {
+  const supported = SUPPORTED_LANGUAGES.map(l => l.code)
+  const fromBrand = brand?.language
+  const fromWindow = typeof window !== 'undefined' ? window.__SITE_LANGUAGE__ : null
+
+  const candidate = fromBrand || fromWindow || DEFAULT_LANGUAGE
+  return supported.includes(candidate) ? candidate : DEFAULT_LANGUAGE
+}
+
+/**
+ * Extrae todos los valores string de un objeto (un nivel de profundidad)
+ * Ignora valores que no son string, arrays de objetos, etc.
+ */
+function extractStrings(content) {
+  if (typeof content === 'string') return [content]
+  if (typeof content !== 'object' || content === null) return []
+  return Object.values(content).filter(v => typeof v === 'string' && v.trim())
+}
+
+/**
+ * Reconstruye el objeto traducido dado el original y el array de traducciones
+ */
+function rebuildObject(original, keys, translations) {
+  if (typeof original === 'string') return translations[0] ?? original
+  const result = { ...original }
+  let i = 0
+  for (const key of keys) {
+    if (typeof original[key] === 'string' && original[key].trim()) {
+      result[key] = translations[i] ?? original[key]
+      i++
+    }
+  }
+  return result
+}
+
+export function useTranslatedContent(content, brand, sourceLang = 'auto') {
+  const [translated, setTranslated] = useState(content)
+  const abortRef = useRef(false)
+
+  // Escuchar cambio de idioma en tiempo real
+  const [langTick, setLangTick] = useState(0)
+  useEffect(() => {
+    const handler = () => setLangTick(t => t + 1)
+    window.addEventListener('sitelang', handler)
+    return () => window.removeEventListener('sitelang', handler)
+  }, [])
+
+  useEffect(() => {
+    // Reset: mostrar original mientras se traduce (sin flash vacío)
+    setTranslated(content)
+    abortRef.current = false
+
+    const targetLang = resolveTargetLang(brand)
+
+    // Si no hace falta traducir → salir inmediatamente
+    if (!shouldTranslate(targetLang, sourceLang)) return
+    if (!content) return
+
+    // Preparar textos a traducir
+    const isString = typeof content === 'string'
+    const keys = isString ? null : Object.keys(content).filter(
+      k => typeof content[k] === 'string' && content[k].trim()
+    )
+    const texts = isString ? [content] : keys.map(k => content[k])
+
+    if (!texts.length) return
+
+    let cancelled = false
+
+    translateBatch(texts, targetLang, sourceLang).then(results => {
+      if (cancelled || abortRef.current) return
+      if (isString) {
+        setTranslated(results[0] ?? content)
+      } else {
+        setTranslated(rebuildObject(content, keys, results))
+      }
+    })
+
+    return () => { cancelled = true }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    // Serializar content para comparación estable
+    typeof content === 'string' ? content : JSON.stringify(content),
+    brand?.language,
+    langTick,
+    sourceLang,
+  ])
+
+  return translated
+}
+
+/**
+ * useTranslatedArray — para arrays de objetos (servicios, testimonios, etc.)
+ * Traduce cada item del array de forma independiente y en paralelo.
+ *
+ * USO:
+ *   const translatedServices = useTranslatedArray(services, ['title','desc'], brand)
+ *
+ * @param {object[]} items     Array de objetos
+ * @param {string[]} fields    Campos a traducir en cada objeto
+ * @param {object}   brand     Objeto brand
+ * @param {string}   sourceLang
+ */
+export function useTranslatedArray(items, fields, brand, sourceLang = 'auto') {
+  const [translated, setTranslated] = useState(items)
+  const [langTick, setLangTick] = useState(0)
+
+  useEffect(() => {
+    const handler = () => setLangTick(t => t + 1)
+    window.addEventListener('sitelang', handler)
+    return () => window.removeEventListener('sitelang', handler)
+  }, [])
+
+  useEffect(() => {
+    setTranslated(items)
+    if (!items || !items.length) return
+
+    const targetLang = resolveTargetLang(brand)
+    if (!shouldTranslate(targetLang, sourceLang)) return
+
+    let cancelled = false
+
+    async function run() {
+      // Traducir todos los items en paralelo
+      const promises = items.map(async item => {
+        const texts = fields
+          .filter(f => typeof item[f] === 'string' && item[f].trim())
+          .map(f => item[f])
+
+        if (!texts.length) return item
+
+        const results = await translateBatch(texts, targetLang, sourceLang)
+
+        const updated = { ...item }
+        let i = 0
+        for (const f of fields) {
+          if (typeof item[f] === 'string' && item[f].trim()) {
+            updated[f] = results[i] ?? item[f]
+            i++
+          }
+        }
+        return updated
+      })
+
+      const results = await Promise.allSettled(promises)
+      if (cancelled) return
+
+      setTranslated(
+        results.map((r, i) => r.status === 'fulfilled' ? r.value : items[i])
+      )
+    }
+
+    run()
+
+    return () => { cancelled = true }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    JSON.stringify(items?.map(i => fields.map(f => i[f]))),
+    brand?.language,
+    langTick,
+    sourceLang,
+  ])
+
+  return translated
+}
+</file>
+
 <file path="src/lib/i18n.js">
 
 </file>
@@ -2959,6 +2455,110 @@ export async function processNewLead(leadData, siteConfig) {
   }
 
   return results
+}
+</file>
+
+<file path="src/lib/translate.js">
+/**
+ * translate.js
+ * ─────────────────────────────────────────────────────────────────────────
+ * Traducción gratuita via Google Translate endpoint no oficial.
+ * Sin API key. Mismo endpoint que usa la extensión de Chrome.
+ *
+ * REGLAS:
+ *  - Cache en sessionStorage → una sola petición por texto+lang por sesión
+ *  - Si sourceLang === targetLang → devuelve el texto original sin llamar a la API
+ *  - Si falla la API → devuelve el texto original (fallback silencioso)
+ *  - Textos vacíos, null o undefined → devuelve '' sin llamar a la API
+ *  - Batching: traduce arrays de strings en una sola request
+ */
+
+const CACHE_PREFIX = 'pt_tr_'
+
+function cacheKey(text, from, to) {
+  // Clave corta para sessionStorage
+  return `${CACHE_PREFIX}${to}_${btoa(encodeURIComponent(text)).slice(0, 40)}`
+}
+
+function fromCache(text, from, to) {
+  try {
+    const raw = sessionStorage.getItem(cacheKey(text, from, to))
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+
+function toCache(text, from, to, translated) {
+  try {
+    sessionStorage.setItem(cacheKey(text, from, to), JSON.stringify(translated))
+  } catch { /* sessionStorage lleno — ignorar */ }
+}
+
+/**
+ * translateText — traduce un string individual
+ * @param {string} text       Texto a traducir
+ * @param {string} targetLang Código ISO 639-1 destino (ej: 'en', 'es', 'fr')
+ * @param {string} sourceLang Código ISO 639-1 origen (default: 'auto')
+ * @returns {Promise<string>} Texto traducido o texto original si falla
+ */
+export async function translateText(text, targetLang, sourceLang = 'auto') {
+  if (!text || typeof text !== 'string' || !text.trim()) return text || ''
+
+  // Si origen y destino son el mismo idioma → sin traducción
+  if (sourceLang !== 'auto' && sourceLang === targetLang) return text
+
+  // Revisar cache
+  const cached = fromCache(text, sourceLang, targetLang)
+  if (cached !== null) return cached
+
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`
+    const res = await fetch(url)
+    if (!res.ok) return text
+
+    const data = await res.json()
+    // La respuesta es un array anidado: [[["translated","original",...],...],...]
+    const translated = data?.[0]
+      ?.map(chunk => chunk?.[0] ?? '')
+      .join('') || text
+
+    toCache(text, sourceLang, targetLang, translated)
+    return translated
+  } catch {
+    // API inalcanzable → texto original
+    return text
+  }
+}
+
+/**
+ * translateBatch — traduce múltiples strings en paralelo
+ * Usa Promise.allSettled para que un fallo individual no cancele los demás
+ * @param {string[]} texts
+ * @param {string}   targetLang
+ * @param {string}   sourceLang
+ * @returns {Promise<string[]>}
+ */
+export async function translateBatch(texts, targetLang, sourceLang = 'auto') {
+  if (!texts || !texts.length) return []
+  if (sourceLang !== 'auto' && sourceLang === targetLang) return texts
+
+  const results = await Promise.allSettled(
+    texts.map(t => translateText(t, targetLang, sourceLang))
+  )
+
+  return results.map((r, i) =>
+    r.status === 'fulfilled' ? r.value : texts[i]
+  )
+}
+
+/**
+ * shouldTranslate — decide si hay que traducir
+ * Si el idioma configurado en el panel es el mismo en que está escrito el contenido
+ * (sourceLang) → no hace falta traducir nada.
+ */
+export function shouldTranslate(targetLang, sourceLang = 'auto') {
+  if (!targetLang) return false
+  if (sourceLang === 'auto') return true
+  return sourceLang !== targetLang
 }
 </file>
 
@@ -3571,92 +3171,6 @@ export default {
 }
 </file>
 
-<file path="vercel.json">
-{
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
-}
-</file>
-
-<file path="index.html">
-<!DOCTYPE html>
-<html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Polartronic Studio</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&family=Bebas+Neue&family=Cinzel:wght@700&display=swap" rel="stylesheet" />
-
-    <!--
-      ANTI-FOUC SCRIPT
-      Aplica colores desde caché ANTES del primer render de React.
-      NO usa opacity ni visibility — nunca bloquea nada.
-      Si la ruta es /admin o /proposal → skip (no necesitan anti-FOUC).
-    -->
-    <script>
-      (function () {
-        try {
-          /* Saltar en rutas que no son el sitio público */
-          var path = window.location.pathname;
-          if (path.indexOf('/admin') === 0 || path.indexOf('/proposal') === 0) return;
-
-          var raw = localStorage.getItem('polartronic_cache');
-          if (!raw) return;
-
-          var parsed = JSON.parse(raw);
-          if (Date.now() - parsed.ts > 300000) return; /* TTL 5 min */
-
-          var site  = parsed.data && parsed.data.site;
-          var brand = site && site.brand;
-          if (!brand) return;
-
-          var root = document.documentElement;
-
-          if (brand.primary) root.style.setProperty('--primary', brand.primary);
-
-          if (brand.bg) {
-            root.style.setProperty('--bg', brand.bg);
-
-            var hex = brand.bg.replace('#', '');
-            if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
-            var r = parseInt(hex.slice(0,2),16);
-            var g = parseInt(hex.slice(2,4),16);
-            var b = parseInt(hex.slice(4,6),16);
-            var light = (0.299*r + 0.587*g + 0.114*b)/255 > 0.5;
-
-            if (light) {
-              root.style.setProperty('--text-main',  '#0a0a0a');
-              root.style.setProperty('--text-dim',   'rgba(0,0,0,0.6)');
-              root.style.setProperty('--text-muted', 'rgba(0,0,0,0.4)');
-              root.style.setProperty('--border',     'rgba(0,0,0,0.1)');
-              root.style.setProperty('--card-bg',    '#f5f5f5');
-              root.setAttribute('data-theme', 'light');
-            } else {
-              root.style.setProperty('--text-main',  '#ffffff');
-              root.style.setProperty('--text-dim',   'rgba(255,255,255,0.55)');
-              root.style.setProperty('--text-muted', 'rgba(255,255,255,0.35)');
-              root.style.setProperty('--border',     'rgba(255,255,255,0.08)');
-              root.style.setProperty('--card-bg',    '#0d0d0d');
-              root.setAttribute('data-theme', 'dark');
-            }
-          }
-
-          if (brand.language) window.__SITE_LANGUAGE__ = brand.language;
-
-        } catch(e) { /* nunca romper la página */ }
-      })();
-    </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
-</html>
-</file>
-
 <file path="package.json">
 {
   "name": "polartronic-studio",
@@ -3777,6 +3291,406 @@ export default function AdminHeader({ onLogout, onToggleSidebar, activeTab }) {
         }
       `}</style>
     </header>
+  )
+}
+</file>
+
+<file path="src/components/admin/tabs/BookingFlow.jsx">
+/**
+ * BookingFlow.jsx — PhoneInput + 100% responsivo
+ * CAMBIOS QUIRÚRGICOS respecto al original:
+ *  1. DetailsStep: campo phone usa <PhoneInput> en lugar de <input type="tel">
+ *  2. Padding/spacing adaptativo con clamp()
+ *  3. Grid de slots responsive con minmax más pequeño en móvil
+ * TODO LO DEMÁS INTACTO.
+ */
+
+import { useState, useMemo, useCallback } from 'react'
+import { useUIStrings }   from '../../hooks/useUIStrings'
+import PhoneInput         from '../common/PhoneInput'
+
+function pad(n) { return String(n).padStart(2, '0') }
+
+function isoDate(date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+function buildCalendar(year, month) {
+  const first   = new Date(year, month, 1)
+  const last    = new Date(year, month + 1, 0)
+  const leading = first.getDay()
+  const days    = []
+  for (let i = 0; i < leading;       i++) days.push(null)
+  for (let d = 1; d <= last.getDate(); d++) days.push(new Date(year, month, d))
+  while (days.length % 7 !== 0) days.push(null)
+  return days
+}
+
+// ── Step indicator ─────────────────────────────────────────────────
+function StepIndicator({ current, total, t }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28 }}>
+      {Array.from({ length: total }).map((_, i) => (
+        <div key={i} style={{
+          height: 3, flex: 1, borderRadius: 2,
+          background: i < current ? 'var(--primary)' : i === current ? 'rgba(255,60,60,0.35)' : 'rgba(255,255,255,0.08)',
+          transition: 'background 0.3s',
+        }} />
+      ))}
+      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', whiteSpace: 'nowrap', marginLeft: 4 }}>
+        {t.booking.step} {current + 1} {t.booking.of} {total}
+      </span>
+    </div>
+  )
+}
+
+// ── Step 1: Service ────────────────────────────────────────────────
+function ServiceStep({ services, selected, onSelect, t, primary }) {
+  return (
+    <div>
+      <h3 style={{ fontSize: 'clamp(1rem,3vw,1.1rem)', fontWeight: 700, marginBottom: 18 }}>
+        {t.booking.selectService}
+      </h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {(services ?? []).map(svc => {
+          const isActive = selected?.id === svc.id
+          return (
+            <button key={svc.id} onClick={() => onSelect(svc)} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: 'clamp(10px,3vw,14px) clamp(12px,4vw,18px)',
+              background: isActive ? `${primary}10` : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${isActive ? primary : 'rgba(255,255,255,0.08)'}`,
+              borderRadius: 12, cursor: 'pointer', transition: 'all 0.18s',
+              textAlign: 'left', color: 'white', width: '100%',
+            }}>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 'clamp(13px,3vw,15px)' }}>{svc.name}</div>
+                {svc.description && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>{svc.description}</div>}
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
+                {svc.price != null && <div style={{ fontWeight: 700, color: primary, fontSize: 'clamp(13px,3vw,15px)' }}>€{svc.price}</div>}
+                {svc.duration && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>{svc.duration} {t.booking.duration}</div>}
+              </div>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── Step 2: Date ───────────────────────────────────────────────────
+function DateStep({ value, onChange, closedDays = [], t, primary }) {
+  const today = new Date()
+  const [viewYear,  setViewYear]  = useState(today.getFullYear())
+  const [viewMonth, setViewMonth] = useState(today.getMonth())
+  const days      = useMemo(() => buildCalendar(viewYear, viewMonth), [viewYear, viewMonth])
+  const monthName = (t.booking.months ?? [])[viewMonth] ?? ''
+
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11) }
+    else setViewMonth(m => m - 1)
+  }
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0) }
+    else setViewMonth(m => m + 1)
+  }
+
+  return (
+    <div>
+      <h3 style={{ fontSize: 'clamp(1rem,3vw,1.1rem)', fontWeight: 700, marginBottom: 18 }}>{t.booking.selectDate}</h3>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <button onClick={prevMonth} style={navBtnStyle}>‹</button>
+        <span style={{ fontWeight: 700, fontSize: 'clamp(13px,3vw,15px)' }}>{monthName} {viewYear}</span>
+        <button onClick={nextMonth} style={navBtnStyle}>›</button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2, marginBottom: 4 }}>
+        {(t.booking.weekdays ?? []).map(wd => (
+          <div key={wd} style={{ textAlign: 'center', fontSize: 'clamp(9px,2vw,10px)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, color: 'rgba(255,255,255,0.3)', padding: '4px 0' }}>{wd}</div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2 }}>
+        {days.map((d, i) => {
+          if (!d) return <div key={`e-${i}`} />
+          const iso      = isoDate(d)
+          const isPast   = d < new Date(today.getFullYear(), today.getMonth(), today.getDate())
+          const isClosed = closedDays.includes(d.getDay())
+          const isToday  = iso === isoDate(today)
+          const isSel    = value === iso
+          const disabled = isPast || isClosed
+          return (
+            <button key={iso} disabled={disabled} onClick={() => !disabled && onChange(iso)} style={{
+              aspectRatio: '1', borderRadius: 8,
+              border: isSel ? `2px solid ${primary}` : isToday ? '2px solid rgba(255,255,255,0.2)' : '2px solid transparent',
+              background: isSel ? `${primary}15` : 'transparent',
+              color: disabled ? 'rgba(255,255,255,0.15)' : isSel ? 'white' : 'rgba(255,255,255,0.75)',
+              fontSize: 'clamp(11px,2.5vw,13px)', fontWeight: isSel ? 700 : 400,
+              cursor: disabled ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
+            }}>
+              {d.getDate()}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+const navBtnStyle = {
+  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+  color: 'white', width: 32, height: 32, borderRadius: 8,
+  cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+}
+
+// ── Step 3: Time ───────────────────────────────────────────────────
+function TimeStep({ slots, value, onChange, loading, t, primary }) {
+  if (loading) return <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.4)' }}>{t.booking.loading}</div>
+  return (
+    <div>
+      <h3 style={{ fontSize: 'clamp(1rem,3vw,1.1rem)', fontWeight: 700, marginBottom: 18 }}>{t.booking.selectTime}</h3>
+      {(!slots || slots.length === 0) ? (
+        <div style={{ textAlign: 'center', padding: '30px 0', color: 'rgba(255,255,255,0.35)', fontSize: 14 }}>{t.booking.noSlots}</div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))', gap: 8 }}>
+          {slots.map(slot => {
+            const isActive = value === slot
+            return (
+              <button key={slot} onClick={() => onChange(slot)} style={{
+                padding: 'clamp(8px,2vw,10px) 6px', borderRadius: 10,
+                border: `1px solid ${isActive ? primary : 'rgba(255,255,255,0.08)'}`,
+                background: isActive ? `${primary}15` : 'rgba(255,255,255,0.03)',
+                color: isActive ? 'white' : 'rgba(255,255,255,0.65)',
+                fontWeight: isActive ? 700 : 400, fontSize: 'clamp(12px,3vw,14px)',
+                cursor: 'pointer', transition: 'all 0.15s',
+              }}>{slot}</button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Step 4: Details — con PhoneInput ──────────────────────────────
+function DetailsStep({ values, onChange, errors, t, primary }) {
+  const textFields = [
+    { key: 'name',  label: t.booking.name,  type: 'text',  required: true  },
+    { key: 'email', label: t.booking.email, type: 'email', required: false },
+    { key: 'notes', label: t.booking.notes, type: 'text',  required: false },
+  ]
+
+  return (
+    <div>
+      <h3 style={{ fontSize: 'clamp(1rem,3vw,1.1rem)', fontWeight: 700, marginBottom: 18 }}>{t.booking.yourDetails}</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+        {/* Nombre */}
+        {textFields.slice(0, 1).map(f => (
+          <div key={f.key}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: errors?.[f.key] ? 'rgba(255,100,100,0.8)' : 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
+              {f.label}{f.required && <span style={{ color: primary, marginLeft: 3 }}>*</span>}
+            </label>
+            <input
+              type={f.type}
+              value={values[f.key] || ''}
+              onChange={e => onChange(f.key, e.target.value)}
+              style={{ width: '100%', padding: '12px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${errors?.[f.key] ? 'rgba(255,80,80,0.5)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 10, color: 'white', fontSize: 14, outline: 'none', transition: 'border-color 0.2s', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              onFocus={e  => { e.currentTarget.style.borderColor = primary }}
+              onBlur={e   => { e.currentTarget.style.borderColor = errors?.[f.key] ? 'rgba(255,80,80,0.5)' : 'rgba(255,255,255,0.1)' }}
+            />
+            {errors?.[f.key] && <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>{errors[f.key]}</p>}
+          </div>
+        ))}
+
+        {/* Teléfono con PhoneInput */}
+        <div>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: errors?.phone ? 'rgba(255,100,100,0.8)' : 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
+            {t.booking.phone}<span style={{ color: primary, marginLeft: 3 }}>*</span>
+          </label>
+          <PhoneInput
+            value={values.phone || ''}
+            onChange={val => onChange('phone', val)}
+            error={errors?.phone}
+            primary={primary}
+          />
+        </div>
+
+        {/* Email y notas */}
+        {textFields.slice(1).map(f => (
+          <div key={f.key}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: errors?.[f.key] ? 'rgba(255,100,100,0.8)' : 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
+              {f.label}{f.required && <span style={{ color: primary, marginLeft: 3 }}>*</span>}
+            </label>
+            <input
+              type={f.type}
+              value={values[f.key] || ''}
+              onChange={e => onChange(f.key, e.target.value)}
+              style={{ width: '100%', padding: '12px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${errors?.[f.key] ? 'rgba(255,80,80,0.5)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 10, color: 'white', fontSize: 14, outline: 'none', transition: 'border-color 0.2s', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              onFocus={e  => { e.currentTarget.style.borderColor = primary }}
+              onBlur={e   => { e.currentTarget.style.borderColor = errors?.[f.key] ? 'rgba(255,80,80,0.5)' : 'rgba(255,255,255,0.1)' }}
+            />
+            {errors?.[f.key] && <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>{errors[f.key]}</p>}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Step 5: Summary ────────────────────────────────────────────────
+function SummaryStep({ service, date, time, customer, t, primary }) {
+  const rows = [
+    { label: t.booking.selectService, value: service?.name },
+    { label: t.booking.selectDate,    value: date           },
+    { label: t.booking.selectTime,    value: time           },
+    { label: t.booking.name,          value: customer.name  },
+    { label: t.booking.phone,         value: customer.phone },
+    customer.email && { label: t.booking.email, value: customer.email },
+    customer.notes && { label: t.booking.notes, value: customer.notes },
+  ].filter(Boolean)
+
+  return (
+    <div>
+      <h3 style={{ fontSize: 'clamp(1rem,3vw,1.1rem)', fontWeight: 700, marginBottom: 18 }}>{t.booking.summary}</h3>
+      <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden' }}>
+        {rows.map((row, i) => (
+          <div key={i} style={{ display: 'flex', gap: 12, padding: 'clamp(10px,2vw,12px) clamp(12px,3vw,16px)', borderBottom: i < rows.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(255,255,255,0.3)', width: 'clamp(80px,25%,110px)', flexShrink: 0, paddingTop: 2 }}>{row.label}</div>
+            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', fontWeight: 500, flex: 1, minWidth: 0, wordBreak: 'break-word' }}>{row.value}</div>
+          </div>
+        ))}
+      </div>
+      {service?.price != null && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, padding: 'clamp(10px,2vw,12px) clamp(12px,3vw,16px)', background: `${primary}08`, border: `1px solid ${primary}30`, borderRadius: 10 }}>
+          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: 700 }}>{t.booking.price}</span>
+          <span style={{ fontSize: 18, fontWeight: 800, color: primary }}>€{service.price}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Success screen ─────────────────────────────────────────────────
+function SuccessScreen({ t, primary, service, date, time, onClose }) {
+  return (
+    <div style={{ background: '#0d0d0d', border: `1px solid ${primary}30`, borderRadius: 20, padding: 'clamp(28px,5vw,56px)', maxWidth: 520, width: '100%', margin: '0 auto', textAlign: 'center', color: 'white', animation: 'bookFadeIn 0.4s cubic-bezier(0.23,1,0.32,1) both' }}>
+      <style>{`
+        @keyframes bookFadeIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+        @keyframes bookCheck{from{stroke-dashoffset:60;opacity:0}to{stroke-dashoffset:0;opacity:1}}
+      `}</style>
+      <div style={{ width: 72, height: 72, borderRadius: '50%', background: `${primary}12`, border: `2px solid ${primary}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', boxShadow: `0 0 40px ${primary}20` }}>
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <path d="M7 16L13 22L25 10" stroke={primary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="60" style={{ animation: 'bookCheck 0.5s 0.15s cubic-bezier(0.23,1,0.32,1) both' }} />
+        </svg>
+      </div>
+      <h2 style={{ fontSize: 'clamp(1.3rem,4vw,1.6rem)', fontWeight: 800, marginBottom: 10 }}>{t.booking.confirmed}</h2>
+      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '14px 20px', margin: '20px 0', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {service?.name && <div style={{ fontSize: 15, fontWeight: 700, color: primary }}>{service.name}</div>}
+        <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)' }}>{date} · {time}</div>
+      </div>
+      <button onClick={onClose} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)', padding: '10px 24px', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', transition: 'all 0.2s' }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = primary; e.currentTarget.style.color = primary }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)' }}>
+        ✕ Close
+      </button>
+    </div>
+  )
+}
+
+// ── MAIN ───────────────────────────────────────────────────────────
+const TOTAL_STEPS = 5
+
+export default function BookingFlow({ theme = {}, services = [], slots = {}, onBook = () => {}, onClose = () => {}, slotsLoading = false }) {
+  const t       = useUIStrings(theme)
+  const primary = theme?.primary_color || theme?.primary || 'var(--primary)'
+
+  const [step,     setStep]     = useState(0)
+  const [service,  setService]  = useState(null)
+  const [date,     setDate]     = useState('')
+  const [time,     setTime]     = useState('')
+  const [customer, setCustomer] = useState({ name: '', phone: '', email: '', notes: '' })
+  const [errors,   setErrors]   = useState({})
+  const [booking,  setBooking]  = useState(false)
+  const [done,     setDone]     = useState(false)
+
+  const todaySlots = date ? (slots[date] ?? []) : []
+
+  const canNext = useMemo(() => {
+    if (step === 0) return !!service
+    if (step === 1) return !!date
+    if (step === 2) return !!time
+    if (step === 3) return !!(customer.name?.trim() && customer.phone?.trim())
+    return true
+  }, [step, service, date, time, customer])
+
+  const validateDetails = useCallback(() => {
+    const errs = {}
+    if (!customer.name?.trim())  errs.name  = t.contact.fieldRequired
+    if (!customer.phone?.trim()) errs.phone = t.contact.fieldRequired
+    if (customer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) {
+      errs.email = t.contact.emailInvalid
+    }
+    setErrors(errs)
+    return Object.keys(errs).length === 0
+  }, [customer, t])
+
+  const next = useCallback(() => {
+    if (step === 3 && !validateDetails()) return
+    if (step < TOTAL_STEPS - 1) setStep(s => s + 1)
+  }, [step, validateDetails])
+
+  const back = useCallback(() => {
+    if (step > 0) setStep(s => s - 1)
+    else onClose()
+  }, [step, onClose])
+
+  const handleConfirm = useCallback(async () => {
+    if (!validateDetails()) { setStep(3); return }
+    setBooking(true)
+    try {
+      await onBook({ service, date, time, customer })
+      setDone(true)
+    } catch (e) {
+      console.error('[BookingFlow] confirm error', e)
+    } finally {
+      setBooking(false)
+    }
+  }, [service, date, time, customer, onBook, validateDetails])
+
+  if (done) return <SuccessScreen t={t} primary={primary} service={service} date={date} time={time} onClose={onClose} />
+
+  return (
+    <div style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 20, padding: 'clamp(16px,4vw,36px)', maxWidth: 520, width: '100%', margin: '0 auto', color: 'white', boxSizing: 'border-box' }}>
+      <StepIndicator current={step} total={TOTAL_STEPS} t={t} />
+
+      <div style={{ minHeight: 280 }}>
+        {step === 0 && <ServiceStep services={services} selected={service} onSelect={svc => { setService(svc); setStep(1) }} t={t} primary={primary} />}
+        {step === 1 && <DateStep value={date} onChange={d => { setDate(d); setTime(''); setStep(2) }} closedDays={theme?.closed_days ?? [0]} t={t} primary={primary} />}
+        {step === 2 && <TimeStep slots={todaySlots} value={time} onChange={slot => { setTime(slot); setStep(3) }} loading={slotsLoading} t={t} primary={primary} />}
+        {step === 3 && <DetailsStep values={customer} onChange={(k, v) => setCustomer(p => ({ ...p, [k]: v }))} errors={errors} t={t} primary={primary} />}
+        {step === 4 && <SummaryStep service={service} date={date} time={time} customer={customer} t={t} primary={primary} />}
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, marginTop: 28, justifyContent: 'space-between', flexWrap: 'wrap' }}>
+        <button onClick={back} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', padding: 'clamp(10px,2vw,12px) clamp(14px,3vw,20px)', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', transition: 'all 0.15s' }}>
+          ← {t.booking.back}
+        </button>
+
+        {step < TOTAL_STEPS - 1 ? (
+          <button onClick={next} disabled={!canNext} style={{ flex: 1, background: canNext ? primary : 'rgba(255,255,255,0.06)', border: 'none', color: canNext ? 'white' : 'rgba(255,255,255,0.2)', padding: 'clamp(10px,2vw,12px) clamp(14px,3vw,24px)', borderRadius: 10, cursor: canNext ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, fontFamily: 'inherit', transition: 'all 0.2s' }}>
+            {t.booking.next} →
+          </button>
+        ) : (
+          <button onClick={handleConfirm} disabled={booking} style={{ flex: 1, background: booking ? `${primary}80` : primary, border: 'none', color: 'white', padding: 'clamp(10px,2vw,12px) clamp(14px,3vw,24px)', borderRadius: 10, cursor: booking ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.2, fontFamily: 'inherit', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            {booking ? (
+              <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'bookSpin 0.7s linear infinite', display: 'inline-block' }} />{t.booking.loading}</>
+            ) : `✓ ${t.booking.confirm}`}
+          </button>
+        )}
+      </div>
+
+      <style>{`@keyframes bookSpin { to { transform: rotate(360deg); } }`}</style>
+    </div>
   )
 }
 </file>
@@ -3922,286 +3836,6 @@ export default function TestimonialsTab({ data }) {
 }
 </file>
 
-<file path="src/components/site/Hero.jsx">
-import { useState, useEffect, useCallback } from 'react'
-import { useUIStrings } from '../../hooks/useUIStrings'
-import { useTranslatedArray } from '../../hooks/useTranslatedContent'
-
-export default function Hero({ hero, brand }) {
-  const primary  = brand?.primary || '#ff3c3c'
-  const t        = useUIStrings(brand)
-
-  const rawSlides = (() => {
-    if (Array.isArray(hero?.slides) && hero.slides.length > 0) return hero.slides
-    return [{
-      badge:    hero?.badge    || t.hero.badge,
-      headline: hero?.headline || 'ESTÉTICA QUE VENDE.',
-      sub:      hero?.sub      || 'Fusionamos el arte cinematográfico con la ingeniería web.',
-      cta:      hero?.cta      || t.hero.exploreCta,
-      bgImage:  hero?.bgImage  || 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?auto=format&fit=crop&w=1920&q=80',
-    }]
-  })()
-
-  // Traducir contenido editorial de cada slide
-  const slides = useTranslatedArray(rawSlides, ['badge', 'headline', 'sub', 'cta'], brand)
-
-  const [current, setCurrent] = useState(0)
-  const [paused,  setPaused]  = useState(false)
-  const [fading,  setFading]  = useState(false)
-  const total = slides.length
-
-  const goTo = useCallback((idx) => {
-    setFading(true)
-    setTimeout(() => {
-      setCurrent(idx)
-      setFading(false)
-    }, 350)
-  }, [])
-
-  const next = useCallback(() => goTo((current + 1) % total), [current, total, goTo])
-  const prev = useCallback(() => goTo((current - 1 + total) % total), [current, total, goTo])
-
-  useEffect(() => {
-    if (total <= 1 || paused) return
-    const id = setInterval(next, 6000)
-    return () => clearInterval(id)
-  }, [total, paused, next])
-
-  const slide = slides[current] || slides[0]
-  const bg    = slide.bgImage || 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?auto=format&fit=crop&w=1920&q=80'
-  const words = (slide.headline || 'ESTÉTICA QUE VENDE.').split(' ')
-
-  return (
-    <section
-      id="home"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      style={{
-        height: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
-        padding: '0 6%',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
-      <div
-        key={`bg-${current}`}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          zIndex: 0,
-          backgroundImage: `
-            radial-gradient(circle at center, ${primary}10 0%, transparent 70%),
-            linear-gradient(to bottom, rgba(3,3,3,0.4), var(--bg)),
-            url('${bg}')
-          `,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          opacity: fading ? 0 : 1,
-          transform: fading ? 'scale(1.03)' : 'scale(1)',
-          transition: 'opacity 0.35s ease, transform 0.35s ease',
-        }}
-      />
-
-      <div
-        style={{
-          maxWidth: 800,
-          position: 'relative',
-          zIndex: 1,
-          opacity: fading ? 0 : 1,
-          transform: fading ? 'translateY(12px)' : 'translateY(0)',
-          transition: 'opacity 0.35s ease, transform 0.35s ease',
-        }}
-      >
-        <p style={{
-          textTransform: 'uppercase', letterSpacing: 5,
-          color: primary, fontWeight: 800, fontSize: '0.85rem', marginBottom: 20,
-        }}>
-          {slide.badge || t.hero.badge}
-        </p>
-
-        <h1 style={{
-          fontFamily: 'Cinzel, serif',
-          fontSize: 'clamp(3rem, 8vw, 6rem)',
-          lineHeight: 0.95, marginBottom: 24, color: 'white',
-        }}>
-          {words.map((word, i) => (
-            <span key={i} style={{ color: i === words.length - 1 ? primary : 'white' }}>
-              {word}{' '}
-            </span>
-          ))}
-        </h1>
-
-        <p style={{
-          color: 'rgba(255,255,255,0.55)',
-          fontSize: '1.15rem', maxWidth: 600,
-          margin: '0 auto 40px', lineHeight: 1.7,
-        }}>
-          {slide.sub}
-        </p>
-
-        <a
-          href="#ecosistemas"
-          style={{
-            display: 'inline-block', padding: '18px 48px',
-            background: primary, color: 'white',
-            textDecoration: 'none', borderRadius: 5,
-            fontWeight: 800, fontSize: '0.9rem',
-            letterSpacing: 2, textTransform: 'uppercase',
-            transition: 'all 0.3s',
-            boxShadow: `0 0 40px ${primary}40`,
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.transform = 'translateY(-3px)'
-            e.currentTarget.style.boxShadow = `0 12px 40px ${primary}60`
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.transform = 'translateY(0)'
-            e.currentTarget.style.boxShadow = `0 0 40px ${primary}40`
-          }}
-        >
-          {slide.cta || t.hero.exploreCta}
-        </a>
-      </div>
-
-      {total > 1 && (
-        <>
-          <button
-            onClick={prev}
-            aria-label="Previous"
-            style={arrowBtnStyle('left', primary)}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = primary; e.currentTarget.style.color = primary }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'white' }}
-          >‹</button>
-          <button
-            onClick={next}
-            aria-label="Next"
-            style={arrowBtnStyle('right', primary)}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = primary; e.currentTarget.style.color = primary }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'white' }}
-          >›</button>
-
-          <div style={{
-            position: 'absolute', bottom: 32, left: '50%',
-            transform: 'translateX(-50%)',
-            display: 'flex', gap: 8, zIndex: 2,
-          }}>
-            {slides.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => goTo(i)}
-                style={{
-                  width: i === current ? 28 : 8,
-                  height: 8, borderRadius: 4,
-                  background: i === current ? primary : 'rgba(255,255,255,0.3)',
-                  border: 'none', cursor: 'pointer', padding: 0,
-                  transition: 'all 0.3s ease',
-                }}
-              />
-            ))}
-          </div>
-
-          <div style={{
-            position: 'absolute', bottom: 36, right: '6%',
-            fontSize: 11, color: 'rgba(255,255,255,0.35)',
-            fontWeight: 700, letterSpacing: 2, zIndex: 2,
-          }}>
-            {String(current + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}
-          </div>
-        </>
-      )}
-    </section>
-  )
-}
-
-function arrowBtnStyle(side, primary) {
-  return {
-    position: 'absolute',
-    top: '50%',
-    [side]: '3%',
-    transform: 'translateY(-50%)',
-    zIndex: 2,
-    width: 48, height: 48,
-    background: 'rgba(0,0,0,0.4)',
-    backdropFilter: 'blur(8px)',
-    border: '1px solid rgba(255,255,255,0.2)',
-    borderRadius: '50%',
-    color: 'white',
-    fontSize: 24,
-    cursor: 'pointer',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    transition: 'all 0.2s',
-    padding: 0, lineHeight: 1,
-  }
-}
-</file>
-
-<file path="src/components/site/TestimonialsSection.jsx">
-import { useUIStrings } from '../../hooks/useUIStrings'
-import { useTranslatedArray } from '../../hooks/useTranslatedContent'
-
-export default function TestimonialsSection({ testimonials, brand }) {
-  if (!testimonials?.length) return null
-  const primary = brand?.primary || 'var(--primary)'
-  const t = useUIStrings(brand)
-
-  // Traducir campos editoriales de cada testimonio
-  // name y role se dejan sin traducir (son nombres propios)
-  const translatedTestimonials = useTranslatedArray(testimonials, ['text', 'role'], brand)
-
-  return (
-    <section id="testimonios" style={{ padding: '100px 6%' }}>
-      <div style={{ textAlign: 'center', marginBottom: 60 }}>
-        <p style={{ color: primary, fontSize: '0.75rem', fontWeight: 800,
-          textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12 }}>
-          {t.testimonials.eyebrow}
-        </p>
-        <h2 style={{ fontSize: 'clamp(2rem,5vw,3rem)', fontWeight: 800, color: 'var(--text-main)' }}>
-          {t.testimonials.heading} <span style={{ color: primary }}>{t.testimonials.headingAccent}</span>
-        </h2>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))', gap: 20 }}>
-        {translatedTestimonials.map((item, i) => (
-          <div key={item.id || i} style={{ background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '28px 24px',
-            transition: 'all 0.3s' }}
-            onMouseEnter={e => {
-              e.currentTarget.style.borderColor = `${primary}50`
-              e.currentTarget.style.background  = `${primary}06`
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
-              e.currentTarget.style.background  = 'rgba(255,255,255,0.03)'
-            }}>
-            <div style={{ color: primary, fontSize: 32, marginBottom: 16, lineHeight: 1 }}>"</div>
-            <p style={{ color: 'var(--text-dim)', fontSize: 15, lineHeight: 1.8,
-              fontStyle: 'italic', marginBottom: 20 }}>{item.text}</p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 44, height: 44, borderRadius: '50%',
-                background: `${primary}20`, overflow: 'hidden',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, flexShrink: 0 }}>
-                {item.avatar
-                  ? <img src={item.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : '👤'}
-              </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-main)' }}>{item.name}</div>
-                <div style={{ color: primary, fontSize: 12 }}>{item.role}</div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  )
-}
-</file>
-
 <file path="src/hooks/useUIStrings.js">
 /**
  * useUIStrings.js — FIXED v2
@@ -4305,6 +3939,15 @@ export function useAuth() {
 }
 </file>
 
+<file path="vercel.json">
+{
+  "rewrites": [
+    { "source": "/sitemap.xml", "destination": "/sitemap.xml" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
+</file>
+
 <file path="vite.config.js">
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -4336,6 +3979,85 @@ export default defineConfig({
     },
   },
 })
+</file>
+
+<file path="index.html">
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="google-site-verification" content="fVDBv_QoaC2pSBLcWuHXeEBP-uhk2ym4o0dXK1zx15U" />
+    <title>Polartronic Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&family=Bebas+Neue&family=Cinzel:wght@700&display=swap" rel="stylesheet" />
+
+    <!--
+      ANTI-FOUC SCRIPT
+      Aplica colores desde caché ANTES del primer render de React.
+      NO usa opacity ni visibility — nunca bloquea nada.
+      Si la ruta es /admin o /proposal → skip (no necesitan anti-FOUC).
+    -->
+    <script>
+      (function () {
+        try {
+          /* Saltar en rutas que no son el sitio público */
+          var path = window.location.pathname;
+          if (path.indexOf('/admin') === 0 || path.indexOf('/proposal') === 0) return;
+
+          var raw = localStorage.getItem('polartronic_cache');
+          if (!raw) return;
+
+          var parsed = JSON.parse(raw);
+          if (Date.now() - parsed.ts > 300000) return; /* TTL 5 min */
+
+          var site  = parsed.data && parsed.data.site;
+          var brand = site && site.brand;
+          if (!brand) return;
+
+          var root = document.documentElement;
+
+          if (brand.primary) root.style.setProperty('--primary', brand.primary);
+
+          if (brand.bg) {
+            root.style.setProperty('--bg', brand.bg);
+
+            var hex = brand.bg.replace('#', '');
+            if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+            var r = parseInt(hex.slice(0,2),16);
+            var g = parseInt(hex.slice(2,4),16);
+            var b = parseInt(hex.slice(4,6),16);
+            var light = (0.299*r + 0.587*g + 0.114*b)/255 > 0.5;
+
+            if (light) {
+              root.style.setProperty('--text-main',  '#0a0a0a');
+              root.style.setProperty('--text-dim',   'rgba(0,0,0,0.6)');
+              root.style.setProperty('--text-muted', 'rgba(0,0,0,0.4)');
+              root.style.setProperty('--border',     'rgba(0,0,0,0.1)');
+              root.style.setProperty('--card-bg',    '#f5f5f5');
+              root.setAttribute('data-theme', 'light');
+            } else {
+              root.style.setProperty('--text-main',  '#ffffff');
+              root.style.setProperty('--text-dim',   'rgba(255,255,255,0.55)');
+              root.style.setProperty('--text-muted', 'rgba(255,255,255,0.35)');
+              root.style.setProperty('--border',     'rgba(255,255,255,0.08)');
+              root.style.setProperty('--card-bg',    '#0d0d0d');
+              root.setAttribute('data-theme', 'dark');
+            }
+          }
+
+          if (brand.language) window.__SITE_LANGUAGE__ = brand.language;
+
+        } catch(e) { /* nunca romper la página */ }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
 </file>
 
 <file path="src/components/admin/ImageUploadField.jsx">
@@ -6235,253 +5957,282 @@ export default function ServicesTab({ data }) {
 }
 </file>
 
-<file path="src/components/site/Footer.jsx">
-import { useUIStrings } from '../../hooks/useUIStrings'
-import { useTranslatedContent } from '../../hooks/useTranslatedContent'
-
-export default function Footer({ site }) {
-  const { brand, footer } = site
-  const primary = brand?.primary || '#ff3c3c'
-  const name    = brand?.name    || 'POLARTRONIC'
-  const logo    = brand?.logo    || ''
-  const t = useUIStrings(brand)
-
-  // Traducir campos editoriales del footer
-  const translatedFooter = useTranslatedContent(
-    {
-      copy: footer?.copy || `© 2026 ${name}. Todos los derechos reservados.`,
-      sub:  footer?.sub  || 'Diseño Web & Branding de Alto Impacto.',
-    },
-    brand
-  )
-
-  return (
-    <footer style={{ background: '#060606', padding: '80px 6% 40px',
-      borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr repeat(3, 1fr)', gap: 50, marginBottom: 50 }}>
-
-        {/* Brand */}
-        <div>
-          <div style={{ marginBottom: 16 }}>
-            {logo ? (
-              <img
-                src={logo}
-                alt={name}
-                style={{ height: 48, maxWidth: 200, objectFit: 'contain' }}
-              />
-            ) : (
-              <div style={{
-                fontFamily: 'Bebas Neue, sans-serif', fontSize: '2rem',
-                color: primary, letterSpacing: 2,
-              }}>
-                {name}
-              </div>
-            )}
-          </div>
-          <p style={{ color: 'rgba(255,255,255,0.35)', lineHeight: 1.8, fontSize: 14 }}>
-            Creamos el estándar del futuro digital. Si buscas lo ordinario, no somos tu agencia.
-          </p>
-        </div>
-
-        {/* Nav */}
-        <div>
-          <h4 style={{ fontSize: 13, fontWeight: 700, marginBottom: 20,
-            textTransform: 'uppercase', letterSpacing: 1.5, color: 'rgba(255,255,255,0.6)' }}>
-            {t.footer.navigation}
-          </h4>
-          <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {[
-              { href: '#home',        label: t.nav.home       },
-              { href: '#servicios',   label: t.nav.services   },
-              { href: '#ecosistemas', label: t.nav.memberships },
-              { href: '#proyectos',   label: t.nav.projects   },
-            ].map(l => (
-              <li key={l.href}>
-                <a href={l.href} style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none',
-                  fontSize: 14, transition: '0.2s' }}
-                  onMouseEnter={e => { e.currentTarget.style.color = primary; e.currentTarget.style.paddingLeft = '5px' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; e.currentTarget.style.paddingLeft = '0' }}>
-                  {l.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Services */}
-        <div>
-          <h4 style={{ fontSize: 13, fontWeight: 700, marginBottom: 20,
-            textTransform: 'uppercase', letterSpacing: 1.5, color: 'rgba(255,255,255,0.6)' }}>
-            {t.footer.services}
-          </h4>
-          <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {['Diseño Web', 'Desarrollo', 'Branding', 'Marketing'].map(s => (
-              <li key={s}>
-                <a href="#servicios" style={{ color: 'rgba(255,255,255,0.4)',
-                  textDecoration: 'none', fontSize: 14 }}>{s}</a>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Contact */}
-        <div>
-          <h4 style={{ fontSize: 13, fontWeight: 700, marginBottom: 20,
-            textTransform: 'uppercase', letterSpacing: 1.5, color: 'rgba(255,255,255,0.6)' }}>
-            {t.footer.contact}
-          </h4>
-          <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {footer?.email && (
-              <li><a href={`mailto:${footer.email}`}
-                style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none', fontSize: 14 }}>
-                {footer.email}</a></li>
-            )}
-            {footer?.whatsapp && footer.whatsapp !== '#' && (
-              <li><a href={footer.whatsapp} target="_blank" rel="noreferrer"
-                style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none', fontSize: 14 }}>
-                {t.footer.whatsapp}</a></li>
-            )}
-            {footer?.instagram && footer.instagram !== '#' && (
-              <li><a href={footer.instagram} target="_blank" rel="noreferrer"
-                style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none', fontSize: 14 }}>
-                {t.footer.instagram}</a></li>
-            )}
-          </ul>
-        </div>
-      </div>
-
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 30,
-        display: 'flex', justifyContent: 'space-between', color: 'rgba(255,255,255,0.25)',
-        fontSize: 13, flexWrap: 'wrap', gap: 10 }}>
-        <span>{translatedFooter.copy}</span>
-        <span>{translatedFooter.sub}</span>
-      </div>
-    </footer>
-  )
-}
-</file>
-
-<file path="src/components/site/ServicesSection.jsx">
+<file path="src/components/site/Hero.jsx">
+import { useState, useEffect, useCallback } from 'react'
 import { useUIStrings } from '../../hooks/useUIStrings'
 import { useTranslatedArray } from '../../hooks/useTranslatedContent'
 
-export default function ServicesSection({ services, brand }) {
-  if (!services?.length) return null
-  const primary = brand?.primary || 'var(--primary)'
-  const t = useUIStrings(brand)
+export default function Hero({ hero, brand }) {
+  const primary  = brand?.primary || '#ff3c3c'
+  const t        = useUIStrings(brand)
 
-  // Traducir campos editoriales de cada servicio
-  const translatedServices = useTranslatedArray(services, ['title', 'desc', 'price'], brand)
+  const rawSlides = (() => {
+    if (Array.isArray(hero?.slides) && hero.slides.length > 0) return hero.slides
+    return [{
+      badge:    hero?.badge    || t.hero.badge,
+      headline: hero?.headline || 'ESTÉTICA QUE VENDE.',
+      sub:      hero?.sub      || 'Fusionamos el arte cinematográfico con la ingeniería web.',
+      cta:      hero?.cta      || t.hero.exploreCta,
+      bgImage:  hero?.bgImage  || 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?auto=format&fit=crop&w=1920&q=80',
+    }]
+  })()
+
+  // Traducir contenido editorial de cada slide
+  const slides = useTranslatedArray(rawSlides, ['badge', 'headline', 'sub', 'cta'], brand)
+
+  const [current, setCurrent] = useState(0)
+  const [paused,  setPaused]  = useState(false)
+  const [fading,  setFading]  = useState(false)
+  const total = slides.length
+
+  const goTo = useCallback((idx) => {
+    setFading(true)
+    setTimeout(() => {
+      setCurrent(idx)
+      setFading(false)
+    }, 350)
+  }, [])
+
+  const next = useCallback(() => goTo((current + 1) % total), [current, total, goTo])
+  const prev = useCallback(() => goTo((current - 1 + total) % total), [current, total, goTo])
+
+  useEffect(() => {
+    if (total <= 1 || paused) return
+    const id = setInterval(next, 6000)
+    return () => clearInterval(id)
+  }, [total, paused, next])
+
+  const slide = slides[current] || slides[0]
+  const bg    = slide.bgImage || 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?auto=format&fit=crop&w=1920&q=80'
+  const words = (slide.headline || 'ESTÉTICA QUE VENDE.').split(' ')
 
   return (
-    <section id="servicios" style={{ padding: '100px 6%', background: 'var(--bg)' }}>
-      <div style={{ textAlign: 'center', marginBottom: 60 }}>
+    <section
+      id="home"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      style={{
+        height: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        padding: '0 6%',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        key={`bg-${current}`}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 0,
+          backgroundImage: `
+            radial-gradient(circle at center, ${primary}10 0%, transparent 70%),
+            linear-gradient(to bottom, rgba(3,3,3,0.4), var(--bg)),
+            url('${bg}')
+          `,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: fading ? 0 : 1,
+          transform: fading ? 'scale(1.03)' : 'scale(1)',
+          transition: 'opacity 0.35s ease, transform 0.35s ease',
+        }}
+      />
+
+      <div
+        style={{
+          maxWidth: 800,
+          position: 'relative',
+          zIndex: 1,
+          opacity: fading ? 0 : 1,
+          transform: fading ? 'translateY(12px)' : 'translateY(0)',
+          transition: 'opacity 0.35s ease, transform 0.35s ease',
+        }}
+      >
         <p style={{
-          color: primary, fontSize: '0.75rem', fontWeight: 800,
-          textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12,
+          textTransform: 'uppercase', letterSpacing: 5,
+          color: primary, fontWeight: 800, fontSize: '0.85rem', marginBottom: 20,
         }}>
-          {t.services.eyebrow}
+          {slide.badge || t.hero.badge}
         </p>
-        <h2 style={{ fontSize: 'clamp(2rem,5vw,3rem)', fontWeight: 800, lineHeight: 1.1, color: 'var(--text-main)' }}>
-          {t.services.heading} <span style={{ color: primary }}>{t.services.headingAccent}</span>
-        </h2>
+
+        <h1 style={{
+          fontFamily: 'Cinzel, serif',
+          fontSize: 'clamp(3rem, 8vw, 6rem)',
+          lineHeight: 0.95, marginBottom: 24, color: 'white',
+        }}>
+          {words.map((word, i) => (
+            <span key={i} style={{ color: i === words.length - 1 ? primary : 'white' }}>
+              {word}{' '}
+            </span>
+          ))}
+        </h1>
+
+        <p style={{
+          color: 'rgba(255,255,255,0.55)',
+          fontSize: '1.15rem', maxWidth: 600,
+          margin: '0 auto 40px', lineHeight: 1.7,
+        }}>
+          {slide.sub}
+        </p>
+
+        <a
+          href="#ecosistemas"
+          style={{
+            display: 'inline-block', padding: '18px 48px',
+            background: primary, color: 'white',
+            textDecoration: 'none', borderRadius: 5,
+            fontWeight: 800, fontSize: '0.9rem',
+            letterSpacing: 2, textTransform: 'uppercase',
+            transition: 'all 0.3s',
+            boxShadow: `0 0 40px ${primary}40`,
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateY(-3px)'
+            e.currentTarget.style.boxShadow = `0 12px 40px ${primary}60`
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'translateY(0)'
+            e.currentTarget.style.boxShadow = `0 0 40px ${primary}40`
+          }}
+        >
+          {slide.cta || t.hero.exploreCta}
+        </a>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 24 }}>
-        {translatedServices.map((svc, i) => (
-          <ServiceCard key={svc.id || i} svc={svc} primary={primary} />
-        ))}
-      </div>
+      {total > 1 && (
+        <>
+          <button
+            onClick={prev}
+            aria-label="Previous"
+            style={arrowBtnStyle('left', primary)}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = primary; e.currentTarget.style.color = primary }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'white' }}
+          >‹</button>
+          <button
+            onClick={next}
+            aria-label="Next"
+            style={arrowBtnStyle('right', primary)}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = primary; e.currentTarget.style.color = primary }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'white' }}
+          >›</button>
+
+          <div style={{
+            position: 'absolute', bottom: 32, left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex', gap: 8, zIndex: 2,
+          }}>
+            {slides.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => goTo(i)}
+                style={{
+                  width: i === current ? 28 : 8,
+                  height: 8, borderRadius: 4,
+                  background: i === current ? primary : 'rgba(255,255,255,0.3)',
+                  border: 'none', cursor: 'pointer', padding: 0,
+                  transition: 'all 0.3s ease',
+                }}
+              />
+            ))}
+          </div>
+
+          <div style={{
+            position: 'absolute', bottom: 36, right: '6%',
+            fontSize: 11, color: 'rgba(255,255,255,0.35)',
+            fontWeight: 700, letterSpacing: 2, zIndex: 2,
+          }}>
+            {String(current + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}
+          </div>
+        </>
+      )}
     </section>
   )
 }
 
-function ServiceCard({ svc, primary }) {
-  const hasImage = !!(svc.image && svc.image.trim())
+function arrowBtnStyle(side, primary) {
+  return {
+    position: 'absolute',
+    top: '50%',
+    [side]: '3%',
+    transform: 'translateY(-50%)',
+    zIndex: 2,
+    width: 48, height: 48,
+    background: 'rgba(0,0,0,0.4)',
+    backdropFilter: 'blur(8px)',
+    border: '1px solid rgba(255,255,255,0.2)',
+    borderRadius: '50%',
+    color: 'white',
+    fontSize: 24,
+    cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    transition: 'all 0.2s',
+    padding: 0, lineHeight: 1,
+  }
+}
+</file>
+
+<file path="src/components/site/TestimonialsSection.jsx">
+import { useUIStrings } from '../../hooks/useUIStrings'
+import { useTranslatedArray } from '../../hooks/useTranslatedContent'
+
+export default function TestimonialsSection({ testimonials, brand }) {
+  if (!testimonials?.length) return null
+  const primary = brand?.primary || 'var(--primary)'
+  const t = useUIStrings(brand)
+
+  // Traducir campos editoriales de cada testimonio
+  // name y role se dejan sin traducir (son nombres propios)
+  const translatedTestimonials = useTranslatedArray(testimonials, ['text', 'role'], brand)
 
   return (
-    <div
-      style={{
-        background: 'rgba(255,255,255,0.03)',
-        border: '1px solid rgba(255,255,255,0.07)',
-        borderRadius: 18,
-        overflow: 'hidden',
-        transition: 'all 0.4s cubic-bezier(0.23,1,0.32,1)',
-        cursor: 'default',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.borderColor = `${primary}60`
-        e.currentTarget.style.transform   = 'translateY(-8px)'
-        e.currentTarget.style.background  = `${primary}08`
-        e.currentTarget.style.boxShadow   = `0 20px 40px rgba(0,0,0,0.4)`
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'
-        e.currentTarget.style.transform   = 'translateY(0)'
-        e.currentTarget.style.background  = 'rgba(255,255,255,0.03)'
-        e.currentTarget.style.boxShadow   = 'none'
-      }}
-    >
-      {hasImage && (
-        <div style={{ height: 160, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
-          <img
-            src={svc.image}
-            alt={svc.title}
-            style={{
-              width: '100%', height: '100%', objectFit: 'cover',
-              filter: 'brightness(0.65)',
-              transition: 'transform 0.5s ease, filter 0.3s',
-            }}
+    <section id="testimonios" style={{ padding: '100px 6%' }}>
+      <div style={{ textAlign: 'center', marginBottom: 60 }}>
+        <p style={{ color: primary, fontSize: '0.75rem', fontWeight: 800,
+          textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12 }}>
+          {t.testimonials.eyebrow}
+        </p>
+        <h2 style={{ fontSize: 'clamp(2rem,5vw,3rem)', fontWeight: 800, color: 'var(--text-main)' }}>
+          {t.testimonials.heading} <span style={{ color: primary }}>{t.testimonials.headingAccent}</span>
+        </h2>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))', gap: 20 }}>
+        {translatedTestimonials.map((item, i) => (
+          <div key={item.id || i} style={{ background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '28px 24px',
+            transition: 'all 0.3s' }}
             onMouseEnter={e => {
-              e.currentTarget.style.transform = 'scale(1.06)'
-              e.currentTarget.style.filter    = 'brightness(0.8)'
+              e.currentTarget.style.borderColor = `${primary}50`
+              e.currentTarget.style.background  = `${primary}06`
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.transform = 'scale(1)'
-              e.currentTarget.style.filter    = 'brightness(0.65)'
-            }}
-          />
-          {svc.icon && (
-            <div style={{
-              position: 'absolute', bottom: 12, left: 16,
-              fontSize: 26,
-              background: 'rgba(0,0,0,0.7)',
-              backdropFilter: 'blur(8px)',
-              width: 48, height: 48, borderRadius: 12,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: `1px solid ${primary}40`,
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+              e.currentTarget.style.background  = 'rgba(255,255,255,0.03)'
             }}>
-              {svc.icon}
+            <div style={{ color: primary, fontSize: 32, marginBottom: 16, lineHeight: 1 }}>"</div>
+            <p style={{ color: 'var(--text-dim)', fontSize: 15, lineHeight: 1.8,
+              fontStyle: 'italic', marginBottom: 20 }}>{item.text}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 44, height: 44, borderRadius: '50%',
+                background: `${primary}20`, overflow: 'hidden',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 18, flexShrink: 0 }}>
+                {item.avatar
+                  ? <img src={item.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : '👤'}
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-main)' }}>{item.name}</div>
+                <div style={{ color: primary, fontSize: 12 }}>{item.role}</div>
+              </div>
             </div>
-          )}
-        </div>
-      )}
-
-      <div style={{ padding: '24px 24px 28px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {!hasImage && svc.icon && (
-          <div style={{ fontSize: 36, marginBottom: 18 }}>{svc.icon}</div>
-        )}
-
-        <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: 10, color: 'var(--text-main)' }}>
-          {svc.title}
-        </h3>
-        <p style={{ color: 'var(--text-dim)', fontSize: 14, lineHeight: 1.7, marginBottom: 16, flex: 1 }}>
-          {svc.desc}
-        </p>
-        {svc.price && (
-          <div style={{
-            color: primary, fontWeight: 700, fontSize: 13,
-            letterSpacing: 0.5,
-            paddingTop: 12,
-            borderTop: '1px solid rgba(255,255,255,0.06)',
-          }}>
-            {svc.price}
           </div>
-        )}
+        ))}
       </div>
-    </div>
+    </section>
   )
 }
 </file>
@@ -7135,6 +6886,257 @@ function NavbarLogoPreview({ layout, logo, name, primary }) {
 }
 </file>
 
+<file path="src/components/site/Footer.jsx">
+import { useUIStrings } from '../../hooks/useUIStrings'
+import { useTranslatedContent } from '../../hooks/useTranslatedContent'
+
+export default function Footer({ site }) {
+  const { brand, footer } = site
+  const primary = brand?.primary || '#ff3c3c'
+  const name    = brand?.name    || 'POLARTRONIC'
+  const logo    = brand?.logo    || ''
+  const t = useUIStrings(brand)
+
+  // Traducir campos editoriales del footer
+  const translatedFooter = useTranslatedContent(
+    {
+      copy: footer?.copy || `© 2026 ${name}. Todos los derechos reservados.`,
+      sub:  footer?.sub  || 'Diseño Web & Branding de Alto Impacto.',
+    },
+    brand
+  )
+
+  return (
+    <footer style={{ background: '#060606', padding: '80px 6% 40px',
+      borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr repeat(3, 1fr)', gap: 50, marginBottom: 50 }}>
+
+        {/* Brand */}
+        <div>
+          <div style={{ marginBottom: 16 }}>
+            {logo ? (
+              <img
+                src={logo}
+                alt={name}
+                style={{ height: 48, maxWidth: 200, objectFit: 'contain' }}
+              />
+            ) : (
+              <div style={{
+                fontFamily: 'Bebas Neue, sans-serif', fontSize: '2rem',
+                color: primary, letterSpacing: 2,
+              }}>
+                {name}
+              </div>
+            )}
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.35)', lineHeight: 1.8, fontSize: 14 }}>
+            Creamos el estándar del futuro digital. Si buscas lo ordinario, no somos tu agencia.
+          </p>
+        </div>
+
+        {/* Nav */}
+        <div>
+          <h4 style={{ fontSize: 13, fontWeight: 700, marginBottom: 20,
+            textTransform: 'uppercase', letterSpacing: 1.5, color: 'rgba(255,255,255,0.6)' }}>
+            {t.footer.navigation}
+          </h4>
+          <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[
+              { href: '#home',        label: t.nav.home       },
+              { href: '#servicios',   label: t.nav.services   },
+              { href: '#ecosistemas', label: t.nav.memberships },
+              { href: '#proyectos',   label: t.nav.projects   },
+            ].map(l => (
+              <li key={l.href}>
+                <a href={l.href} style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none',
+                  fontSize: 14, transition: '0.2s' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = primary; e.currentTarget.style.paddingLeft = '5px' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; e.currentTarget.style.paddingLeft = '0' }}>
+                  {l.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Services */}
+        <div>
+          <h4 style={{ fontSize: 13, fontWeight: 700, marginBottom: 20,
+            textTransform: 'uppercase', letterSpacing: 1.5, color: 'rgba(255,255,255,0.6)' }}>
+            {t.footer.services}
+          </h4>
+          <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {['Diseño Web', 'Desarrollo', 'Branding', 'Marketing'].map(s => (
+              <li key={s}>
+                <a href="#servicios" style={{ color: 'rgba(255,255,255,0.4)',
+                  textDecoration: 'none', fontSize: 14 }}>{s}</a>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Contact */}
+        <div>
+          <h4 style={{ fontSize: 13, fontWeight: 700, marginBottom: 20,
+            textTransform: 'uppercase', letterSpacing: 1.5, color: 'rgba(255,255,255,0.6)' }}>
+            {t.footer.contact}
+          </h4>
+          <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {footer?.email && (
+              <li><a href={`mailto:${footer.email}`}
+                style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none', fontSize: 14 }}>
+                {footer.email}</a></li>
+            )}
+            {footer?.whatsapp && footer.whatsapp !== '#' && (
+              <li><a href={footer.whatsapp} target="_blank" rel="noreferrer"
+                style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none', fontSize: 14 }}>
+                {t.footer.whatsapp}</a></li>
+            )}
+            {footer?.instagram && footer.instagram !== '#' && (
+              <li><a href={footer.instagram} target="_blank" rel="noreferrer"
+                style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none', fontSize: 14 }}>
+                {t.footer.instagram}</a></li>
+            )}
+          </ul>
+        </div>
+      </div>
+
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 30,
+        display: 'flex', justifyContent: 'space-between', color: 'rgba(255,255,255,0.25)',
+        fontSize: 13, flexWrap: 'wrap', gap: 10 }}>
+        <span>{translatedFooter.copy}</span>
+        <span>{translatedFooter.sub}</span>
+      </div>
+    </footer>
+  )
+}
+</file>
+
+<file path="src/components/site/ServicesSection.jsx">
+import { useUIStrings } from '../../hooks/useUIStrings'
+import { useTranslatedArray } from '../../hooks/useTranslatedContent'
+
+export default function ServicesSection({ services, brand }) {
+  if (!services?.length) return null
+  const primary = brand?.primary || 'var(--primary)'
+  const t = useUIStrings(brand)
+
+  // Traducir campos editoriales de cada servicio
+  const translatedServices = useTranslatedArray(services, ['title', 'desc', 'price'], brand)
+
+  return (
+    <section id="servicios" style={{ padding: '100px 6%', background: 'var(--bg)' }}>
+      <div style={{ textAlign: 'center', marginBottom: 60 }}>
+        <p style={{
+          color: primary, fontSize: '0.75rem', fontWeight: 800,
+          textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12,
+        }}>
+          {t.services.eyebrow}
+        </p>
+        <h2 style={{ fontSize: 'clamp(2rem,5vw,3rem)', fontWeight: 800, lineHeight: 1.1, color: 'var(--text-main)' }}>
+          {t.services.heading} <span style={{ color: primary }}>{t.services.headingAccent}</span>
+        </h2>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 24 }}>
+        {translatedServices.map((svc, i) => (
+          <ServiceCard key={svc.id || i} svc={svc} primary={primary} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function ServiceCard({ svc, primary }) {
+  const hasImage = !!(svc.image && svc.image.trim())
+
+  return (
+    <div
+      style={{
+        background: 'rgba(255,255,255,0.03)',
+        border: '1px solid rgba(255,255,255,0.07)',
+        borderRadius: 18,
+        overflow: 'hidden',
+        transition: 'all 0.4s cubic-bezier(0.23,1,0.32,1)',
+        cursor: 'default',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.borderColor = `${primary}60`
+        e.currentTarget.style.transform   = 'translateY(-8px)'
+        e.currentTarget.style.background  = `${primary}08`
+        e.currentTarget.style.boxShadow   = `0 20px 40px rgba(0,0,0,0.4)`
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'
+        e.currentTarget.style.transform   = 'translateY(0)'
+        e.currentTarget.style.background  = 'rgba(255,255,255,0.03)'
+        e.currentTarget.style.boxShadow   = 'none'
+      }}
+    >
+      {hasImage && (
+        <div style={{ height: 160, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
+          <img
+            src={svc.image}
+            alt={svc.title}
+            style={{
+              width: '100%', height: '100%', objectFit: 'cover',
+              filter: 'brightness(0.65)',
+              transition: 'transform 0.5s ease, filter 0.3s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'scale(1.06)'
+              e.currentTarget.style.filter    = 'brightness(0.8)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'scale(1)'
+              e.currentTarget.style.filter    = 'brightness(0.65)'
+            }}
+          />
+          {svc.icon && (
+            <div style={{
+              position: 'absolute', bottom: 12, left: 16,
+              fontSize: 26,
+              background: 'rgba(0,0,0,0.7)',
+              backdropFilter: 'blur(8px)',
+              width: 48, height: 48, borderRadius: 12,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: `1px solid ${primary}40`,
+            }}>
+              {svc.icon}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{ padding: '24px 24px 28px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {!hasImage && svc.icon && (
+          <div style={{ fontSize: 36, marginBottom: 18 }}>{svc.icon}</div>
+        )}
+
+        <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: 10, color: 'var(--text-main)' }}>
+          {svc.title}
+        </h3>
+        <p style={{ color: 'var(--text-dim)', fontSize: 14, lineHeight: 1.7, marginBottom: 16, flex: 1 }}>
+          {svc.desc}
+        </p>
+        {svc.price && (
+          <div style={{
+            color: primary, fontWeight: 700, fontSize: 13,
+            letterSpacing: 0.5,
+            paddingTop: 12,
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+          }}>
+            {svc.price}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+</file>
+
 <file path="src/index.css">
 @tailwind base;
 @tailwind components;
@@ -7591,6 +7593,258 @@ export default function App() {
 }
 </file>
 
+<file path="src/lib/firebaseHelpers.js">
+import {
+  doc, getDoc, setDoc, updateDoc,
+  collection, getDocs, addDoc, deleteDoc,
+} from 'firebase/firestore'
+import { db, auth } from './firebase'
+
+function invalidateCache() {
+  try {
+    localStorage.removeItem('polartronic_cache')
+  } catch (e) {
+    console.warn('[cache] invalidation skipped:', e.message)
+  }
+}
+
+export async function getSiteConfig() {
+  try {
+    const snap = await getDoc(doc(db, 'site', 'config'))
+    return snap.exists() ? snap.data() : null
+  } catch (e) {
+    console.error('[firebaseHelpers] getSiteConfig:', e)
+    throw e
+  }
+}
+
+export async function saveSiteConfig(data) {
+  try {
+    await setDoc(doc(db, 'site', 'config'), data, { merge: true })
+    invalidateCache()
+    return { ok: true }
+  } catch (e) {
+    console.error('[firebaseHelpers] saveSiteConfig:', e)
+    throw e
+  }
+}
+
+export async function getEcosystems() {
+  try {
+    const snap = await getDocs(collection(db, 'ecosystems'))
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  } catch (e) {
+    console.error('[firebaseHelpers] getEcosystems:', e)
+    throw e
+  }
+}
+
+export async function saveEcosystem(id, data) {
+  try {
+    if (id) {
+      await updateDoc(doc(db, 'ecosystems', id), data)
+      invalidateCache()
+      return { id }
+    } else {
+      const docRef = await addDoc(collection(db, 'ecosystems'), data)
+      invalidateCache()
+      return { id: docRef.id }
+    }
+  } catch (e) {
+    console.error('[firebaseHelpers] saveEcosystem:', e)
+    throw e
+  }
+}
+
+export async function deleteEcosystem(id) {
+  try {
+    await deleteDoc(doc(db, 'ecosystems', id))
+    invalidateCache()
+  } catch (e) {
+    console.error('[firebaseHelpers] deleteEcosystem:', e)
+    throw e
+  }
+}
+
+export async function getProjects() {
+  try {
+    const snap = await getDocs(collection(db, 'projects'))
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  } catch (e) {
+    console.error('[firebaseHelpers] getProjects:', e)
+    throw e
+  }
+}
+
+export async function saveProject(id, data) {
+  try {
+    if (id) {
+      await updateDoc(doc(db, 'projects', id), data)
+      invalidateCache()
+      return { id }
+    } else {
+      const docRef = await addDoc(collection(db, 'projects'), data)
+      invalidateCache()
+      return { id: docRef.id }
+    }
+  } catch (e) {
+    console.error('[firebaseHelpers] saveProject:', e)
+    throw e
+  }
+}
+
+export async function deleteProject(id) {
+  try {
+    await deleteDoc(doc(db, 'projects', id))
+    invalidateCache()
+  } catch (e) {
+    console.error('[firebaseHelpers] deleteProject:', e)
+    throw e
+  }
+}
+
+export async function getTestimonials() {
+  try {
+    const snap = await getDocs(collection(db, 'testimonials'))
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  } catch (e) {
+    console.error('[firebaseHelpers] getTestimonials:', e)
+    throw e
+  }
+}
+
+export async function saveTestimonial(id, data) {
+  try {
+    if (id) {
+      await updateDoc(doc(db, 'testimonials', id), data)
+      invalidateCache()
+      return { id }
+    } else {
+      const docRef = await addDoc(collection(db, 'testimonials'), data)
+      invalidateCache()
+      return { id: docRef.id }
+    }
+  } catch (e) {
+    console.error('[firebaseHelpers] saveTestimonial:', e)
+    throw e
+  }
+}
+
+export async function deleteTestimonial(id) {
+  try {
+    await deleteDoc(doc(db, 'testimonials', id))
+    invalidateCache()
+  } catch (e) {
+    console.error('[firebaseHelpers] deleteTestimonial:', e)
+    throw e
+  }
+}
+
+export async function getServices() {
+  try {
+    const snap = await getDocs(collection(db, 'services'))
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  } catch (e) {
+    console.error('[firebaseHelpers] getServices:', e)
+    throw e
+  }
+}
+
+export async function saveService(id, data) {
+  try {
+    if (id) {
+      await updateDoc(doc(db, 'services', id), data)
+      invalidateCache()
+      return { id }
+    } else {
+      const docRef = await addDoc(collection(db, 'services'), data)
+      invalidateCache()
+      return { id: docRef.id }
+    }
+  } catch (e) {
+    console.error('[firebaseHelpers] saveService:', e)
+    throw e
+  }
+}
+
+export async function deleteService(id) {
+  try {
+    await deleteDoc(doc(db, 'services', id))
+    invalidateCache()
+  } catch (e) {
+    console.error('[firebaseHelpers] deleteService:', e)
+    throw e
+  }
+}
+
+// ─── Comprime imagen con canvas → base64 WebP ────────────────────────
+function compressImage(file, maxWidth = 1200, quality = 0.85) {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const objectUrl = URL.createObjectURL(file)
+
+    img.onload = () => {
+      let { width, height } = img
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width)
+        width = maxWidth
+      }
+
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, width, height)
+
+      URL.revokeObjectURL(objectUrl)
+      resolve(canvas.toDataURL('image/webp', quality))
+    }
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('Error cargando imagen'))
+    }
+
+    img.src = objectUrl
+  })
+}
+
+// ─── Upload imagen → Firestore (base64) — sin Firebase Storage, sin CORS ──
+export async function uploadImage(file, folder = 'images', onProgress = null) {
+  if (!file) throw new Error('No file provided')
+  if (!file.type.startsWith('image/')) throw new Error('Not a valid image')
+  if (file.size > 10 * 1024 * 1024) throw new Error('Image exceeds 10 MB')
+
+  const user = auth.currentUser
+  if (!user) throw new Error('Usuario no autenticado')
+
+  if (typeof onProgress === 'function') onProgress(10)
+
+  // Comprimir imagen a WebP máx 1200px
+  const base64 = await compressImage(file, 1200, 0.85)
+
+  if (typeof onProgress === 'function') onProgress(60)
+
+  // Guardar en Firestore — colección 'images'
+  // Añade la regla en Firestore:
+  // match /images/{doc} { allow read: if true; allow write: if request.auth != null; }
+  await addDoc(collection(db, 'images'), {
+    data: base64,
+    folder,
+    name: file.name,
+    type: 'image/webp',
+    createdAt: new Date().toISOString(),
+    uid: user.uid,
+  })
+
+  if (typeof onProgress === 'function') onProgress(100)
+
+  // Devuelve el base64 directamente — funciona como src en cualquier <img>
+  return base64
+}
+</file>
+
 <file path="src/components/site/ContactSection.jsx">
 /**
  * ContactSection.jsx — PhoneInput + 100% responsivo + traducción editorial
@@ -7896,258 +8150,6 @@ export default function ContactSection({ contact, footer, brand, site }) {
       </div>
     </section>
   )
-}
-</file>
-
-<file path="src/lib/firebaseHelpers.js">
-import {
-  doc, getDoc, setDoc, updateDoc,
-  collection, getDocs, addDoc, deleteDoc,
-} from 'firebase/firestore'
-import { db, auth } from './firebase'
-
-function invalidateCache() {
-  try {
-    localStorage.removeItem('polartronic_cache')
-  } catch (e) {
-    console.warn('[cache] invalidation skipped:', e.message)
-  }
-}
-
-export async function getSiteConfig() {
-  try {
-    const snap = await getDoc(doc(db, 'site', 'config'))
-    return snap.exists() ? snap.data() : null
-  } catch (e) {
-    console.error('[firebaseHelpers] getSiteConfig:', e)
-    throw e
-  }
-}
-
-export async function saveSiteConfig(data) {
-  try {
-    await setDoc(doc(db, 'site', 'config'), data, { merge: true })
-    invalidateCache()
-    return { ok: true }
-  } catch (e) {
-    console.error('[firebaseHelpers] saveSiteConfig:', e)
-    throw e
-  }
-}
-
-export async function getEcosystems() {
-  try {
-    const snap = await getDocs(collection(db, 'ecosystems'))
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
-  } catch (e) {
-    console.error('[firebaseHelpers] getEcosystems:', e)
-    throw e
-  }
-}
-
-export async function saveEcosystem(id, data) {
-  try {
-    if (id) {
-      await updateDoc(doc(db, 'ecosystems', id), data)
-      invalidateCache()
-      return { id }
-    } else {
-      const docRef = await addDoc(collection(db, 'ecosystems'), data)
-      invalidateCache()
-      return { id: docRef.id }
-    }
-  } catch (e) {
-    console.error('[firebaseHelpers] saveEcosystem:', e)
-    throw e
-  }
-}
-
-export async function deleteEcosystem(id) {
-  try {
-    await deleteDoc(doc(db, 'ecosystems', id))
-    invalidateCache()
-  } catch (e) {
-    console.error('[firebaseHelpers] deleteEcosystem:', e)
-    throw e
-  }
-}
-
-export async function getProjects() {
-  try {
-    const snap = await getDocs(collection(db, 'projects'))
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
-  } catch (e) {
-    console.error('[firebaseHelpers] getProjects:', e)
-    throw e
-  }
-}
-
-export async function saveProject(id, data) {
-  try {
-    if (id) {
-      await updateDoc(doc(db, 'projects', id), data)
-      invalidateCache()
-      return { id }
-    } else {
-      const docRef = await addDoc(collection(db, 'projects'), data)
-      invalidateCache()
-      return { id: docRef.id }
-    }
-  } catch (e) {
-    console.error('[firebaseHelpers] saveProject:', e)
-    throw e
-  }
-}
-
-export async function deleteProject(id) {
-  try {
-    await deleteDoc(doc(db, 'projects', id))
-    invalidateCache()
-  } catch (e) {
-    console.error('[firebaseHelpers] deleteProject:', e)
-    throw e
-  }
-}
-
-export async function getTestimonials() {
-  try {
-    const snap = await getDocs(collection(db, 'testimonials'))
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
-  } catch (e) {
-    console.error('[firebaseHelpers] getTestimonials:', e)
-    throw e
-  }
-}
-
-export async function saveTestimonial(id, data) {
-  try {
-    if (id) {
-      await updateDoc(doc(db, 'testimonials', id), data)
-      invalidateCache()
-      return { id }
-    } else {
-      const docRef = await addDoc(collection(db, 'testimonials'), data)
-      invalidateCache()
-      return { id: docRef.id }
-    }
-  } catch (e) {
-    console.error('[firebaseHelpers] saveTestimonial:', e)
-    throw e
-  }
-}
-
-export async function deleteTestimonial(id) {
-  try {
-    await deleteDoc(doc(db, 'testimonials', id))
-    invalidateCache()
-  } catch (e) {
-    console.error('[firebaseHelpers] deleteTestimonial:', e)
-    throw e
-  }
-}
-
-export async function getServices() {
-  try {
-    const snap = await getDocs(collection(db, 'services'))
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
-  } catch (e) {
-    console.error('[firebaseHelpers] getServices:', e)
-    throw e
-  }
-}
-
-export async function saveService(id, data) {
-  try {
-    if (id) {
-      await updateDoc(doc(db, 'services', id), data)
-      invalidateCache()
-      return { id }
-    } else {
-      const docRef = await addDoc(collection(db, 'services'), data)
-      invalidateCache()
-      return { id: docRef.id }
-    }
-  } catch (e) {
-    console.error('[firebaseHelpers] saveService:', e)
-    throw e
-  }
-}
-
-export async function deleteService(id) {
-  try {
-    await deleteDoc(doc(db, 'services', id))
-    invalidateCache()
-  } catch (e) {
-    console.error('[firebaseHelpers] deleteService:', e)
-    throw e
-  }
-}
-
-// ─── Comprime imagen con canvas → base64 WebP ────────────────────────
-function compressImage(file, maxWidth = 1200, quality = 0.85) {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    const objectUrl = URL.createObjectURL(file)
-
-    img.onload = () => {
-      let { width, height } = img
-      if (width > maxWidth) {
-        height = Math.round((height * maxWidth) / width)
-        width = maxWidth
-      }
-
-      const canvas = document.createElement('canvas')
-      canvas.width = width
-      canvas.height = height
-
-      const ctx = canvas.getContext('2d')
-      ctx.drawImage(img, 0, 0, width, height)
-
-      URL.revokeObjectURL(objectUrl)
-      resolve(canvas.toDataURL('image/webp', quality))
-    }
-
-    img.onerror = () => {
-      URL.revokeObjectURL(objectUrl)
-      reject(new Error('Error cargando imagen'))
-    }
-
-    img.src = objectUrl
-  })
-}
-
-// ─── Upload imagen → Firestore (base64) — sin Firebase Storage, sin CORS ──
-export async function uploadImage(file, folder = 'images', onProgress = null) {
-  if (!file) throw new Error('No file provided')
-  if (!file.type.startsWith('image/')) throw new Error('Not a valid image')
-  if (file.size > 10 * 1024 * 1024) throw new Error('Image exceeds 10 MB')
-
-  const user = auth.currentUser
-  if (!user) throw new Error('Usuario no autenticado')
-
-  if (typeof onProgress === 'function') onProgress(10)
-
-  // Comprimir imagen a WebP máx 1200px
-  const base64 = await compressImage(file, 1200, 0.85)
-
-  if (typeof onProgress === 'function') onProgress(60)
-
-  // Guardar en Firestore — colección 'images'
-  // Añade la regla en Firestore:
-  // match /images/{doc} { allow read: if true; allow write: if request.auth != null; }
-  await addDoc(collection(db, 'images'), {
-    data: base64,
-    folder,
-    name: file.name,
-    type: 'image/webp',
-    createdAt: new Date().toISOString(),
-    uid: user.uid,
-  })
-
-  if (typeof onProgress === 'function') onProgress(100)
-
-  // Devuelve el base64 directamente — funciona como src en cualquier <img>
-  return base64
 }
 </file>
 
@@ -8710,6 +8712,407 @@ export function useSiteData() {
 }
 </file>
 
+<file path="src/pages/PublicSite.jsx">
+/**
+ * PublicSite.jsx — v3 ANTI-FOUC
+ * ─────────────────────────────────────────────────────────────────────────
+ * Si loading=true y no hay cache → muestra spinner mínimo (fondo negro,
+ * spinner del color primario del anti-FOUC script).
+ * En cuanto llegan los datos reales de Firebase → render completo.
+ * NUNCA se muestran los datos demo hardcoded durante la carga.
+ */
+
+import { useEffect } from 'react'
+import { useSiteData }          from '../hooks/useSiteData'
+import NavBar                   from '../components/site/NavBar'
+import Hero                     from '../components/site/Hero'
+import ServicesSection          from '../components/site/ServicesSection'
+import EcosystemSection         from '../components/site/EcosystemSection'
+import ProjectsSection          from '../components/site/ProjectsSection'
+import TestimonialsSection      from '../components/site/TestimonialsSection'
+import ContactSection           from '../components/site/ContactSection'
+import Footer                   from '../components/site/Footer'
+
+// ─── Aplica colores de marca al DOM ──────────────────────────────────
+function isLightColor(hex = '') {
+  const h = hex.replace('#', '')
+  if (h.length < 6) return false
+  const r = parseInt(h.substring(0, 2), 16)
+  const g = parseInt(h.substring(2, 4), 16)
+  const b = parseInt(h.substring(4, 6), 16)
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5
+}
+
+export function applyBrandColors(brand) {
+  if (!brand) return
+  const root = document.documentElement
+
+  if (brand.primary) root.style.setProperty('--primary', brand.primary)
+
+  if (brand.bg) {
+    root.style.setProperty('--bg', brand.bg)
+    document.body.style.backgroundColor = brand.bg
+
+    const isLight = isLightColor(brand.bg)
+    const theme   = isLight ? 'light' : 'dark'
+    document.body.setAttribute('data-theme', theme)
+    root.setAttribute('data-theme', theme)
+
+    if (isLight) {
+      root.style.setProperty('--text-main',  '#0a0a0a')
+      root.style.setProperty('--text-dim',   'rgba(0,0,0,0.6)')
+      root.style.setProperty('--text-muted', 'rgba(0,0,0,0.4)')
+      root.style.setProperty('--border',     'rgba(0,0,0,0.1)')
+      root.style.setProperty('--card-bg',    '#f5f5f5')
+    } else {
+      root.style.setProperty('--text-main',  '#ffffff')
+      root.style.setProperty('--text-dim',   'rgba(255,255,255,0.55)')
+      root.style.setProperty('--text-muted', 'rgba(255,255,255,0.35)')
+      root.style.setProperty('--border',     'rgba(255,255,255,0.08)')
+      root.style.setProperty('--card-bg',    '#0d0d0d')
+    }
+  }
+
+  if (brand.language) window.__SITE_LANGUAGE__ = brand.language
+}
+
+// ─── Spinner minimalista ─────────────────────────────────────────────
+// Usa los CSS vars ya aplicados por el anti-FOUC script del index.html
+// El fondo ya es correcto gracias al anti-FOUC → sin flash
+function SiteLoader() {
+  const primary = getComputedStyle(document.documentElement)
+    .getPropertyValue('--primary').trim() || '#ff3c3c'
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'var(--bg)',
+      gap: 20,
+    }}>
+      <div style={{
+        width: 40, height: 40,
+        borderRadius: '50%',
+        border: `3px solid rgba(255,255,255,0.08)`,
+        borderTopColor: primary,
+        animation: 'siteSpin 0.75s linear infinite',
+      }} />
+      <style>{`@keyframes siteSpin { to { transform: rotate(360deg) } }`}</style>
+    </div>
+  )
+}
+
+// ─── Componente principal ─────────────────────────────────────────────
+export default function PublicSite() {
+  const { site, ecosystems, projects, testimonials, services, loading, hasData } = useSiteData()
+
+  // Aplicar colores de marca en cuanto llegan (o desde cache)
+  useEffect(() => {
+    if (site?.brand) applyBrandColors(site.brand)
+  }, [site?.brand])
+
+  // Mostrar spinner solo si estamos cargando Y no tenemos datos todavía
+  if (loading && !hasData) {
+    return <SiteLoader />
+  }
+
+  return (
+    <div style={{ background: 'var(--bg)', color: 'var(--text-main)' }}>
+      <NavBar brand={site.brand} />
+      <Hero   hero={site.hero}   brand={site.brand} />
+      <ServicesSection
+        services={services}
+        brand={site.brand}
+      />
+      <EcosystemSection
+        ecosystems={ecosystems}
+        brand={site.brand}
+        projects={projects}
+      />
+      <ProjectsSection
+        projects={projects}
+        brand={site.brand}
+        site={site}
+      />
+      <TestimonialsSection
+        testimonials={testimonials}
+        brand={site.brand}
+      />
+      <ContactSection
+        contact={site.contact}
+        footer={site.footer}
+        brand={site.brand}
+        site={site}
+      />
+      <Footer site={site} />
+    </div>
+  )
+}
+</file>
+
+<file path="src/components/admin/AdminSidebar.jsx">
+import { useEffect, useState } from 'react'
+
+const TABS = [
+  { id: 'site',          icon: '⚙️', label: 'Marca & Colores'    },
+  { id: 'hero',          icon: '🖼',  label: 'Hero / Portada'     },
+  { id: 'services',      icon: '💼', label: 'Servicios'          },
+  { id: 'ecosystems',    icon: '🎟',  label: 'Membresías'         },
+  { id: 'projects',      icon: '🗂',  label: 'Proyectos'          },
+  { id: 'testimonials',  icon: '💬', label: 'Testimonios'        },
+  { id: 'contact',       icon: '📬', label: 'Contacto & Footer'  },
+  { id: 'language',      icon: '🌐', label: 'Lingua del Sito'    },
+  { id: 'leads',         icon: '📥', label: 'Inbox Lead'         },
+  { id: 'agents',        icon: '👥', label: 'Agenti Commerciali' },
+  { id: 'notifications', icon: '🔔', label: 'Notifiche & Canali' },
+]
+
+function BrandMark({ logo, name, height = 28 }) {
+  return logo ? (
+    <img
+      src={logo}
+      alt={name}
+      style={{ height, maxWidth: 160, objectFit: 'contain' }}
+    />
+  ) : (
+    <span style={{
+      fontFamily: 'Bebas Neue, sans-serif',
+      fontSize: '1.6rem', color: '#ff3c3c', letterSpacing: 2,
+    }}>
+      {name}
+    </span>
+  )
+}
+
+export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, brand }) {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  const logo = brand?.logo || ''
+  const name = brand?.name || 'POLARTRONIC'
+
+  // ── MOBILE: bottom sheet ──────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <>
+        {/* Overlay oscuro cuando el sheet está abierto */}
+        {open && (
+          <div
+            onClick={onToggle}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 1100,
+              background: 'rgba(0,0,0,0.7)',
+              backdropFilter: 'blur(4px)',
+            }}
+          />
+        )}
+
+        {/* Bottom sheet */}
+        <div style={{
+          position: 'fixed',
+          bottom: 0, left: 0, right: 0,
+          zIndex: 1200,
+          background: '#090909',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: open ? '20px 20px 0 0' : 0,
+          transform: open ? 'translateY(0)' : 'translateY(100%)',
+          transition: 'transform 0.35s cubic-bezier(0.23,1,0.32,1)',
+          maxHeight: '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+        }}>
+          {/* Handle drag */}
+          <div style={{
+            display: 'flex', justifyContent: 'center',
+            padding: '12px 0 4px', flexShrink: 0,
+          }}>
+            <div style={{
+              width: 40, height: 4, borderRadius: 2,
+              background: 'rgba(255,255,255,0.2)',
+            }} />
+          </div>
+
+          {/* Header del sheet */}
+          <div style={{
+            padding: '4px 20px 14px',
+            borderBottom: '1px solid rgba(255,255,255,0.07)',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            flexShrink: 0,
+          }}>
+            <div>
+              <BrandMark logo={logo} name={name} height={28} />
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
+                Admin Panel
+              </div>
+            </div>
+            <button
+              onClick={onToggle}
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.6)',
+                width: 34, height: 34, borderRadius: '50%',
+                cursor: 'pointer', fontSize: 16,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Lista de tabs */}
+          <nav style={{ overflowY: 'auto', padding: '8px 0', flex: 1 }}>
+            {TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => { onTabChange(tab.id); onToggle() }}
+                style={{
+                  width: '100%',
+                  display: 'flex', alignItems: 'center', gap: 14,
+                  padding: '13px 20px',
+                  border: 'none', cursor: 'pointer', textAlign: 'left',
+                  borderLeft: activeTab === tab.id
+                    ? '3px solid #ff3c3c'
+                    : '3px solid transparent',
+                  background: activeTab === tab.id
+                    ? 'rgba(255,60,60,0.08)'
+                    : 'transparent',
+                  color: activeTab === tab.id
+                    ? '#fff'
+                    : 'rgba(255,255,255,0.55)',
+                  fontSize: 14,
+                  fontWeight: activeTab === tab.id ? 700 : 400,
+                  transition: 'all 0.15s',
+                }}
+              >
+                <span style={{ fontSize: 20, width: 28, textAlign: 'center' }}>
+                  {tab.icon}
+                </span>
+                <span>{tab.label}</span>
+                {activeTab === tab.id && (
+                  <span style={{ marginLeft: 'auto', color: '#ff3c3c', fontSize: 10 }}>
+                    ●
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
+
+          {/* Footer del sheet */}
+          <div style={{
+            padding: '14px 20px',
+            borderTop: '1px solid rgba(255,255,255,0.07)',
+            flexShrink: 0,
+          }}>
+            <a
+              href="/"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                fontSize: 13, color: 'rgba(255,255,255,0.4)',
+                textDecoration: 'none',
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}
+            >
+              🌐 Ver sitio público ↗
+            </a>
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  // ── DESKTOP: sidebar clásico ─────────────────────────────────────
+  if (!open) return null
+
+  return (
+    <aside style={{
+      width: 240, flexShrink: 0,
+      background: '#080808',
+      borderRight: '1px solid rgba(255,255,255,0.07)',
+      height: '100vh', overflowY: 'auto',
+      display: 'flex', flexDirection: 'column',
+      padding: '1.5rem 0',
+    }}>
+      <div style={{
+        padding: '0 1.5rem 1.5rem',
+        borderBottom: '1px solid rgba(255,255,255,0.07)',
+      }}>
+        <BrandMark logo={logo} name={name} height={32} />
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>
+          Admin Panel
+        </div>
+      </div>
+
+      <nav style={{ padding: '1rem 0', flex: 1 }}>
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => onTabChange(tab.id)}
+            style={{
+              width: '100%',
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '11px 1.5rem',
+              border: 'none', cursor: 'pointer', textAlign: 'left',
+              transition: 'all 0.15s',
+              borderLeft: activeTab === tab.id
+                ? '2px solid #ff3c3c'
+                : '2px solid transparent',
+              background: activeTab === tab.id
+                ? 'rgba(255,60,60,0.06)'
+                : 'transparent',
+              color: activeTab === tab.id
+                ? '#fff'
+                : 'rgba(255,255,255,0.45)',
+              fontSize: 13,
+              fontWeight: activeTab === tab.id ? 600 : 400,
+            }}
+            onMouseEnter={e => {
+              if (activeTab !== tab.id)
+                e.currentTarget.style.color = 'rgba(255,255,255,0.8)'
+            }}
+            onMouseLeave={e => {
+              if (activeTab !== tab.id)
+                e.currentTarget.style.color = 'rgba(255,255,255,0.45)'
+            }}
+          >
+            <span style={{ fontSize: 16 }}>{tab.icon}</span>
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
+      <div style={{
+        padding: '1rem 1.5rem',
+        borderTop: '1px solid rgba(255,255,255,0.07)',
+      }}>
+        <a
+          href="/"
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            fontSize: 12, color: 'rgba(255,255,255,0.35)',
+            textDecoration: 'none',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}
+        >
+          🌐 Ver sitio público ↗
+        </a>
+      </div>
+    </aside>
+  )
+}
+</file>
+
 <file path="src/components/site/ProjectsSection.jsx">
 /**
  * ProjectsSection.jsx — iframe auto-translate + 100% responsivo
@@ -9165,407 +9568,6 @@ export default function ProjectsSection({ projects, brand, site }) {
         <ProjectShell project={activeProject} brand={brand} site={site} onClose={() => setActiveProject(null)} />
       )}
     </section>
-  )
-}
-</file>
-
-<file path="src/pages/PublicSite.jsx">
-/**
- * PublicSite.jsx — v3 ANTI-FOUC
- * ─────────────────────────────────────────────────────────────────────────
- * Si loading=true y no hay cache → muestra spinner mínimo (fondo negro,
- * spinner del color primario del anti-FOUC script).
- * En cuanto llegan los datos reales de Firebase → render completo.
- * NUNCA se muestran los datos demo hardcoded durante la carga.
- */
-
-import { useEffect } from 'react'
-import { useSiteData }          from '../hooks/useSiteData'
-import NavBar                   from '../components/site/NavBar'
-import Hero                     from '../components/site/Hero'
-import ServicesSection          from '../components/site/ServicesSection'
-import EcosystemSection         from '../components/site/EcosystemSection'
-import ProjectsSection          from '../components/site/ProjectsSection'
-import TestimonialsSection      from '../components/site/TestimonialsSection'
-import ContactSection           from '../components/site/ContactSection'
-import Footer                   from '../components/site/Footer'
-
-// ─── Aplica colores de marca al DOM ──────────────────────────────────
-function isLightColor(hex = '') {
-  const h = hex.replace('#', '')
-  if (h.length < 6) return false
-  const r = parseInt(h.substring(0, 2), 16)
-  const g = parseInt(h.substring(2, 4), 16)
-  const b = parseInt(h.substring(4, 6), 16)
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5
-}
-
-export function applyBrandColors(brand) {
-  if (!brand) return
-  const root = document.documentElement
-
-  if (brand.primary) root.style.setProperty('--primary', brand.primary)
-
-  if (brand.bg) {
-    root.style.setProperty('--bg', brand.bg)
-    document.body.style.backgroundColor = brand.bg
-
-    const isLight = isLightColor(brand.bg)
-    const theme   = isLight ? 'light' : 'dark'
-    document.body.setAttribute('data-theme', theme)
-    root.setAttribute('data-theme', theme)
-
-    if (isLight) {
-      root.style.setProperty('--text-main',  '#0a0a0a')
-      root.style.setProperty('--text-dim',   'rgba(0,0,0,0.6)')
-      root.style.setProperty('--text-muted', 'rgba(0,0,0,0.4)')
-      root.style.setProperty('--border',     'rgba(0,0,0,0.1)')
-      root.style.setProperty('--card-bg',    '#f5f5f5')
-    } else {
-      root.style.setProperty('--text-main',  '#ffffff')
-      root.style.setProperty('--text-dim',   'rgba(255,255,255,0.55)')
-      root.style.setProperty('--text-muted', 'rgba(255,255,255,0.35)')
-      root.style.setProperty('--border',     'rgba(255,255,255,0.08)')
-      root.style.setProperty('--card-bg',    '#0d0d0d')
-    }
-  }
-
-  if (brand.language) window.__SITE_LANGUAGE__ = brand.language
-}
-
-// ─── Spinner minimalista ─────────────────────────────────────────────
-// Usa los CSS vars ya aplicados por el anti-FOUC script del index.html
-// El fondo ya es correcto gracias al anti-FOUC → sin flash
-function SiteLoader() {
-  const primary = getComputedStyle(document.documentElement)
-    .getPropertyValue('--primary').trim() || '#ff3c3c'
-
-  return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'var(--bg)',
-      gap: 20,
-    }}>
-      <div style={{
-        width: 40, height: 40,
-        borderRadius: '50%',
-        border: `3px solid rgba(255,255,255,0.08)`,
-        borderTopColor: primary,
-        animation: 'siteSpin 0.75s linear infinite',
-      }} />
-      <style>{`@keyframes siteSpin { to { transform: rotate(360deg) } }`}</style>
-    </div>
-  )
-}
-
-// ─── Componente principal ─────────────────────────────────────────────
-export default function PublicSite() {
-  const { site, ecosystems, projects, testimonials, services, loading, hasData } = useSiteData()
-
-  // Aplicar colores de marca en cuanto llegan (o desde cache)
-  useEffect(() => {
-    if (site?.brand) applyBrandColors(site.brand)
-  }, [site?.brand])
-
-  // Mostrar spinner solo si estamos cargando Y no tenemos datos todavía
-  if (loading && !hasData) {
-    return <SiteLoader />
-  }
-
-  return (
-    <div style={{ background: 'var(--bg)', color: 'var(--text-main)' }}>
-      <NavBar brand={site.brand} />
-      <Hero   hero={site.hero}   brand={site.brand} />
-      <ServicesSection
-        services={services}
-        brand={site.brand}
-      />
-      <EcosystemSection
-        ecosystems={ecosystems}
-        brand={site.brand}
-        projects={projects}
-      />
-      <ProjectsSection
-        projects={projects}
-        brand={site.brand}
-        site={site}
-      />
-      <TestimonialsSection
-        testimonials={testimonials}
-        brand={site.brand}
-      />
-      <ContactSection
-        contact={site.contact}
-        footer={site.footer}
-        brand={site.brand}
-        site={site}
-      />
-      <Footer site={site} />
-    </div>
-  )
-}
-</file>
-
-<file path="src/components/admin/AdminSidebar.jsx">
-import { useEffect, useState } from 'react'
-
-const TABS = [
-  { id: 'site',          icon: '⚙️', label: 'Marca & Colores'    },
-  { id: 'hero',          icon: '🖼',  label: 'Hero / Portada'     },
-  { id: 'services',      icon: '💼', label: 'Servicios'          },
-  { id: 'ecosystems',    icon: '🎟',  label: 'Membresías'         },
-  { id: 'projects',      icon: '🗂',  label: 'Proyectos'          },
-  { id: 'testimonials',  icon: '💬', label: 'Testimonios'        },
-  { id: 'contact',       icon: '📬', label: 'Contacto & Footer'  },
-  { id: 'language',      icon: '🌐', label: 'Lingua del Sito'    },
-  { id: 'leads',         icon: '📥', label: 'Inbox Lead'         },
-  { id: 'agents',        icon: '👥', label: 'Agenti Commerciali' },
-  { id: 'notifications', icon: '🔔', label: 'Notifiche & Canali' },
-]
-
-function BrandMark({ logo, name, height = 28 }) {
-  return logo ? (
-    <img
-      src={logo}
-      alt={name}
-      style={{ height, maxWidth: 160, objectFit: 'contain' }}
-    />
-  ) : (
-    <span style={{
-      fontFamily: 'Bebas Neue, sans-serif',
-      fontSize: '1.6rem', color: '#ff3c3c', letterSpacing: 2,
-    }}>
-      {name}
-    </span>
-  )
-}
-
-export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, brand }) {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
-
-  const logo = brand?.logo || ''
-  const name = brand?.name || 'POLARTRONIC'
-
-  // ── MOBILE: bottom sheet ──────────────────────────────────────────
-  if (isMobile) {
-    return (
-      <>
-        {/* Overlay oscuro cuando el sheet está abierto */}
-        {open && (
-          <div
-            onClick={onToggle}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 1100,
-              background: 'rgba(0,0,0,0.7)',
-              backdropFilter: 'blur(4px)',
-            }}
-          />
-        )}
-
-        {/* Bottom sheet */}
-        <div style={{
-          position: 'fixed',
-          bottom: 0, left: 0, right: 0,
-          zIndex: 1200,
-          background: '#090909',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: open ? '20px 20px 0 0' : 0,
-          transform: open ? 'translateY(0)' : 'translateY(100%)',
-          transition: 'transform 0.35s cubic-bezier(0.23,1,0.32,1)',
-          maxHeight: '85vh',
-          display: 'flex',
-          flexDirection: 'column',
-        }}>
-          {/* Handle drag */}
-          <div style={{
-            display: 'flex', justifyContent: 'center',
-            padding: '12px 0 4px', flexShrink: 0,
-          }}>
-            <div style={{
-              width: 40, height: 4, borderRadius: 2,
-              background: 'rgba(255,255,255,0.2)',
-            }} />
-          </div>
-
-          {/* Header del sheet */}
-          <div style={{
-            padding: '4px 20px 14px',
-            borderBottom: '1px solid rgba(255,255,255,0.07)',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            flexShrink: 0,
-          }}>
-            <div>
-              <BrandMark logo={logo} name={name} height={28} />
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
-                Admin Panel
-              </div>
-            </div>
-            <button
-              onClick={onToggle}
-              style={{
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: 'rgba(255,255,255,0.6)',
-                width: 34, height: 34, borderRadius: '50%',
-                cursor: 'pointer', fontSize: 16,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Lista de tabs */}
-          <nav style={{ overflowY: 'auto', padding: '8px 0', flex: 1 }}>
-            {TABS.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => { onTabChange(tab.id); onToggle() }}
-                style={{
-                  width: '100%',
-                  display: 'flex', alignItems: 'center', gap: 14,
-                  padding: '13px 20px',
-                  border: 'none', cursor: 'pointer', textAlign: 'left',
-                  borderLeft: activeTab === tab.id
-                    ? '3px solid #ff3c3c'
-                    : '3px solid transparent',
-                  background: activeTab === tab.id
-                    ? 'rgba(255,60,60,0.08)'
-                    : 'transparent',
-                  color: activeTab === tab.id
-                    ? '#fff'
-                    : 'rgba(255,255,255,0.55)',
-                  fontSize: 14,
-                  fontWeight: activeTab === tab.id ? 700 : 400,
-                  transition: 'all 0.15s',
-                }}
-              >
-                <span style={{ fontSize: 20, width: 28, textAlign: 'center' }}>
-                  {tab.icon}
-                </span>
-                <span>{tab.label}</span>
-                {activeTab === tab.id && (
-                  <span style={{ marginLeft: 'auto', color: '#ff3c3c', fontSize: 10 }}>
-                    ●
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
-
-          {/* Footer del sheet */}
-          <div style={{
-            padding: '14px 20px',
-            borderTop: '1px solid rgba(255,255,255,0.07)',
-            flexShrink: 0,
-          }}>
-            <a
-              href="/"
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                fontSize: 13, color: 'rgba(255,255,255,0.4)',
-                textDecoration: 'none',
-                display: 'flex', alignItems: 'center', gap: 8,
-              }}
-            >
-              🌐 Ver sitio público ↗
-            </a>
-          </div>
-        </div>
-      </>
-    )
-  }
-
-  // ── DESKTOP: sidebar clásico ─────────────────────────────────────
-  if (!open) return null
-
-  return (
-    <aside style={{
-      width: 240, flexShrink: 0,
-      background: '#080808',
-      borderRight: '1px solid rgba(255,255,255,0.07)',
-      height: '100vh', overflowY: 'auto',
-      display: 'flex', flexDirection: 'column',
-      padding: '1.5rem 0',
-    }}>
-      <div style={{
-        padding: '0 1.5rem 1.5rem',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
-      }}>
-        <BrandMark logo={logo} name={name} height={32} />
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>
-          Admin Panel
-        </div>
-      </div>
-
-      <nav style={{ padding: '1rem 0', flex: 1 }}>
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => onTabChange(tab.id)}
-            style={{
-              width: '100%',
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '11px 1.5rem',
-              border: 'none', cursor: 'pointer', textAlign: 'left',
-              transition: 'all 0.15s',
-              borderLeft: activeTab === tab.id
-                ? '2px solid #ff3c3c'
-                : '2px solid transparent',
-              background: activeTab === tab.id
-                ? 'rgba(255,60,60,0.06)'
-                : 'transparent',
-              color: activeTab === tab.id
-                ? '#fff'
-                : 'rgba(255,255,255,0.45)',
-              fontSize: 13,
-              fontWeight: activeTab === tab.id ? 600 : 400,
-            }}
-            onMouseEnter={e => {
-              if (activeTab !== tab.id)
-                e.currentTarget.style.color = 'rgba(255,255,255,0.8)'
-            }}
-            onMouseLeave={e => {
-              if (activeTab !== tab.id)
-                e.currentTarget.style.color = 'rgba(255,255,255,0.45)'
-            }}
-          >
-            <span style={{ fontSize: 16 }}>{tab.icon}</span>
-            {tab.label}
-          </button>
-        ))}
-      </nav>
-
-      <div style={{
-        padding: '1rem 1.5rem',
-        borderTop: '1px solid rgba(255,255,255,0.07)',
-      }}>
-        <a
-          href="/"
-          target="_blank"
-          rel="noreferrer"
-          style={{
-            fontSize: 12, color: 'rgba(255,255,255,0.35)',
-            textDecoration: 'none',
-            display: 'flex', alignItems: 'center', gap: 6,
-          }}
-        >
-          🌐 Ver sitio público ↗
-        </a>
-      </div>
-    </aside>
   )
 }
 </file>
