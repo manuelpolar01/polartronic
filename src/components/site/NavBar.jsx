@@ -62,13 +62,11 @@ function HamburgerIcon({ open, primary }) {
 }
 
 export default function NavBar({ brand }) {
-  const [scrolled, setScrolled] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [activeLink, setActiveLink] = useState('#home')
-  const t = useUIStrings(brand)
-
+  const [scrolled,    setScrolled]    = useState(false)
+  const [menuOpen,    setMenuOpen]    = useState(false)
+  const [activeLink,  setActiveLink]  = useState('#home')
+  const t       = useUIStrings(brand)
   const primary = brand?.primary || '#ff3c3c'
-  const name    = brand?.name    || 'POLARTRONIC'
 
   const NAV_LINKS = [
     { href: '#home',        label: t.nav.home        },
@@ -161,7 +159,7 @@ export default function NavBar({ brand }) {
         }
       `}</style>
 
-      {/* ── HEADER ── */}
+      {/* ── HEADER FIJO ── */}
       <header style={{
         position: 'fixed', top: 0, left: 0, right: 0, width: '100%',
         zIndex: 1000,
@@ -175,6 +173,7 @@ export default function NavBar({ brand }) {
         transition: 'all 0.4s cubic-bezier(0.23,1,0.32,1)',
         boxSizing: 'border-box',
       }}>
+        {/* Logo */}
         <a href="#home" style={{ textDecoration: 'none', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
           <BrandLogo brand={brand} scrolled={scrolled} />
         </a>
@@ -186,15 +185,13 @@ export default function NavBar({ brand }) {
           ))}
         </nav>
 
-        {/* Botón hamburguesa — glassmorphism cuadrado */}
+        {/* Botón hamburguesa — ÚNICO botón de apertura/cierre en mobile */}
         <button
           onClick={() => setMenuOpen(p => !p)}
           className="mobile-menu-btn"
-          aria-label="Menu"
+          aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
           style={{
-            background: menuOpen
-              ? `rgba(255,60,60,0.12)`
-              : 'rgba(255,255,255,0.06)',
+            background: menuOpen ? `rgba(255,60,60,0.12)` : 'rgba(255,255,255,0.06)',
             border: `1px solid ${menuOpen ? `rgba(255,60,60,0.4)` : 'rgba(255,255,255,0.12)'}`,
             width: 44, height: 44,
             borderRadius: 10,
@@ -204,31 +201,34 @@ export default function NavBar({ brand }) {
             transition: 'all 0.3s',
             flexShrink: 0,
             padding: 0,
+            // Siempre visible encima del panel
+            position: 'relative',
+            zIndex: 1201,
           }}
         >
           <HamburgerIcon open={menuOpen} primary={primary} />
         </button>
       </header>
 
-      {/* ── MOBILE MENU — Glass style ── */}
+      {/* ── MOBILE MENU PANEL ── */}
       {menuOpen && (
         <>
           {/* Backdrop */}
           <div
             onClick={() => setMenuOpen(false)}
             style={{
-              position: 'fixed', inset: 0, zIndex: 998,
+              position: 'fixed', inset: 0, zIndex: 1098,
               background: 'rgba(0,0,0,0.6)',
               backdropFilter: 'blur(4px)',
               WebkitBackdropFilter: 'blur(4px)',
             }}
           />
 
-          {/* Panel glass */}
+          {/* Panel glass — SIN botón ✕ propio, el header lo gestiona */}
           <div style={{
             position: 'fixed',
             top: 0, left: 0, right: 0,
-            zIndex: 999,
+            zIndex: 1099,
             background: 'rgba(8,8,12,0.97)',
             backdropFilter: 'blur(24px)',
             WebkitBackdropFilter: 'blur(24px)',
@@ -243,31 +243,8 @@ export default function NavBar({ brand }) {
               background: `linear-gradient(90deg, ${primary}, ${primary}40, transparent)`,
             }} />
 
-            {/* Header del panel */}
-            <div style={{
-              display: 'flex', alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '0 20px',
-              height: 64,
-              borderBottom: '0.5px solid rgba(255,255,255,0.06)',
-            }}>
-              <a href="#home" onClick={() => setMenuOpen(false)} style={{ textDecoration: 'none' }}>
-                <BrandLogo brand={brand} scrolled={true} />
-              </a>
-              <button
-                onClick={() => setMenuOpen(false)}
-                style={{
-                  width: 36, height: 36, borderRadius: 8,
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  color: 'rgba(255,255,255,0.6)',
-                  cursor: 'pointer', fontSize: 16,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-              >
-                ✕
-              </button>
-            </div>
+            {/* Spacer que ocupa el alto del header fijo para que los links no queden debajo */}
+            <div style={{ height: scrolled ? 64 : 80 }} />
 
             {/* Links */}
             <nav style={{ display: 'flex', flexDirection: 'column' }}>
@@ -294,17 +271,17 @@ export default function NavBar({ brand }) {
               ))}
             </nav>
 
-            {/* Footer CTA */}
+            {/* Footer CTA — solo el botón de contacto, sin ✕ redundante */}
             <div style={{
               padding: '14px 20px 20px',
               borderTop: '0.5px solid rgba(255,255,255,0.06)',
-              display: 'flex', gap: 10,
             }}>
               <a
                 href="#contacto"
                 onClick={() => handleLinkClick('#contacto')}
                 style={{
-                  flex: 1, padding: '13px',
+                  display: 'block',
+                  padding: '14px',
                   background: primary, color: 'white',
                   borderRadius: 10, fontWeight: 800,
                   fontSize: 13, letterSpacing: 0.8,
@@ -315,19 +292,6 @@ export default function NavBar({ brand }) {
               >
                 {t.nav.contact} →
               </a>
-              <button
-                onClick={() => setMenuOpen(false)}
-                style={{
-                  padding: '13px 16px',
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  color: 'rgba(255,255,255,0.5)',
-                  borderRadius: 10, fontSize: 13,
-                  fontWeight: 600, cursor: 'pointer',
-                }}
-              >
-                ✕
-              </button>
             </div>
           </div>
         </>
