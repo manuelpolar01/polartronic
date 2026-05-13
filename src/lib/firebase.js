@@ -7,16 +7,33 @@ import {
 } from 'firebase/auth'
 import { getStorage } from 'firebase/storage'
 
-// ─── FIX BUG 1: storageBucket cambiado de .firebasestorage.app → .appspot.com
-// El bucket nuevo requiere configuración CORS manual vía gsutil.
-// El bucket .appspot.com funciona sin configuración extra.
+// ─────────────────────────────────────────────────────────────────────
+// Lee las credenciales desde variables de entorno VITE_*
+// Nunca hardcodeadas aquí — nunca en git.
+// En Vercel: Settings → Environment Variables
+// En local: archivo .env en la raíz del proyecto
+// ─────────────────────────────────────────────────────────────────────
 const firebaseConfig = {
-  apiKey:            "AIzaSyCYThbHoPglpb-8RuT308pLLxo6enaRmb0",
-  authDomain:        "polartronic-27bf7.firebaseapp.com",
-  projectId:         "polartronic-27bf7",
-  storageBucket:     "polartronic-27bf7.appspot.com",
-  messagingSenderId: "218217170970",
-  appId:             "1:218217170970:web:d7d67d35fe98147b7469a3",
+  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId:             import.meta.env.VITE_FIREBASE_APP_ID,
+}
+
+// Validación en desarrollo — avisa si falta alguna variable
+if (import.meta.env.DEV) {
+  const missing = Object.entries(firebaseConfig)
+    .filter(([, v]) => !v)
+    .map(([k]) => k)
+  if (missing.length > 0) {
+    console.error(
+      '[Firebase] Variables de entorno faltantes:',
+      missing,
+      '\nCrea un archivo .env en la raíz del proyecto con las variables VITE_FIREBASE_*'
+    )
+  }
 }
 
 const app = initializeApp(firebaseConfig)

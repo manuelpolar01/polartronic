@@ -69,20 +69,6 @@ function EcosystemFullscreen({ eco, brand, onClose, t }) {
   function buildSrcDoc(html) {
     const targetLang = (typeof window !== 'undefined' && window.__SITE_LANGUAGE__) || brand?.language || 'it'
 
-    const stripCSS = `<style id="pt-strip">
-      button,input[type="submit"],input[type="button"],input[type="reset"],
-      form,.nav,nav,.navbar,.navigation,.hamburger,.menu-toggle,.burger,.menu-btn,
-      [class*="hamburger"],[class*="burger"],[id*="hamburger"],
-      [class*="menu-btn"],[id*="menu-btn"],
-      a[href^="mailto"],a[href^="tel"],a[href^="wa.me"],a[href*="whatsapp"],
-      a[href*="contacto"],a[href*="contact"],a[href*="reserva"],a[href*="book"],
-      [class*="cta"],[class*="btn"],[id*="cta"],[id*="btn"],
-      .cta,.btn,.button,.contact-form,.booking-form,[class*="form"],
-      textarea,select{display:none!important;visibility:hidden!important;pointer-events:none!important;}
-      a{pointer-events:none!important;cursor:default!important;}
-      html,body{overflow-x:hidden;}
-    </style>`
-
     // Script que traduce via postMessage — el lang llega del parent React
     const translateScript = `<script>
 (function() {
@@ -151,7 +137,7 @@ function EcosystemFullscreen({ eco, brand, onClose, t }) {
 })();
 <\/script>`
 
-    const inject = stripCSS + translateScript
+    const inject = translateScript
 
     if (/<!doctype\s+html/i.test(html) || /<html[\s>]/i.test(html)) {
       // Inyecta data-pt-lang en el tag <html> y el script en <head>

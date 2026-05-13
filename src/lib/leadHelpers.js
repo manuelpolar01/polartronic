@@ -1,19 +1,12 @@
-/**
- * leadHelpers.js
- * ─────────────────────────────────────────────────────────────────────────
- * Logica completa per la gestione lead:
- *  1. saveLead()          → salva su Firestore
- *  2. sendEmailCliente()  → email conferma via EmailJS
- *  3. sendWhatsApp()      → notifica agente via CallMeBot
- *  4. sendSMS()           → alert admin via Twilio proxy
- *  5. findAgentForZona()  → trova l'agente giusto per zona
- *  6. processNewLead()    → orchestrazione completa
- */
+// ─────────────────────────────────────────────────────────────────────
+// leadHelpers.js — ACTUALIZADO
+// sendSMS ahora llama a la Cloud Function proxy, no a Twilio directo.
+// Las credenciales de Twilio nunca están en el frontend.
+// ─────────────────────────────────────────────────────────────────────
 
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from './firebase'
 
-// ── Interpolazione template ───────────────────────────────────────────
 function interpolate(template, vars) {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] || '')
 }
@@ -51,15 +44,12 @@ export async function sendEmailCliente(leadData, notifConfig, siteConfig) {
 
   const vars = buildVars(leadData, siteConfig)
   const templateParams = {
-    to_email:   leadData.email,
-    to_name:    leadData.name,
-    message:    interpolate(notifConfig.templates?.emailCliente || '', vars),
-    from_name:  siteConfig?.brand?.name || 'Team',
-    reply_to:   siteConfig?.footer?.email || '',
-    // variabili singole (utili nei template EmailJS)
-    ...Object.fromEntries(
-      Object.entries(vars).map(([k, v]) => [k, v])
-    ),
+    to_email:  leadData.email,
+    to_name:   leadData.name,
+    message:   interpolate(notifConfig.templates?.emailCliente || '', vars),
+    from_name: siteConfig?.brand?.name || 'Team',
+    reply_to:  siteConfig?.footer?.email || '',
+    ...Object.fromEntries(Object.entries(vars).map(([k, v]) => [k, v])),
   }
 
   const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
@@ -86,11 +76,11 @@ export async function sendEmailInterna(leadData, notifConfig, siteConfig) {
 
   const vars = buildVars(leadData, siteConfig)
   const templateParams = {
-    to_email:   notifConfig.notificaAdmin || siteConfig?.footer?.email,
-    to_name:    'Team ' + (siteConfig?.brand?.name || ''),
-    message:    interpolate(notifConfig.templates?.emailCliente || '', vars),
-    from_name:  leadData.name,
-    reply_to:   leadData.email,
+    to_email:  notifConfig.notificaAdmin || siteConfig?.footer?.email,
+    to_name:   'Team ' + (siteConfig?.brand?.name || ''),
+    message:   interpolate(notifConfig.templates?.emailCliente || '', vars),
+    from_name: leadData.name,
+    reply_to:  leadData.email,
     ...Object.fromEntries(Object.entries(vars).map(([k, v]) => [k, v])),
   }
 
@@ -108,7 +98,6 @@ export async function sendEmailInterna(leadData, notifConfig, siteConfig) {
   if (!res.ok) {
     const text = await res.text()
     console.warn(`[leads] email interna: ${text}`)
-    // Non rilancia — la notifica interna è secondaria
   }
 }
 
@@ -120,29 +109,47 @@ export async function sendWhatsApp(numero, apiKey, messaggio) {
   const url = `https://api.callmebot.com/whatsapp.php?phone=${numClean}&text=${encodeURIComponent(messaggio)}&apikey=${apiKey}`
 
   try {
-    // CallMeBot richiede una GET — usa no-cors perché non supporta CORS
     await fetch(url, { mode: 'no-cors' })
-  } catch (e) {
-    // no-cors lancia sempre per le response opaque — è normale
-    console.log('[leads] WhatsApp inviato (no-cors, response opaque per design)')
+  } catch {
+    // no-cors lanza siempre para response opaque — es normal
   }
 }
 
-// ── 5. SMS via Twilio proxy ───────────────────────────────────────────
-// NOTA: in produzione le credenziali Twilio vanno in una Firebase Cloud Function,
-// non nel frontend. Questo helper chiama un endpoint proxy.
+// ── 5. SMS via Cloud Function proxy ──────────────────────────────────
+// Las credenciales de Twilio están en Firebase Secrets (lado servidor).
+// El frontend solo llama a esta URL pública que actúa como proxy seguro.
 export async function sendSMS(smsConfig, messaggio) {
-  if (!smsConfig?.attivo || !smsConfig.accountSid) return
+  if (!smsConfig?.attivo) return
 
-  // Se hai la Firebase Cloud Function:
-  // await fetch('https://YOUR_REGION-YOUR_PROJECT.cloudfunctions.net/sendSMS', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ to: smsConfig.toNumber, body: messaggio }),
-  // })
+  // URL de la Cloud Function — viene de la variable de entorno
+  const functionUrl = import.meta.env.VITE_TWILIO_FUNCTION_URL
+  if (!functionUrl) {
+    console.warn('[leads] SMS: VITE_TWILIO_FUNCTION_URL no configurada en .env')
+    return
+  }
 
-  // Per ora logga — da sostituire con il proxy
-  console.log('[leads] SMS da inviare:', messaggio)
+  if (!smsConfig.toNumber) {
+    console.warn('[leads] SMS: no hay número destinatario configurado')
+    return
+  }
+
+  try {
+    const res = await fetch(functionUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to:   smsConfig.toNumber,
+        body: messaggio,
+      }),
+    })
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      console.warn('[leads] SMS error:', data.error || res.status)
+    }
+  } catch (err) {
+    console.warn('[leads] SMS fetch error:', err.message)
+  }
 }
 
 // ── 6. Trova agente per zona ──────────────────────────────────────────
@@ -151,7 +158,6 @@ export function findAgentForZona(agents = [], zona = '') {
 
   const zonaLow = zona.toLowerCase().trim()
 
-  // Cerca corrispondenza esatta prima, poi parziale
   const exact = agents.find(a =>
     a.attivo &&
     (a.zone || []).some(z => z.toLowerCase().trim() === zonaLow)
@@ -174,14 +180,17 @@ export async function processNewLead(leadData, siteConfig) {
   const agents      = siteConfig?.agents        || []
   const vars        = buildVars(leadData, siteConfig)
 
-  const results = { leadId: null, emailCliente: false, emailInterna: false, whatsapp: false, sms: false, agente: null }
+  const results = {
+    leadId: null, emailCliente: false, emailInterna: false,
+    whatsapp: false, sms: false, agente: null,
+  }
 
   // 1. Salva su Firestore
   try {
     results.leadId = await saveLead(leadData)
   } catch (e) {
     console.error('[leads] Firestore save failed:', e)
-    throw e // Questo è bloccante — senza salvataggio non procediamo
+    throw e
   }
 
   // 2. Trova agente per zona
@@ -200,7 +209,7 @@ export async function processNewLead(leadData, siteConfig) {
     .then(() => { results.emailInterna = true })
     .catch(e => console.warn('[leads] email interna:', e.message))
 
-  // 5. WhatsApp all'agente (se trovato e ha WhatsApp) o all'admin
+  // 5. WhatsApp all'agente (non bloccante)
   const wa = notifConfig.whatsapp
   if (wa?.attivo) {
     const targetNumero = agente?.canalePreferito === 'WhatsApp' && agente?.whatsapp
@@ -218,7 +227,7 @@ export async function processNewLead(leadData, siteConfig) {
     }
   }
 
-  // 6. SMS all'admin (non bloccante)
+  // 6. SMS via Cloud Function (non bloccante)
   if (notifConfig.sms?.attivo) {
     const smsMsg = interpolate(
       notifConfig.templates?.smsAdmin || 'Nuovo lead: {{nome}} — {{zona}} — {{telefono}}',
