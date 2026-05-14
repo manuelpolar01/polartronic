@@ -1,16 +1,12 @@
 /**
- * PublicSite.jsx — v3 ANTI-FOUC
- * ─────────────────────────────────────────────────────────────────────────
- * Si loading=true y no hay cache → muestra spinner mínimo (fondo negro,
- * spinner del color primario del anti-FOUC script).
- * En cuanto llegan los datos reales de Firebase → render completo.
- * NUNCA se muestran los datos demo hardcoded durante la carga.
+ * PublicSite.jsx — con AboutSection integrada
  */
 
-import { useEffect } from 'react'
+import { useEffect }            from 'react'
 import { useSiteData }          from '../hooks/useSiteData'
 import NavBar                   from '../components/site/NavBar'
 import Hero                     from '../components/site/Hero'
+import AboutSection             from '../components/site/AboutSection'
 import ServicesSection          from '../components/site/ServicesSection'
 import EcosystemSection         from '../components/site/EcosystemSection'
 import ProjectsSection          from '../components/site/ProjectsSection'
@@ -18,7 +14,6 @@ import TestimonialsSection      from '../components/site/TestimonialsSection'
 import ContactSection           from '../components/site/ContactSection'
 import Footer                   from '../components/site/Footer'
 
-// ─── Aplica colores de marca al DOM ──────────────────────────────────
 function isLightColor(hex = '') {
   const h = hex.replace('#', '')
   if (h.length < 6) return false
@@ -61,9 +56,6 @@ export function applyBrandColors(brand) {
   if (brand.language) window.__SITE_LANGUAGE__ = brand.language
 }
 
-// ─── Spinner minimalista ─────────────────────────────────────────────
-// Usa los CSS vars ya aplicados por el anti-FOUC script del index.html
-// El fondo ya es correcto gracias al anti-FOUC → sin flash
 function SiteLoader() {
   const primary = getComputedStyle(document.documentElement)
     .getPropertyValue('--primary').trim() || '#ff3c3c'
@@ -90,16 +82,13 @@ function SiteLoader() {
   )
 }
 
-// ─── Componente principal ─────────────────────────────────────────────
 export default function PublicSite() {
   const { site, ecosystems, projects, testimonials, services, loading, hasData } = useSiteData()
 
-  // Aplicar colores de marca en cuanto llegan (o desde cache)
   useEffect(() => {
     if (site?.brand) applyBrandColors(site.brand)
   }, [site?.brand])
 
-  // Mostrar spinner solo si estamos cargando Y no tenemos datos todavía
   if (loading && !hasData) {
     return <SiteLoader />
   }
@@ -107,31 +96,44 @@ export default function PublicSite() {
   return (
     <div style={{ background: 'var(--bg)', color: 'var(--text-main)' }}>
       <NavBar brand={site.brand} />
-      <Hero   hero={site.hero}   brand={site.brand} />
-      <ServicesSection
-        services={services}
-        brand={site.brand}
-      />
+
+      {/* 1 — Portada */}
+      <Hero hero={site.hero} brand={site.brand} />
+
+      {/* 2 — Quiénes somos */}
+      <AboutSection brand={site.brand} about={site.about} />
+
+      {/* 3 — Servicios */}
+      <ServicesSection services={services} brand={site.brand} />
+
+      {/* 4 — Ecosistemas / Membresías */}
       <EcosystemSection
         ecosystems={ecosystems}
         brand={site.brand}
         projects={projects}
       />
+
+      {/* 5 — Proyectos */}
       <ProjectsSection
         projects={projects}
         brand={site.brand}
         site={site}
       />
+
+      {/* 6 — Testimonios */}
       <TestimonialsSection
         testimonials={testimonials}
         brand={site.brand}
       />
+
+      {/* 7 — Contacto */}
       <ContactSection
         contact={site.contact}
         footer={site.footer}
         brand={site.brand}
         site={site}
       />
+
       <Footer site={site} />
     </div>
   )

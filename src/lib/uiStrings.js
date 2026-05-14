@@ -22,6 +22,7 @@ const strings = {
   // ── NAVIGATION ─────────────────────────────────────────────────────────
   nav: {
     home:         { it: 'Home',         en: 'Home',         es: 'Inicio',       fr: 'Accueil',      de: 'Startseite',       pt: 'Início'        },
+    about: { it: 'Chi siamo', en: 'About', es: 'Nosotros', fr: 'À propos', de: 'Über uns', pt: 'Sobre nós' },
     services:     { it: 'Servizi',      en: 'Services',     es: 'Servicios',    fr: 'Services',     de: 'Leistungen',       pt: 'Serviços'      },
     memberships:  { it: 'Memberships',  en: 'Memberships',  es: 'Membresías',   fr: 'Abonnements',  de: 'Mitgliedschaften', pt: 'Membros'       },
     projects:     { it: 'Progetti',     en: 'Projects',     es: 'Proyectos',    fr: 'Projets',      de: 'Projekte',         pt: 'Projetos'      },

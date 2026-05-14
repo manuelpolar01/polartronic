@@ -70,6 +70,7 @@ export default function NavBar({ brand }) {
 
   const NAV_LINKS = [
     { href: '#home',        label: t.nav.home        },
+    { href: '#about',       label: t.nav.about       },
     { href: '#servicios',   label: t.nav.services    },
     { href: '#ecosistemas', label: t.nav.memberships },
     { href: '#proyectos',   label: t.nav.projects    },
