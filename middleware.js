@@ -169,6 +169,7 @@ export default async function middleware(request) {
   <meta name="twitter:description" content="${description}" />
 
   <meta name="google-site-verification" content="${GOOGLE_VERIFICATION}" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
 
   <script type="application/ld+json">
   {
