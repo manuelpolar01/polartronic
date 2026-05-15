@@ -69,6 +69,7 @@ src/components/admin/tabs/ServicesTab.jsx
 src/components/admin/tabs/SiteConfigTab.jsx
 src/components/admin/tabs/TestimonialsTab.jsx
 src/components/common/PhoneInput.jsx
+src/components/site/AboutSection.jsx
 src/components/site/ContactSection.jsx
 src/components/site/EcosystemSection.jsx
 src/components/site/Footer.jsx
@@ -77,6 +78,8 @@ src/components/site/NavBar.jsx
 src/components/site/ProjectsSection.jsx
 src/components/site/ServicesSection.jsx
 src/components/site/TestimonialsSection.jsx
+src/functions/index.js
+src/functions/package.json
 src/hooks/useSiteData.js
 src/hooks/useTranslatedContent.js
 src/hooks/useUIStrings.js
@@ -107,10 +110,6 @@ This section contains the contents of the repository's files.
     "default": "polartronic-27bf7"
   }
 }
-</file>
-
-<file path=".gitignore">
-node_modules
 </file>
 
 <file path="cors.json">
@@ -2012,6 +2011,383 @@ export default function PhoneInput({ value, onChange, error, primary = '#ff3c3c'
 }
 </file>
 
+<file path="src/components/site/AboutSection.jsx">
+/**
+ * AboutSection.jsx
+ * ─────────────────────────────────────────────────────────────────────
+ * Sección "Quiénes Somos" — empresa argentina expandiéndose a Europa.
+ * - 100% responsiva con clamp()
+ * - Traducción automática via useTranslatedContent
+ * - Afectada por el idioma configurado en el panel admin
+ * - Integra con brand.about si está configurado, sino usa defaults
+ */
+
+import { useUIStrings }        from '../../hooks/useUIStrings'
+import { useTranslatedContent } from '../../hooks/useTranslatedContent'
+
+// ── Strings de UI (traducidos por idioma) ─────────────────────────────
+const ABOUT_UI = {
+  eyebrow:       { it: 'Chi siamo',        en: 'About us',        es: 'Quiénes somos',   fr: 'Qui sommes-nous', de: 'Über uns',          pt: 'Sobre nós'        },
+  origin:        { it: 'Origine',          en: 'Origin',          es: 'Origen',          fr: 'Origine',         de: 'Herkunft',          pt: 'Origem'           },
+  mission:       { it: 'Missione',         en: 'Mission',         es: 'Misión',          fr: 'Mission',         de: 'Mission',           pt: 'Missão'           },
+  vision:        { it: 'Visione',          en: 'Vision',          es: 'Visión',          fr: 'Vision',          de: 'Vision',            pt: 'Visão'            },
+  yearsLabel:    { it: 'Anni di exp.',     en: 'Years of exp.',   es: 'Años de exp.',    fr: "Ans d'exp.",      de: 'Jahre Erfahrung',   pt: 'Anos de exp.'     },
+  projectsLabel: { it: 'Progetti globali', en: 'Global projects', es: 'Proyectos glob.', fr: 'Projets globaux', de: 'Globale Projekte',  pt: 'Projetos globais' },
+  countriesLabel:{ it: 'Paesi attivi',     en: 'Active countries',es: 'Países activos',  fr: 'Pays actifs',     de: 'Aktive Länder',     pt: 'Países ativos'    },
+  teamLabel:     { it: 'Professionisti',   en: 'Professionals',   es: 'Profesionales',   fr: 'Professionnels',  de: 'Fachleute',         pt: 'Profissionais'    },
+  ctaLabel:      { it: 'Lavora con noi',   en: 'Work with us',    es: 'Trabajemos juntos',fr: 'Travaillons ensemble', de: 'Zusammenarbeiten', pt: 'Trabalhe conosco' },
+}
+
+function rl(dict, lang) {
+  return dict?.[lang] || dict?.['es'] || dict?.['en'] || ''
+}
+
+// ── Contenido editorial por defecto ───────────────────────────────────
+// Se usa si el admin no configuró nada en el panel → siempre se muestra algo
+const DEFAULT_ABOUT = {
+  title:   'Nacimos en Argentina,\ncrecemos en Europa.',
+  subtitle:'Somos un estudio digital con raíces en Buenos Aires y visión global. Combinamos la creatividad y el talento latinoamericano con los estándares de calidad del mercado europeo para crear experiencias digitales que realmente marcan la diferencia.',
+  origin:  'Fundados en Buenos Aires en 2018, llevamos años construyendo soluciones digitales para marcas y empresas en Argentina, Chile y Uruguay. Hoy damos el gran paso: llevamos ese talento y esa pasión directamente al corazón de Europa.',
+  mission: 'Democratizar el acceso a diseño y tecnología de alto impacto. Creemos que una PyME italiana merece la misma calidad digital que una gran corporación, a precios accesibles y con la energía creativa que solo América Latina sabe dar.',
+  vision:  'Ser el puente definitivo entre el talento digital latinoamericano y las empresas europeas que buscan diferenciarse en un mercado cada vez más competitivo.',
+}
+
+// ── Valores / pilares ─────────────────────────────────────────────────
+const VALORES = [
+  {
+    icon: '🧉',
+    title: { it: 'Anima Latina',         en: 'Latin Soul',        es: 'Alma Latina',        fr: 'Âme Latine',          de: 'Lateinische Seele',  pt: 'Alma Latina'          },
+    desc:  { it: 'La creatività e la passione del talento argentino in ogni progetto che realizziamo.', en: 'The creativity and passion of Argentine talent in every project we deliver.', es: 'La creatividad y pasión del talento argentino en cada proyecto que entregamos.', fr: 'La créativité et la passion du talent argentin dans chaque projet que nous réalisons.', de: 'Die Kreativität und Leidenschaft argentinischen Talents in jedem Projekt.', pt: 'A criatividade e paixão do talento argentino em cada projeto que entregamos.' },
+  },
+  {
+    icon: '🇪🇺',
+    title: { it: 'Standard Europei',     en: 'European Standards', es: 'Estándares Europeos', fr: 'Standards Européens', de: 'Europäische Standards', pt: 'Padrões Europeus'  },
+    desc:  { it: 'Qualità, puntualità e rigore tecnico che soddisfano le esigenze del mercato europeo.', en: 'Quality, punctuality and technical rigor that meet European market demands.', es: 'Calidad, puntualidad y rigor técnico que satisfacen las exigencias del mercado europeo.', fr: 'Qualité, ponctualité et rigueur technique pour le marché européen.', de: 'Qualität, Pünktlichkeit und technische Strenge für den europäischen Markt.', pt: 'Qualidade, pontualidade e rigor técnico para o mercado europeu.' },
+  },
+  {
+    icon: '🚀',
+    title: { it: 'Innovazione Continua', en: 'Continuous Innovation', es: 'Innovación Continua', fr: 'Innovation Continue', de: 'Kontinuierliche Innovation', pt: 'Inovação Contínua' },
+    desc:  { it: 'Tecnologie moderne, approcci freschi e soluzioni che anticipano le tendenze del mercato.', en: 'Modern technologies, fresh approaches and solutions that anticipate market trends.', es: 'Tecnologías modernas, enfoques frescos y soluciones que anticipan las tendencias del mercado.', fr: 'Technologies modernes et solutions qui anticipent les tendances du marché.', de: 'Moderne Technologien und Lösungen, die Markttrends antizipieren.', pt: 'Tecnologias modernas e soluções que antecipam as tendências do mercado.' },
+  },
+  {
+    icon: '🤝',
+    title: { it: 'Relazioni Durature',   en: 'Lasting Relationships', es: 'Relaciones Duraderas', fr: 'Relations Durables', de: 'Dauerhafte Beziehungen', pt: 'Relações Duradouras' },
+    desc:  { it: 'Non siamo solo fornitori: diventiamo il tuo team digitale a lungo termine.', en: "We're not just vendors — we become your long-term digital team.", es: 'No somos solo proveedores: nos convertimos en tu equipo digital a largo plazo.', fr: "Nous ne sommes pas que des prestataires : nous devenons votre équipe digitale à long terme.", de: 'Wir sind nicht nur Anbieter — wir werden Ihr langfristiges digitales Team.', pt: 'Não somos apenas fornecedores — tornamo-nos a sua equipa digital a longo prazo.' },
+  },
+]
+
+// ── Estadísticas ──────────────────────────────────────────────────────
+const STATS = [
+  { value: '6+',  keyLabel: 'yearsLabel'     },
+  { value: '80+', keyLabel: 'projectsLabel'  },
+  { value: '4',   keyLabel: 'countriesLabel' },
+  { value: '12',  keyLabel: 'teamLabel'      },
+]
+
+// ── Componente principal ──────────────────────────────────────────────
+export default function AboutSection({ brand, about }) {
+  const primary = brand?.primary || '#ff3c3c'
+  const t = useUIStrings(brand)
+  const lang = brand?.language
+    || (typeof window !== 'undefined' ? window.__SITE_LANGUAGE__ : null)
+    || 'it'
+
+  // Traducir contenido editorial (viene del panel admin o usa defaults)
+  const content = useTranslatedContent(
+    {
+      title:   about?.title   || DEFAULT_ABOUT.title,
+      subtitle:about?.subtitle|| DEFAULT_ABOUT.subtitle,
+      origin:  about?.text    || DEFAULT_ABOUT.origin,
+      mission: DEFAULT_ABOUT.mission,
+      vision:  DEFAULT_ABOUT.vision,
+    },
+    brand
+  )
+
+  return (
+    <section id="about" style={{ padding: 'clamp(60px,10vw,100px) clamp(20px,6%,80px)', background: 'var(--dark2, rgba(255,255,255,0.015))', position: 'relative', overflow: 'hidden' }}>
+      <style>{`
+        @keyframes abtFadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        .abt-valor:hover{border-color:${primary}40!important;transform:translateY(-4px)!important;background:${primary}06!important;}
+        .abt-valor:hover .abt-icon{transform:scale(1.15)!important;}
+        .abt-cta:hover{background:${primary}!important;color:white!important;transform:translateY(-2px)!important;box-shadow:0 12px 36px ${primary}40!important;}
+        @media(max-width:768px){
+          .abt-grid{grid-template-columns:1fr!important;}
+          .abt-valores{grid-template-columns:1fr 1fr!important;}
+          .abt-stats{grid-template-columns:repeat(2,1fr)!important;}
+        }
+        @media(max-width:480px){
+          .abt-valores{grid-template-columns:1fr!important;}
+          .abt-stats{grid-template-columns:repeat(2,1fr)!important;}
+        }
+      `}</style>
+
+      {/* Decoración de fondo — mapa Argentina → Europa */}
+      <div style={{
+        position: 'absolute', top: 0, right: 0, bottom: 0,
+        width: '40%', zIndex: 0, overflow: 'hidden',
+        background: `radial-gradient(ellipse at 80% 50%, ${primary}06 0%, transparent 70%)`,
+        pointerEvents: 'none',
+      }}>
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%,-50%)',
+          fontSize: 'clamp(6rem,15vw,12rem)',
+          opacity: 0.04, userSelect: 'none',
+          filter: 'grayscale(1)',
+        }}>🌍</div>
+      </div>
+
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 1200, margin: '0 auto' }}>
+
+        {/* ── HEADER ── */}
+        <div style={{ textAlign: 'center', marginBottom: 'clamp(40px,6vw,64px)', animation: 'abtFadeUp 0.7s ease both' }}>
+          <p style={{ color: primary, fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 14 }}>
+            {rl(ABOUT_UI.eyebrow, lang)}
+          </p>
+          <h2 style={{ fontSize: 'clamp(1.8rem,5vw,3rem)', fontWeight: 800, lineHeight: 1.15, color: 'var(--text-main)', margin: '0 auto', maxWidth: 700, whiteSpace: 'pre-line' }}>
+            {content.title}
+          </h2>
+          <p style={{ color: 'var(--text-dim)', fontSize: 'clamp(14px,2vw,17px)', lineHeight: 1.8, maxWidth: 640, margin: '20px auto 0', fontWeight: 300 }}>
+            {content.subtitle}
+          </p>
+        </div>
+
+        {/* ── STATS ── */}
+        <div className="abt-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 'clamp(12px,2vw,20px)', marginBottom: 'clamp(48px,7vw,72px)' }}>
+          {STATS.map((s, i) => (
+            <div key={i} style={{
+              padding: 'clamp(18px,3vw,28px) clamp(12px,2vw,20px)',
+              background: `${primary}06`, border: `1px solid ${primary}20`,
+              borderRadius: 14, textAlign: 'center',
+              animation: `abtFadeUp 0.6s ${i * 0.08}s ease both`,
+            }}>
+              <div style={{ fontSize: 'clamp(1.8rem,4vw,2.8rem)', fontWeight: 800, color: primary, lineHeight: 1 }}>{s.value}</div>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.4 }}>
+                {rl(ABOUT_UI[s.keyLabel], lang)}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── GRILLA PRINCIPAL: origen / misión / visión ── */}
+        <div className="abt-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'clamp(20px,4vw,40px)', marginBottom: 'clamp(48px,7vw,72px)', alignItems: 'start' }}>
+
+          {/* Columna izquierda — Origen */}
+          <div style={{ animation: 'abtFadeUp 0.7s 0.1s ease both' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', background: `${primary}15`, border: `1px solid ${primary}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🇦🇷</div>
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: primary }}>{rl(ABOUT_UI.origin, lang)}</span>
+            </div>
+            <p style={{ color: 'var(--text-dim)', fontSize: 'clamp(13px,1.8vw,15px)', lineHeight: 1.85 }}>
+              {content.origin}
+            </p>
+
+            {/* Bandera de ruta AR → EU */}
+            <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 28 }}>🇦🇷</span>
+              <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${primary}, ${primary}20)`, position: 'relative' }}>
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 8, height: 8, borderRadius: '50%', background: primary }} />
+              </div>
+              <span style={{ fontSize: 28 }}>🇪🇺</span>
+            </div>
+          </div>
+
+          {/* Columna derecha — Misión + Visión */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(16px,3vw,24px)', animation: 'abtFadeUp 0.7s 0.2s ease both' }}>
+            <div style={{ padding: 'clamp(16px,3vw,24px)', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, borderLeft: `3px solid ${primary}` }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: primary, marginBottom: 10 }}>{rl(ABOUT_UI.mission, lang)}</div>
+              <p style={{ color: 'var(--text-dim)', fontSize: 'clamp(13px,1.8vw,14px)', lineHeight: 1.8, margin: 0 }}>
+                {content.mission}
+              </p>
+            </div>
+            <div style={{ padding: 'clamp(16px,3vw,24px)', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, borderLeft: `3px solid ${primary}50` }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: `${primary}80`, marginBottom: 10 }}>{rl(ABOUT_UI.vision, lang)}</div>
+              <p style={{ color: 'var(--text-dim)', fontSize: 'clamp(13px,1.8vw,14px)', lineHeight: 1.8, margin: 0 }}>
+                {content.vision}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* ── VALORES ── */}
+        <div className="abt-valores" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 'clamp(12px,2vw,18px)', marginBottom: 'clamp(40px,6vw,56px)' }}>
+          {VALORES.map((v, i) => (
+            <div key={i} className="abt-valor" style={{
+              padding: 'clamp(18px,3vw,26px) clamp(14px,2vw,20px)',
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.07)',
+              borderRadius: 14, cursor: 'default',
+              transition: 'all 0.35s cubic-bezier(0.16,1,0.3,1)',
+              animation: `abtFadeUp 0.6s ${0.1 + i * 0.07}s ease both`,
+            }}>
+              <div className="abt-icon" style={{ fontSize: 'clamp(1.6rem,3vw,2rem)', marginBottom: 14, transition: 'transform 0.3s', display: 'block' }}>
+                {v.icon}
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 'clamp(0.9rem,2vw,1rem)', color: 'var(--text-main)', marginBottom: 8, lineHeight: 1.3 }}>
+                {rl(v.title, lang)}
+              </div>
+              <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: 1.7, margin: 0 }}>
+                {rl(v.desc, lang)}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* ── CTA ── */}
+        <div style={{ textAlign: 'center', animation: 'abtFadeUp 0.7s 0.4s ease both' }}>
+          <a
+            href="#contacto"
+            className="abt-cta"
+            style={{
+              display: 'inline-block',
+              padding: 'clamp(14px,2vw,18px) clamp(32px,5vw,56px)',
+              background: 'transparent',
+              color: primary,
+              border: `2px solid ${primary}`,
+              borderRadius: 8,
+              fontWeight: 800,
+              fontSize: 'clamp(12px,2vw,14px)',
+              letterSpacing: 1.5,
+              textTransform: 'uppercase',
+              textDecoration: 'none',
+              transition: 'all 0.3s cubic-bezier(0.16,1,0.3,1)',
+            }}
+          >
+            {rl(ABOUT_UI.ctaLabel, lang)} →
+          </a>
+        </div>
+
+      </div>
+    </section>
+  )
+}
+</file>
+
+<file path="src/functions/index.js">
+// ─────────────────────────────────────────────────────────────────────
+// functions/index.js — Cloud Function proxy para Twilio SMS
+// ─────────────────────────────────────────────────────────────────────
+//
+// Por qué esto es necesario:
+//   Las credenciales de Twilio (accountSid + authToken) no pueden estar
+//   en el frontend — cualquiera podría usarlas para enviar SMS a tu costa.
+//   Esta función actúa como proxy seguro: el frontend llama a esta URL,
+//   la función usa las credenciales guardadas como secrets de Firebase.
+//
+// SETUP (una sola vez):
+//   1. npm install -g firebase-tools
+//   2. firebase login
+//   3. cd functions && npm install
+//   4. firebase functions:secrets:set TWILIO_ACCOUNT_SID
+//      → pega tu Account SID cuando lo pida
+//   5. firebase functions:secrets:set TWILIO_AUTH_TOKEN
+//      → pega tu Auth Token cuando lo pida
+//   6. firebase functions:secrets:set TWILIO_FROM_NUMBER
+//      → pega tu número Twilio (+12025551234)
+//   7. firebase deploy --only functions
+//   8. Copia la URL que aparece en el deploy y ponla en .env:
+//      VITE_TWILIO_FUNCTION_URL=https://us-central1-TU_PROYECTO.cloudfunctions.net/sendSMS
+//
+// Coste: ~$0.001 por invocación (Cloud Functions) + ~$0.05 por SMS (Twilio)
+// ─────────────────────────────────────────────────────────────────────
+
+const { onRequest } = require('firebase-functions/v2/https')
+const { defineSecret } = require('firebase-functions/params')
+const twilio = require('twilio')
+
+// Los secrets nunca se hardcodean — Firebase los inyecta en runtime
+const TWILIO_ACCOUNT_SID  = defineSecret('TWILIO_ACCOUNT_SID')
+const TWILIO_AUTH_TOKEN   = defineSecret('TWILIO_AUTH_TOKEN')
+const TWILIO_FROM_NUMBER  = defineSecret('TWILIO_FROM_NUMBER')
+
+exports.sendSMS = onRequest(
+  {
+    // Expone los secrets a esta función
+    secrets: [TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER],
+    // CORS: solo acepta requests de tu dominio
+    cors: [
+      'http://localhost:5173',
+      'https://polartronic.app-customer.com',
+      /\.vercel\.app$/,   // preview deployments de Vercel
+    ],
+  },
+  async (req, res) => {
+    // Solo acepta POST
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
+
+    const { to, body } = req.body
+
+    // Validación básica
+    if (!to || !body) {
+      return res.status(400).json({ error: 'Missing "to" or "body" field' })
+    }
+
+    // Formato de número: debe empezar por +
+    if (!to.startsWith('+')) {
+      return res.status(400).json({ error: 'Phone number must include country code (+39...)' })
+    }
+
+    // Límite de caracteres para evitar abusos
+    if (body.length > 500) {
+      return res.status(400).json({ error: 'Message too long (max 500 chars)' })
+    }
+
+    try {
+      const client = twilio(
+        TWILIO_ACCOUNT_SID.value(),
+        TWILIO_AUTH_TOKEN.value()
+      )
+
+      const message = await client.messages.create({
+        body,
+        from: TWILIO_FROM_NUMBER.value(),
+        to,
+      })
+
+      return res.status(200).json({
+        success: true,
+        sid: message.sid,
+      })
+
+    } catch (err) {
+      console.error('[sendSMS] Twilio error:', err.message)
+      return res.status(500).json({
+        error: 'SMS delivery failed',
+        // No exponer el mensaje de error completo en producción
+        ...(process.env.NODE_ENV === 'development' && { detail: err.message }),
+      })
+    }
+  }
+)
+</file>
+
+<file path="src/functions/package.json">
+{
+  "name": "polartronic-functions",
+  "description": "Firebase Cloud Functions — Polartronic Studio",
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "18"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-functions": "^4.9.0",
+    "twilio": "^5.3.0"
+  },
+  "devDependencies": {
+    "firebase-admin": "^12.0.0"
+  },
+  "private": true
+}
+</file>
+
 <file path="src/hooks/useTranslatedContent.js">
 /**
  * useTranslatedContent.js
@@ -2222,242 +2598,6 @@ export function useTranslatedArray(items, fields, brand, sourceLang = 'auto') {
 
 <file path="src/lib/i18n.js">
 
-</file>
-
-<file path="src/lib/leadHelpers.js">
-/**
- * leadHelpers.js
- * ─────────────────────────────────────────────────────────────────────────
- * Logica completa per la gestione lead:
- *  1. saveLead()          → salva su Firestore
- *  2. sendEmailCliente()  → email conferma via EmailJS
- *  3. sendWhatsApp()      → notifica agente via CallMeBot
- *  4. sendSMS()           → alert admin via Twilio proxy
- *  5. findAgentForZona()  → trova l'agente giusto per zona
- *  6. processNewLead()    → orchestrazione completa
- */
-
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from './firebase'
-
-// ── Interpolazione template ───────────────────────────────────────────
-function interpolate(template, vars) {
-  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] || '')
-}
-
-function buildVars(leadData, siteConfig) {
-  return {
-    nome:      leadData.name      || '',
-    email:     leadData.email     || '',
-    telefono:  leadData.phone     || '',
-    zona:      leadData.zona      || '',
-    servizio:  leadData.servizio  || '',
-    messaggio: leadData.message   || '',
-    data:      new Date().toLocaleDateString('it-IT', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    }),
-    nomeSito: siteConfig?.brand?.name || 'Polartronic',
-  }
-}
-
-// ── 1. Salva lead su Firestore ────────────────────────────────────────
-export async function saveLead(leadData) {
-  const docRef = await addDoc(collection(db, 'leads'), {
-    ...leadData,
-    stato:     'nuovo',
-    createdAt: serverTimestamp(),
-  })
-  return docRef.id
-}
-
-// ── 2. Email conferma al cliente via EmailJS ──────────────────────────
-export async function sendEmailCliente(leadData, notifConfig, siteConfig) {
-  const ejs = notifConfig?.emailjs
-  if (!ejs?.attivo || !ejs.serviceId || !ejs.templateIdCliente || !ejs.publicKey) return
-
-  const vars = buildVars(leadData, siteConfig)
-  const templateParams = {
-    to_email:   leadData.email,
-    to_name:    leadData.name,
-    message:    interpolate(notifConfig.templates?.emailCliente || '', vars),
-    from_name:  siteConfig?.brand?.name || 'Team',
-    reply_to:   siteConfig?.footer?.email || '',
-    // variabili singole (utili nei template EmailJS)
-    ...Object.fromEntries(
-      Object.entries(vars).map(([k, v]) => [k, v])
-    ),
-  }
-
-  const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      service_id:      ejs.serviceId,
-      template_id:     ejs.templateIdCliente,
-      user_id:         ejs.publicKey,
-      template_params: templateParams,
-    }),
-  })
-
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`EmailJS cliente: ${text}`)
-  }
-}
-
-// ── 3. Email alert interna al team ────────────────────────────────────
-export async function sendEmailInterna(leadData, notifConfig, siteConfig) {
-  const ejs = notifConfig?.emailjs
-  if (!ejs?.attivo || !ejs.serviceId || !ejs.templateIdInterno || !ejs.publicKey) return
-
-  const vars = buildVars(leadData, siteConfig)
-  const templateParams = {
-    to_email:   notifConfig.notificaAdmin || siteConfig?.footer?.email,
-    to_name:    'Team ' + (siteConfig?.brand?.name || ''),
-    message:    interpolate(notifConfig.templates?.emailCliente || '', vars),
-    from_name:  leadData.name,
-    reply_to:   leadData.email,
-    ...Object.fromEntries(Object.entries(vars).map(([k, v]) => [k, v])),
-  }
-
-  const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      service_id:      ejs.serviceId,
-      template_id:     ejs.templateIdInterno,
-      user_id:         ejs.publicKey,
-      template_params: templateParams,
-    }),
-  })
-
-  if (!res.ok) {
-    const text = await res.text()
-    console.warn(`[leads] email interna: ${text}`)
-    // Non rilancia — la notifica interna è secondaria
-  }
-}
-
-// ── 4. WhatsApp via CallMeBot ─────────────────────────────────────────
-export async function sendWhatsApp(numero, apiKey, messaggio) {
-  if (!numero || !apiKey || !messaggio) return
-
-  const numClean = numero.replace(/\D/g, '')
-  const url = `https://api.callmebot.com/whatsapp.php?phone=${numClean}&text=${encodeURIComponent(messaggio)}&apikey=${apiKey}`
-
-  try {
-    // CallMeBot richiede una GET — usa no-cors perché non supporta CORS
-    await fetch(url, { mode: 'no-cors' })
-  } catch (e) {
-    // no-cors lancia sempre per le response opaque — è normale
-    console.log('[leads] WhatsApp inviato (no-cors, response opaque per design)')
-  }
-}
-
-// ── 5. SMS via Twilio proxy ───────────────────────────────────────────
-// NOTA: in produzione le credenziali Twilio vanno in una Firebase Cloud Function,
-// non nel frontend. Questo helper chiama un endpoint proxy.
-export async function sendSMS(smsConfig, messaggio) {
-  if (!smsConfig?.attivo || !smsConfig.accountSid) return
-
-  // Se hai la Firebase Cloud Function:
-  // await fetch('https://YOUR_REGION-YOUR_PROJECT.cloudfunctions.net/sendSMS', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ to: smsConfig.toNumber, body: messaggio }),
-  // })
-
-  // Per ora logga — da sostituire con il proxy
-  console.log('[leads] SMS da inviare:', messaggio)
-}
-
-// ── 6. Trova agente per zona ──────────────────────────────────────────
-export function findAgentForZona(agents = [], zona = '') {
-  if (!zona || !agents.length) return null
-
-  const zonaLow = zona.toLowerCase().trim()
-
-  // Cerca corrispondenza esatta prima, poi parziale
-  const exact = agents.find(a =>
-    a.attivo &&
-    (a.zone || []).some(z => z.toLowerCase().trim() === zonaLow)
-  )
-  if (exact) return exact
-
-  const partial = agents.find(a =>
-    a.attivo &&
-    (a.zone || []).some(z =>
-      zonaLow.includes(z.toLowerCase().trim()) ||
-      z.toLowerCase().trim().includes(zonaLow)
-    )
-  )
-  return partial || null
-}
-
-// ── 7. Orchestrazione completa ────────────────────────────────────────
-export async function processNewLead(leadData, siteConfig) {
-  const notifConfig = siteConfig?.notifications || {}
-  const agents      = siteConfig?.agents        || []
-  const vars        = buildVars(leadData, siteConfig)
-
-  const results = { leadId: null, emailCliente: false, emailInterna: false, whatsapp: false, sms: false, agente: null }
-
-  // 1. Salva su Firestore
-  try {
-    results.leadId = await saveLead(leadData)
-  } catch (e) {
-    console.error('[leads] Firestore save failed:', e)
-    throw e // Questo è bloccante — senza salvataggio non procediamo
-  }
-
-  // 2. Trova agente per zona
-  const agente = findAgentForZona(agents, leadData.zona)
-  results.agente = agente
-
-  // 3. Email conferma al cliente (non bloccante)
-  if (leadData.email) {
-    sendEmailCliente(leadData, notifConfig, siteConfig)
-      .then(() => { results.emailCliente = true })
-      .catch(e => console.warn('[leads] email cliente:', e.message))
-  }
-
-  // 4. Email interna al team (non bloccante)
-  sendEmailInterna(leadData, notifConfig, siteConfig)
-    .then(() => { results.emailInterna = true })
-    .catch(e => console.warn('[leads] email interna:', e.message))
-
-  // 5. WhatsApp all'agente (se trovato e ha WhatsApp) o all'admin
-  const wa = notifConfig.whatsapp
-  if (wa?.attivo) {
-    const targetNumero = agente?.canalePreferito === 'WhatsApp' && agente?.whatsapp
-      ? agente.whatsapp
-      : wa.number
-
-    if (targetNumero && wa.apiKey) {
-      const waMsg = interpolate(
-        notifConfig.templates?.whatsappAgente || '🔔 Nuovo lead: {{nome}} — {{zona}} — {{telefono}}',
-        vars
-      )
-      sendWhatsApp(targetNumero, wa.apiKey, waMsg)
-        .then(() => { results.whatsapp = true })
-        .catch(e => console.warn('[leads] WhatsApp:', e.message))
-    }
-  }
-
-  // 6. SMS all'admin (non bloccante)
-  if (notifConfig.sms?.attivo) {
-    const smsMsg = interpolate(
-      notifConfig.templates?.smsAdmin || 'Nuovo lead: {{nome}} — {{zona}} — {{telefono}}',
-      vars
-    )
-    sendSMS(notifConfig.sms, smsMsg)
-      .then(() => { results.sms = true })
-      .catch(e => console.warn('[leads] SMS:', e.message))
-  }
-
-  return results
-}
 </file>
 
 <file path="src/lib/translate.js">
@@ -3171,6 +3311,15 @@ export default {
   },
   plugins: [],
 }
+</file>
+
+<file path=".gitignore">
+node_modules
+.env
+.env.local
+.env.production
+dist
+.DS_Store
 </file>
 
 <file path="package.json">
@@ -3900,6 +4049,251 @@ export function resolveStrings(langOrBrand) {
     ? langOrBrand
     : resolveLang(langOrBrand?.language ?? null)
   return getStrings(lang)
+}
+</file>
+
+<file path="src/lib/leadHelpers.js">
+// ─────────────────────────────────────────────────────────────────────
+// leadHelpers.js — ACTUALIZADO
+// sendSMS ahora llama a la Cloud Function proxy, no a Twilio directo.
+// Las credenciales de Twilio nunca están en el frontend.
+// ─────────────────────────────────────────────────────────────────────
+
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { db } from './firebase'
+
+function interpolate(template, vars) {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] || '')
+}
+
+function buildVars(leadData, siteConfig) {
+  return {
+    nome:      leadData.name      || '',
+    email:     leadData.email     || '',
+    telefono:  leadData.phone     || '',
+    zona:      leadData.zona      || '',
+    servizio:  leadData.servizio  || '',
+    messaggio: leadData.message   || '',
+    data:      new Date().toLocaleDateString('it-IT', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    }),
+    nomeSito: siteConfig?.brand?.name || 'Polartronic',
+  }
+}
+
+// ── 1. Salva lead su Firestore ────────────────────────────────────────
+export async function saveLead(leadData) {
+  const docRef = await addDoc(collection(db, 'leads'), {
+    ...leadData,
+    stato:     'nuovo',
+    createdAt: serverTimestamp(),
+  })
+  return docRef.id
+}
+
+// ── 2. Email conferma al cliente via EmailJS ──────────────────────────
+export async function sendEmailCliente(leadData, notifConfig, siteConfig) {
+  const ejs = notifConfig?.emailjs
+  if (!ejs?.attivo || !ejs.serviceId || !ejs.templateIdCliente || !ejs.publicKey) return
+
+  const vars = buildVars(leadData, siteConfig)
+  const templateParams = {
+    to_email:  leadData.email,
+    to_name:   leadData.name,
+    message:   interpolate(notifConfig.templates?.emailCliente || '', vars),
+    from_name: siteConfig?.brand?.name || 'Team',
+    reply_to:  siteConfig?.footer?.email || '',
+    ...Object.fromEntries(Object.entries(vars).map(([k, v]) => [k, v])),
+  }
+
+  const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      service_id:      ejs.serviceId,
+      template_id:     ejs.templateIdCliente,
+      user_id:         ejs.publicKey,
+      template_params: templateParams,
+    }),
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`EmailJS cliente: ${text}`)
+  }
+}
+
+// ── 3. Email alert interna al team ────────────────────────────────────
+export async function sendEmailInterna(leadData, notifConfig, siteConfig) {
+  const ejs = notifConfig?.emailjs
+  if (!ejs?.attivo || !ejs.serviceId || !ejs.templateIdInterno || !ejs.publicKey) return
+
+  const vars = buildVars(leadData, siteConfig)
+  const templateParams = {
+    to_email:  notifConfig.notificaAdmin || siteConfig?.footer?.email,
+    to_name:   'Team ' + (siteConfig?.brand?.name || ''),
+    message:   interpolate(notifConfig.templates?.emailCliente || '', vars),
+    from_name: leadData.name,
+    reply_to:  leadData.email,
+    ...Object.fromEntries(Object.entries(vars).map(([k, v]) => [k, v])),
+  }
+
+  const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      service_id:      ejs.serviceId,
+      template_id:     ejs.templateIdInterno,
+      user_id:         ejs.publicKey,
+      template_params: templateParams,
+    }),
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    console.warn(`[leads] email interna: ${text}`)
+  }
+}
+
+// ── 4. WhatsApp via CallMeBot ─────────────────────────────────────────
+export async function sendWhatsApp(numero, apiKey, messaggio) {
+  if (!numero || !apiKey || !messaggio) return
+
+  const numClean = numero.replace(/\D/g, '')
+  const url = `https://api.callmebot.com/whatsapp.php?phone=${numClean}&text=${encodeURIComponent(messaggio)}&apikey=${apiKey}`
+
+  try {
+    await fetch(url, { mode: 'no-cors' })
+  } catch {
+    // no-cors lanza siempre para response opaque — es normal
+  }
+}
+
+// ── 5. SMS via Cloud Function proxy ──────────────────────────────────
+// Las credenciales de Twilio están en Firebase Secrets (lado servidor).
+// El frontend solo llama a esta URL pública que actúa como proxy seguro.
+export async function sendSMS(smsConfig, messaggio) {
+  if (!smsConfig?.attivo) return
+
+  // URL de la Cloud Function — viene de la variable de entorno
+  const functionUrl = import.meta.env.VITE_TWILIO_FUNCTION_URL
+  if (!functionUrl) {
+    console.warn('[leads] SMS: VITE_TWILIO_FUNCTION_URL no configurada en .env')
+    return
+  }
+
+  if (!smsConfig.toNumber) {
+    console.warn('[leads] SMS: no hay número destinatario configurado')
+    return
+  }
+
+  try {
+    const res = await fetch(functionUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to:   smsConfig.toNumber,
+        body: messaggio,
+      }),
+    })
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      console.warn('[leads] SMS error:', data.error || res.status)
+    }
+  } catch (err) {
+    console.warn('[leads] SMS fetch error:', err.message)
+  }
+}
+
+// ── 6. Trova agente per zona ──────────────────────────────────────────
+export function findAgentForZona(agents = [], zona = '') {
+  if (!zona || !agents.length) return null
+
+  const zonaLow = zona.toLowerCase().trim()
+
+  const exact = agents.find(a =>
+    a.attivo &&
+    (a.zone || []).some(z => z.toLowerCase().trim() === zonaLow)
+  )
+  if (exact) return exact
+
+  const partial = agents.find(a =>
+    a.attivo &&
+    (a.zone || []).some(z =>
+      zonaLow.includes(z.toLowerCase().trim()) ||
+      z.toLowerCase().trim().includes(zonaLow)
+    )
+  )
+  return partial || null
+}
+
+// ── 7. Orchestrazione completa ────────────────────────────────────────
+export async function processNewLead(leadData, siteConfig) {
+  const notifConfig = siteConfig?.notifications || {}
+  const agents      = siteConfig?.agents        || []
+  const vars        = buildVars(leadData, siteConfig)
+
+  const results = {
+    leadId: null, emailCliente: false, emailInterna: false,
+    whatsapp: false, sms: false, agente: null,
+  }
+
+  // 1. Salva su Firestore
+  try {
+    results.leadId = await saveLead(leadData)
+  } catch (e) {
+    console.error('[leads] Firestore save failed:', e)
+    throw e
+  }
+
+  // 2. Trova agente per zona
+  const agente = findAgentForZona(agents, leadData.zona)
+  results.agente = agente
+
+  // 3. Email conferma al cliente (non bloccante)
+  if (leadData.email) {
+    sendEmailCliente(leadData, notifConfig, siteConfig)
+      .then(() => { results.emailCliente = true })
+      .catch(e => console.warn('[leads] email cliente:', e.message))
+  }
+
+  // 4. Email interna al team (non bloccante)
+  sendEmailInterna(leadData, notifConfig, siteConfig)
+    .then(() => { results.emailInterna = true })
+    .catch(e => console.warn('[leads] email interna:', e.message))
+
+  // 5. WhatsApp all'agente (non bloccante)
+  const wa = notifConfig.whatsapp
+  if (wa?.attivo) {
+    const targetNumero = agente?.canalePreferito === 'WhatsApp' && agente?.whatsapp
+      ? agente.whatsapp
+      : wa.number
+
+    if (targetNumero && wa.apiKey) {
+      const waMsg = interpolate(
+        notifConfig.templates?.whatsappAgente || '🔔 Nuovo lead: {{nome}} — {{zona}} — {{telefono}}',
+        vars
+      )
+      sendWhatsApp(targetNumero, wa.apiKey, waMsg)
+        .then(() => { results.whatsapp = true })
+        .catch(e => console.warn('[leads] WhatsApp:', e.message))
+    }
+  }
+
+  // 6. SMS via Cloud Function (non bloccante)
+  if (notifConfig.sms?.attivo) {
+    const smsMsg = interpolate(
+      notifConfig.templates?.smsAdmin || 'Nuovo lead: {{nome}} — {{zona}} — {{telefono}}',
+      vars
+    )
+    sendSMS(notifConfig.sms, smsMsg)
+      .then(() => { results.sms = true })
+      .catch(e => console.warn('[leads] SMS:', e.message))
+  }
+
+  return results
 }
 </file>
 
@@ -6238,39 +6632,6 @@ export default function TestimonialsSection({ testimonials, brand }) {
 }
 </file>
 
-<file path="src/lib/firebase.js">
-import { initializeApp }              from 'firebase/app'
-import { getFirestore }               from 'firebase/firestore'
-import {
-  getAuth,
-  browserLocalPersistence,
-  setPersistence,
-} from 'firebase/auth'
-import { getStorage } from 'firebase/storage'
-
-// ─── FIX BUG 1: storageBucket cambiado de .firebasestorage.app → .appspot.com
-// El bucket nuevo requiere configuración CORS manual vía gsutil.
-// El bucket .appspot.com funciona sin configuración extra.
-const firebaseConfig = {
-  apiKey:            "AIzaSyCYThbHoPglpb-8RuT308pLLxo6enaRmb0",
-  authDomain:        "polartronic-27bf7.firebaseapp.com",
-  projectId:         "polartronic-27bf7",
-  storageBucket:     "polartronic-27bf7.appspot.com",
-  messagingSenderId: "218217170970",
-  appId:             "1:218217170970:web:d7d67d35fe98147b7469a3",
-}
-
-const app = initializeApp(firebaseConfig)
-
-export const db      = getFirestore(app)
-export const storage = getStorage(app)
-
-export const auth = getAuth(app)
-setPersistence(auth, browserLocalPersistence)
-
-export default app
-</file>
-
 <file path="vercel.json">
 {
   "headers": [
@@ -7362,208 +7723,54 @@ body[data-theme="light"] {
 }
 </file>
 
-<file path="src/lib/uiStrings.js">
-/**
- * uiStrings.js — v4 COMPLETE I18N
- * ─────────────────────────────────────────────────────────────────────────
- * All UI strings fully translated for: it, en, es, fr, de, pt
- * Added: hero carousel labels, service image alt, ecosystem shell strings,
- * generic pagination/navigation strings.
- */
+<file path="src/lib/firebase.js">
+import { initializeApp }              from 'firebase/app'
+import { getFirestore }               from 'firebase/firestore'
+import {
+  getAuth,
+  browserLocalPersistence,
+  setPersistence,
+} from 'firebase/auth'
+import { getStorage } from 'firebase/storage'
 
-export const SUPPORTED_LANGUAGES = [
-  { code: 'it', label: 'Italiano',   flag: '🇮🇹' },
-  { code: 'en', label: 'English',    flag: '🇬🇧' },
-  { code: 'es', label: 'Español',    flag: '🇪🇸' },
-  { code: 'fr', label: 'Français',   flag: '🇫🇷' },
-  { code: 'de', label: 'Deutsch',    flag: '🇩🇪' },
-  { code: 'pt', label: 'Português',  flag: '🇵🇹' },
-]
-
-export const DEFAULT_LANGUAGE = 'it'
-
-const strings = {
-
-  // ── NAVIGATION ─────────────────────────────────────────────────────────
-  nav: {
-    home:         { it: 'Home',         en: 'Home',         es: 'Inicio',       fr: 'Accueil',      de: 'Startseite',       pt: 'Início'        },
-    services:     { it: 'Servizi',      en: 'Services',     es: 'Servicios',    fr: 'Services',     de: 'Leistungen',       pt: 'Serviços'      },
-    memberships:  { it: 'Memberships',  en: 'Memberships',  es: 'Membresías',   fr: 'Abonnements',  de: 'Mitgliedschaften', pt: 'Membros'       },
-    projects:     { it: 'Progetti',     en: 'Projects',     es: 'Proyectos',    fr: 'Projets',      de: 'Projekte',         pt: 'Projetos'      },
-    clients:      { it: 'Clienti',      en: 'Clients',      es: 'Clientes',     fr: 'Clients',      de: 'Kunden',           pt: 'Clientes'      },
-    contact:      { it: 'Contatto',     en: 'Contact',      es: 'Contacto',     fr: 'Contact',      de: 'Kontakt',          pt: 'Contato'       },
-    booking:      { it: 'Prenota',      en: 'Book Now',     es: 'Reservar',     fr: 'Réserver',     de: 'Buchen',           pt: 'Reservar'      },
-  },
-
-  // ── HERO SECTION + CAROUSEL ────────────────────────────────────────────
-  hero: {
-    badge:        { it: 'Studio Digitale Creativo',  en: 'Digital Creative Studio', es: 'Estudio Digital Creativo', fr: 'Studio Créatif Digital', de: 'Digitales Kreativstudio', pt: 'Estúdio Digital Criativo' },
-    exploreCta:   { it: 'ESPLORA LE AREE',           en: 'EXPLORE AREAS',           es: 'EXPLORAR ÁREAS',           fr: 'EXPLORER LES ZONES',     de: 'BEREICHE ENTDECKEN',       pt: 'EXPLORAR ÁREAS'           },
-    // Carousel accessibility / labels
-    prevSlide:    { it: 'Slide precedente',           en: 'Previous slide',          es: 'Diapositiva anterior',     fr: 'Diapositive précédente',  de: 'Vorherige Folie',          pt: 'Slide anterior'           },
-    nextSlide:    { it: 'Slide successiva',           en: 'Next slide',              es: 'Diapositiva siguiente',    fr: 'Diapositive suivante',    de: 'Nächste Folie',            pt: 'Próximo slide'            },
-    slideOf:      { it: 'di',                         en: 'of',                      es: 'de',                       fr: 'sur',                     de: 'von',                      pt: 'de'                       },
-  },
-
-  // ── SERVICES SECTION ───────────────────────────────────────────────────
-  services: {
-    eyebrow:       { it: 'Cosa facciamo',   en: 'What we do',      es: 'Lo que hacemos',  fr: 'Ce que nous faisons', de: 'Was wir machen',    pt: 'O que fazemos'     },
-    heading:       { it: 'I nostri',        en: 'Our',             es: 'Nuestros',        fr: 'Nos',                  de: 'Unsere',            pt: 'Nossos'            },
-    headingAccent: { it: 'Servizi',         en: 'Services',        es: 'Servicios',       fr: 'Services',             de: 'Leistungen',        pt: 'Serviços'          },
-    from:          { it: 'Da',              en: 'From',            es: 'Desde',           fr: 'À partir de',          de: 'Ab',                pt: 'A partir de'       },
-  },
-
-  // ── ECOSYSTEMS / MEMBERSHIPS SECTION ──────────────────────────────────
-  ecosystems: {
-    eyebrow:        { it: 'Gruppi Partner',      en: 'Partner Groups',     es: 'Grupos Partners',    fr: 'Groupes Partenaires',  de: 'Partner-Gruppen',     pt: 'Grupos Parceiros'     },
-    headingPrefix:  { it: 'Le nostre',            en: 'Our',                es: 'Nuestras',           fr: 'Nos',                   de: 'Unsere',              pt: 'Nossas'               },
-    heading:        { it: 'Membresie',            en: 'Memberships',        es: 'Membresías',         fr: 'Memberships',           de: 'Mitgliedschaften',    pt: 'Memberships'          },
-    featured:       { it: '★ In Evidenza',        en: '★ Featured',         es: '★ Destacado',        fr: '★ À la une',            de: '★ Empfohlen',         pt: '★ Destaque'           },
-    benefits:       { it: 'Vantaggi inclusi',     en: 'Included benefits',  es: 'Beneficios incluidos', fr: 'Avantages inclus',   de: 'Enthaltene Vorteile', pt: 'Benefícios incluídos' },
-    close:          { it: 'Torna al sito',        en: 'Back to site',       es: 'Volver al sitio',    fr: 'Retour au site',        de: 'Zurück zur Website',  pt: 'Voltar ao site'       },
-    viewDetail:     { it: 'Vedi dettaglio',       en: 'See details',        es: 'Ver detalle',        fr: 'Voir le détail',        de: 'Details ansehen',     pt: 'Ver detalhe'          },
-    drawerSubtitle: { it: 'Come lavoriamo in questo settore', en: 'How we work this sector', es: 'Cómo trabajamos este sector', fr: 'Comment nous travaillons ce secteur', de: 'Wie wir in diesem Bereich arbeiten', pt: 'Como trabalhamos este setor' },
-    successCases:   { it: 'Casi di successo',     en: 'Success stories',    es: 'Casos de éxito',     fr: 'Cas de succès',         de: 'Erfolgsgeschichten',  pt: 'Casos de sucesso'     },
-    typicalResults: { it: 'Risultati tipici',      en: 'Typical results',    es: 'Resultados típicos', fr: 'Résultats typiques',    de: 'Typische Ergebnisse', pt: 'Resultados típicos'   },
-    ctaContact:     { it: 'Parliamo',              en: "Let's talk",         es: 'Hablemos',           fr: 'Parlons',               de: 'Sprechen wir',        pt: 'Vamos falar'          },
-    ctaProjects:    { it: 'Vedi i progetti',       en: 'See projects',       es: 'Ver proyectos',      fr: 'Voir les projets',      de: 'Projekte ansehen',    pt: 'Ver projetos'         },
-    // Shell bar strings
-    shellDemo:      { it: 'Demo Commerciale',      en: 'Commercial Demo',    es: 'Demo Comercial',     fr: 'Démo Commerciale',      de: 'Kommerzielle Demo',   pt: 'Demo Comercial'       },
-    shellBack:      { it: '← Torna',               en: '← Back',             es: '← Volver',           fr: '← Retour',              de: '← Zurück',            pt: '← Voltar'             },
-  },
-
-  // ── PROJECTS SECTION ───────────────────────────────────────────────────
-  projects: {
-    eyebrow:       { it: 'Casi di successo',     en: 'Success stories',   es: 'Casos de éxito',     fr: 'Cas de succès',         de: 'Erfolgsgeschichten',  pt: 'Casos de sucesso'   },
-    heading:       { it: 'Il nostro',            en: 'Our',               es: 'Nuestro',            fr: 'Notre',                  de: 'Unser',               pt: 'Nosso'              },
-    headingAccent: { it: 'Portfolio',            en: 'Portfolio',         es: 'Portafolio',         fr: 'Portfolio',              de: 'Portfolio',           pt: 'Portfólio'          },
-    sub:           { it: 'Risultati reali per clienti reali.', en: 'Real results for real clients.', es: 'Resultados reales para clientes reales.', fr: 'De vrais résultats pour de vrais clients.', de: 'Echte Ergebnisse für echte Kunden.', pt: 'Resultados reais para clientes reais.' },
-    results:       { it: 'Risultati',            en: 'Results',           es: 'Resultados',         fr: 'Résultats',              de: 'Ergebnisse',          pt: 'Resultados'         },
-    contractThis:  { it: 'Voglio questo',        en: 'Hire this',         es: 'Contratar esto',     fr: 'Je veux ça',             de: 'Das beauftragen',     pt: 'Contratar isso'     },
-    backBtn:       { it: '← Torna',             en: '← Back',            es: '← Volver',           fr: '← Retour',               de: '← Zurück',            pt: '← Voltar'           },
-    openApp:       { it: 'Apri la demo',         en: 'Open demo',         es: 'Abrir demo',         fr: 'Ouvrir la démo',         de: 'Demo öffnen',         pt: 'Abrir demo'         },
-    visitSite:     { it: 'Visita il sito',       en: 'Visit site',        es: 'Ver sitio',          fr: 'Visiter le site',        de: 'Website besuchen',    pt: 'Visitar site'       },
-  },
-
-  // ── TESTIMONIALS SECTION ───────────────────────────────────────────────
-  testimonials: {
-    eyebrow:       { it: 'Social Proof',         en: 'Social Proof',      es: 'Social Proof',       fr: 'Témoignages',            de: 'Kundenstimmen',       pt: 'Prova Social'       },
-    heading:       { it: 'Cosa dicono i nostri', en: 'What our',          es: 'Lo que dicen',       fr: 'Ce que disent nos',      de: 'Was unsere',          pt: 'O que dizem nossos' },
-    headingAccent: { it: 'clienti',              en: 'clients say',       es: 'nuestros clientes',  fr: 'clients',                de: 'Kunden sagen',        pt: 'clientes'           },
-  },
-
-  // ── CONTACT SECTION ────────────────────────────────────────────────────
-  contact: {
-    eyebrow:      { it: 'Parliamo',              en: "Let's Talk",        es: 'Hablemos',           fr: 'Parlons',                de: 'Sprechen wir',        pt: 'Vamos Falar'        },
-    sendBtn:      { it: 'INVIA MESSAGGIO',        en: 'SEND MESSAGE',      es: 'ENVIAR MENSAJE',     fr: 'ENVOYER',                de: 'SENDEN',              pt: 'ENVIAR MENSAGEM'    },
-    whatsappBtn:  { it: 'WhatsApp',              en: 'WhatsApp',          es: 'WhatsApp',           fr: 'WhatsApp',               de: 'WhatsApp',            pt: 'WhatsApp'           },
-    privacy:      { it: 'Le tue informazioni sono private e non verranno condivise con terzi.', en: 'Your information is private and will never be shared with third parties.', es: 'Tu información es privada y nunca será compartida con terceros.', fr: 'Vos informations sont privées et ne seront jamais partagées.', de: 'Ihre Daten sind privat und werden nicht weitergegeben.', pt: 'Suas informações são privadas e nunca serão compartilhadas.' },
-    orEmail:      { it: 'oppure scrivici a',      en: 'or write to us at', es: 'o escríbenos a',     fr: 'ou écrivez-nous à',      de: 'oder schreiben Sie uns an', pt: 'ou escreva para' },
-    sendAnother:  { it: 'Invia un altro messaggio', en: 'Send another message', es: 'Enviar otro mensaje', fr: 'Envoyer un autre message', de: 'Weitere Nachricht senden', pt: 'Enviar outra mensagem' },
-    required:     { it: 'obbligatorio',           en: 'required',          es: 'obligatorio',        fr: 'obligatoire',            de: 'Pflichtfeld',         pt: 'obrigatório'        },
-    selectOpt:    { it: 'Seleziona…',             en: 'Select…',           es: 'Seleccionar…',       fr: 'Sélectionner…',          de: 'Auswählen…',          pt: 'Selecionar…'        },
-    sending:      { it: 'Invio in corso…',         en: 'Sending…',          es: 'Enviando…',          fr: 'Envoi en cours…',        de: 'Wird gesendet…',      pt: 'Enviando…'          },
-    errorRetry:   { it: "Errore durante l'invio. Riprova o contattaci via WhatsApp.", en: 'There was an error sending. Please try again or contact us via WhatsApp.', es: 'Hubo un error al enviar. Intenta de nuevo o contáctanos por WhatsApp.', fr: "Erreur lors de l'envoi. Réessayez ou contactez-nous via WhatsApp.", de: 'Fehler beim Senden. Bitte erneut versuchen oder per WhatsApp kontaktieren.', pt: 'Erro ao enviar. Tente novamente ou entre em contato pelo WhatsApp.' },
-    emailInvalid: { it: 'Email non valida',        en: 'Invalid email',     es: 'Email inválido',     fr: 'Email invalide',         de: 'Ungültige E-Mail',    pt: 'E-mail inválido'    },
-    fieldRequired:{ it: 'Campo obbligatorio',      en: 'This field is required', es: 'Campo obligatorio', fr: 'Champ obligatoire', de: 'Pflichtfeld',          pt: 'Campo obrigatório'  },
-  },
-
-  // ── FOOTER ─────────────────────────────────────────────────────────────
-  footer: {
-    navigation:   { it: 'Navigazione',           en: 'Navigation',        es: 'Navegación',         fr: 'Navigation',             de: 'Navigation',          pt: 'Navegação'          },
-    services:     { it: 'Servizi',               en: 'Services',          es: 'Servicios',          fr: 'Services',               de: 'Leistungen',          pt: 'Serviços'           },
-    contact:      { it: 'Contatti',              en: 'Contact',           es: 'Contacto',           fr: 'Contact',                de: 'Kontakt',             pt: 'Contato'            },
-    whatsapp:     { it: 'WhatsApp Business',     en: 'WhatsApp Business', es: 'WhatsApp Business',  fr: 'WhatsApp Business',      de: 'WhatsApp Business',   pt: 'WhatsApp Business'  },
-    instagram:    { it: 'Instagram Studio',      en: 'Instagram Studio',  es: 'Instagram Studio',   fr: 'Instagram Studio',       de: 'Instagram Studio',    pt: 'Instagram Studio'   },
-  },
-
-  // ── BOOKING FLOW ───────────────────────────────────────────────────────
-  booking: {
-    title:         { it: 'Prenota il tuo appuntamento',  en: 'Book your appointment',       es: 'Reserva tu cita',             fr: 'Réservez votre rendez-vous',  de: 'Termin buchen',               pt: 'Agendar seu compromisso'      },
-    selectService: { it: 'Scegli il servizio',           en: 'Choose a service',            es: 'Elige el servicio',           fr: 'Choisissez un service',       de: 'Leistung wählen',             pt: 'Escolha o serviço'            },
-    selectDate:    { it: 'Scegli la data',               en: 'Choose a date',               es: 'Elige la fecha',              fr: 'Choisissez une date',         de: 'Datum wählen',                pt: 'Escolha a data'               },
-    selectTime:    { it: "Scegli l'orario",              en: 'Choose a time slot',          es: 'Elige el horario',            fr: 'Choisissez un créneau',       de: 'Uhrzeit wählen',              pt: 'Escolha o horário'            },
-    yourDetails:   { it: 'I tuoi dati',                  en: 'Your details',                es: 'Tus datos',                   fr: 'Vos coordonnées',             de: 'Ihre Daten',                  pt: 'Seus dados'                   },
-    confirm:       { it: 'Conferma prenotazione',        en: 'Confirm booking',             es: 'Confirmar reserva',           fr: 'Confirmer la réservation',    de: 'Buchung bestätigen',          pt: 'Confirmar reserva'            },
-    confirmed:     { it: 'Prenotazione confermata!',     en: 'Booking confirmed!',          es: '¡Reserva confirmada!',        fr: 'Réservation confirmée !',     de: 'Buchung bestätigt!',          pt: 'Reserva confirmada!'          },
-    name:          { it: 'Nome',                         en: 'Name',                        es: 'Nombre',                      fr: 'Nom',                         de: 'Name',                        pt: 'Nome'                         },
-    phone:         { it: 'Telefono',                     en: 'Phone',                       es: 'Teléfono',                    fr: 'Téléphone',                   de: 'Telefon',                     pt: 'Telefone'                     },
-    email:         { it: 'Email',                        en: 'Email',                       es: 'Email',                       fr: 'E-mail',                      de: 'E-Mail',                      pt: 'E-mail'                       },
-    notes:         { it: 'Note (facoltativo)',            en: 'Notes (optional)',            es: 'Notas (opcional)',            fr: 'Notes (facultatif)',           de: 'Hinweise (optional)',         pt: 'Notas (opcional)'             },
-    back:          { it: 'Indietro',                     en: 'Back',                        es: 'Atrás',                       fr: 'Retour',                      de: 'Zurück',                      pt: 'Voltar'                       },
-    next:          { it: 'Avanti',                       en: 'Next',                        es: 'Siguiente',                   fr: 'Suivant',                     de: 'Weiter',                      pt: 'Próximo'                      },
-    duration:      { it: 'min',                          en: 'min',                         es: 'min',                         fr: 'min',                         de: 'Min.',                        pt: 'min'                          },
-    price:         { it: 'Prezzo',                       en: 'Price',                       es: 'Precio',                      fr: 'Prix',                        de: 'Preis',                       pt: 'Preço'                        },
-    noSlots:       { it: 'Nessun orario disponibile',    en: 'No time slots available',     es: 'Sin horarios disponibles',    fr: 'Aucun créneau disponible',    de: 'Keine Zeiten verfügbar',      pt: 'Sem horários disponíveis'     },
-    loading:       { it: 'Caricamento…',                 en: 'Loading…',                    es: 'Cargando…',                   fr: 'Chargement…',                 de: 'Wird geladen…',               pt: 'Carregando…'                  },
-    step:          { it: 'Passo',                        en: 'Step',                        es: 'Paso',                        fr: 'Étape',                       de: 'Schritt',                     pt: 'Passo'                        },
-    of:            { it: 'di',                           en: 'of',                          es: 'de',                          fr: 'sur',                         de: 'von',                         pt: 'de'                           },
-    summary:       { it: 'Riepilogo',                    en: 'Summary',                     es: 'Resumen',                     fr: 'Récapitulatif',               de: 'Zusammenfassung',             pt: 'Resumo'                       },
-    months: {
-      it: ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'],
-      en: ['January','February','March','April','May','June','July','August','September','October','November','December'],
-      es: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
-      fr: ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'],
-      de: ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'],
-      pt: ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'],
-    },
-    weekdays: {
-      it: ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'],
-      en: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
-      es: ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'],
-      fr: ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'],
-      de: ['So','Mo','Di','Mi','Do','Fr','Sa'],
-      pt: ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'],
-    },
-  },
-
-  // ── ADMIN PANEL ────────────────────────────────────────────────────────
-  admin: {
-    language: { it: 'Lingua del Sito',      en: 'Site Language',    es: 'Idioma del Sitio', fr: 'Langue du Site',       de: 'Website-Sprache',    pt: 'Idioma do Site'     },
-    saved:    { it: 'Salvato ✓',            en: 'Saved ✓',          es: 'Guardado ✓',       fr: 'Enregistré ✓',         de: 'Gespeichert ✓',      pt: 'Salvo ✓'            },
-    saving:   { it: 'Salvataggio…',         en: 'Saving…',          es: 'Guardando…',       fr: 'Enregistrement…',      de: 'Wird gespeichert…',  pt: 'Salvando…'          },
-    error:    { it: 'Errore durante il salvataggio', en: 'Error saving', es: 'Error al guardar', fr: "Erreur d'enregistrement", de: 'Speicherfehler', pt: 'Erro ao salvar' },
-  },
-
-  // ── GENERIC / SHARED ───────────────────────────────────────────────────
-  common: {
-    save:     { it: 'Salva',               en: 'Save',             es: 'Guardar',          fr: 'Enregistrer',          de: 'Speichern',          pt: 'Salvar'             },
-    cancel:   { it: 'Annulla',             en: 'Cancel',           es: 'Cancelar',         fr: 'Annuler',              de: 'Abbrechen',          pt: 'Cancelar'           },
-    delete:   { it: 'Elimina',             en: 'Delete',           es: 'Eliminar',         fr: 'Supprimer',            de: 'Löschen',            pt: 'Excluir'            },
-    edit:     { it: 'Modifica',            en: 'Edit',             es: 'Editar',           fr: 'Modifier',             de: 'Bearbeiten',         pt: 'Editar'             },
-    addNew:   { it: 'Aggiungi',            en: 'Add New',          es: 'Agregar',          fr: 'Ajouter',              de: 'Hinzufügen',         pt: 'Adicionar'          },
-    viewSite: { it: 'Vedi il sito',        en: 'View site',        es: 'Ver sitio',        fr: 'Voir le site',         de: 'Seite anzeigen',     pt: 'Ver site'           },
-    logout:   { it: 'Esci',               en: 'Logout',           es: 'Salir',            fr: 'Déconnexion',          de: 'Abmelden',           pt: 'Sair'               },
-    loading:  { it: 'Caricamento…',        en: 'Loading…',         es: 'Cargando…',        fr: 'Chargement…',          de: 'Wird geladen…',      pt: 'Carregando…'        },
-    close:    { it: 'Chiudi',              en: 'Close',            es: 'Cerrar',           fr: 'Fermer',               de: 'Schließen',          pt: 'Fechar'             },
-    back:     { it: 'Indietro',            en: 'Back',             es: 'Volver',           fr: 'Retour',               de: 'Zurück',             pt: 'Voltar'             },
-    prev:     { it: 'Precedente',          en: 'Previous',         es: 'Anterior',         fr: 'Précédent',            de: 'Vorherige',          pt: 'Anterior'           },
-    next:     { it: 'Successivo',          en: 'Next',             es: 'Siguiente',        fr: 'Suivant',              de: 'Weiter',             pt: 'Próximo'            },
-    of:       { it: 'di',                  en: 'of',               es: 'de',               fr: 'sur',                  de: 'von',                pt: 'de'                 },
-  },
+// ─────────────────────────────────────────────────────────────────────
+// Lee las credenciales desde variables de entorno VITE_*
+// Nunca hardcodeadas aquí — nunca en git.
+// En Vercel: Settings → Environment Variables
+// En local: archivo .env en la raíz del proyecto
+// ─────────────────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId:             import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// RESOLVER
-// ─────────────────────────────────────────────────────────────────────
-export function getStrings(lang = DEFAULT_LANGUAGE) {
-  const l = SUPPORTED_LANGUAGES.find(x => x.code === lang)?.code ?? DEFAULT_LANGUAGE
-
-  function resolve(node) {
-    if (node === null || node === undefined) return ''
-    if (typeof node === 'object' && typeof node[l] !== 'undefined') {
-      if (Array.isArray(node[l])) return node[l]
-      return node[l]
-    }
-    const out = {}
-    for (const [k, v] of Object.entries(node)) {
-      out[k] = resolve(v)
-    }
-    return out
+// Validación en desarrollo — avisa si falta alguna variable
+if (import.meta.env.DEV) {
+  const missing = Object.entries(firebaseConfig)
+    .filter(([, v]) => !v)
+    .map(([k]) => k)
+  if (missing.length > 0) {
+    console.error(
+      '[Firebase] Variables de entorno faltantes:',
+      missing,
+      '\nCrea un archivo .env en la raíz del proyecto con las variables VITE_FIREBASE_*'
+    )
   }
-
-  return resolve(strings)
 }
+
+const app = initializeApp(firebaseConfig)
+
+export const db      = getFirestore(app)
+export const storage = getStorage(app)
+
+export const auth = getAuth(app)
+setPersistence(auth, browserLocalPersistence)
+
+export default app
 </file>
 
 <file path="src/App.jsx">
@@ -7872,6 +8079,196 @@ export async function uploadImage(file, folder = 'images', onProgress = null) {
 }
 </file>
 
+<file path="src/lib/uiStrings.js">
+/**
+ * uiStrings.js — v5
+ * Añadido: contact.successTitle, contact.successMessage
+ * nav.about
+ */
+
+export const SUPPORTED_LANGUAGES = [
+  { code: 'it', label: 'Italiano',   flag: '🇮🇹' },
+  { code: 'en', label: 'English',    flag: '🇬🇧' },
+  { code: 'es', label: 'Español',    flag: '🇪🇸' },
+  { code: 'fr', label: 'Français',   flag: '🇫🇷' },
+  { code: 'de', label: 'Deutsch',    flag: '🇩🇪' },
+  { code: 'pt', label: 'Português',  flag: '🇵🇹' },
+]
+
+export const DEFAULT_LANGUAGE = 'it'
+
+const strings = {
+
+  nav: {
+    home:         { it: 'Home',         en: 'Home',         es: 'Inicio',       fr: 'Accueil',      de: 'Startseite',       pt: 'Início'        },
+    about:        { it: 'Chi siamo',    en: 'About',        es: 'Nosotros',     fr: 'À propos',     de: 'Über uns',         pt: 'Sobre nós'     },
+    services:     { it: 'Servizi',      en: 'Services',     es: 'Servicios',    fr: 'Services',     de: 'Leistungen',       pt: 'Serviços'      },
+    memberships:  { it: 'Memberships',  en: 'Memberships',  es: 'Membresías',   fr: 'Abonnements',  de: 'Mitgliedschaften', pt: 'Membros'       },
+    projects:     { it: 'Progetti',     en: 'Projects',     es: 'Proyectos',    fr: 'Projets',      de: 'Projekte',         pt: 'Projetos'      },
+    clients:      { it: 'Clienti',      en: 'Clients',      es: 'Clientes',     fr: 'Clients',      de: 'Kunden',           pt: 'Clientes'      },
+    contact:      { it: 'Contatto',     en: 'Contact',      es: 'Contacto',     fr: 'Contact',      de: 'Kontakt',          pt: 'Contato'       },
+    booking:      { it: 'Prenota',      en: 'Book Now',     es: 'Reservar',     fr: 'Réserver',     de: 'Buchen',           pt: 'Reservar'      },
+  },
+
+  hero: {
+    badge:        { it: 'Studio Digitale Creativo',  en: 'Digital Creative Studio', es: 'Estudio Digital Creativo', fr: 'Studio Créatif Digital', de: 'Digitales Kreativstudio', pt: 'Estúdio Digital Criativo' },
+    exploreCta:   { it: 'ESPLORA LE AREE',           en: 'EXPLORE AREAS',           es: 'EXPLORAR ÁREAS',           fr: 'EXPLORER LES ZONES',     de: 'BEREICHE ENTDECKEN',       pt: 'EXPLORAR ÁREAS'           },
+    prevSlide:    { it: 'Slide precedente',           en: 'Previous slide',          es: 'Diapositiva anterior',     fr: 'Diapositive précédente',  de: 'Vorherige Folie',          pt: 'Slide anterior'           },
+    nextSlide:    { it: 'Slide successiva',           en: 'Next slide',              es: 'Diapositiva siguiente',    fr: 'Diapositive suivante',    de: 'Nächste Folie',            pt: 'Próximo slide'            },
+    slideOf:      { it: 'di',                         en: 'of',                      es: 'de',                       fr: 'sur',                     de: 'von',                      pt: 'de'                       },
+  },
+
+  services: {
+    eyebrow:       { it: 'Cosa facciamo',   en: 'What we do',      es: 'Lo que hacemos',  fr: 'Ce que nous faisons', de: 'Was wir machen',    pt: 'O que fazemos'     },
+    heading:       { it: 'I nostri',        en: 'Our',             es: 'Nuestros',        fr: 'Nos',                  de: 'Unsere',            pt: 'Nossos'            },
+    headingAccent: { it: 'Servizi',         en: 'Services',        es: 'Servicios',       fr: 'Services',             de: 'Leistungen',        pt: 'Serviços'          },
+    from:          { it: 'Da',              en: 'From',            es: 'Desde',           fr: 'À partir de',          de: 'Ab',                pt: 'A partir de'       },
+  },
+
+  ecosystems: {
+    eyebrow:        { it: 'Gruppi Partner',      en: 'Partner Groups',     es: 'Grupos Partners',    fr: 'Groupes Partenaires',  de: 'Partner-Gruppen',     pt: 'Grupos Parceiros'     },
+    headingPrefix:  { it: 'Le nostre',            en: 'Our',                es: 'Nuestras',           fr: 'Nos',                   de: 'Unsere',              pt: 'Nossas'               },
+    heading:        { it: 'Membresie',            en: 'Memberships',        es: 'Membresías',         fr: 'Memberships',           de: 'Mitgliedschaften',    pt: 'Memberships'          },
+    featured:       { it: '★ In Evidenza',        en: '★ Featured',         es: '★ Destacado',        fr: '★ À la une',            de: '★ Empfohlen',         pt: '★ Destaque'           },
+    benefits:       { it: 'Vantaggi inclusi',     en: 'Included benefits',  es: 'Beneficios incluidos', fr: 'Avantages inclus',   de: 'Enthaltene Vorteile', pt: 'Benefícios incluídos' },
+    close:          { it: 'Torna al sito',        en: 'Back to site',       es: 'Volver al sitio',    fr: 'Retour au site',        de: 'Zurück zur Website',  pt: 'Voltar ao site'       },
+    viewDetail:     { it: 'Vedi dettaglio',       en: 'See details',        es: 'Ver detalle',        fr: 'Voir le détail',        de: 'Details ansehen',     pt: 'Ver detalhe'          },
+    drawerSubtitle: { it: 'Come lavoriamo in questo settore', en: 'How we work this sector', es: 'Cómo trabajamos este sector', fr: 'Comment nous travaillons ce secteur', de: 'Wie wir in diesem Bereich arbeiten', pt: 'Como trabalhamos este setor' },
+    successCases:   { it: 'Casi di successo',     en: 'Success stories',    es: 'Casos de éxito',     fr: 'Cas de succès',         de: 'Erfolgsgeschichten',  pt: 'Casos de sucesso'     },
+    typicalResults: { it: 'Risultati tipici',      en: 'Typical results',    es: 'Resultados típicos', fr: 'Résultats typiques',    de: 'Typische Ergebnisse', pt: 'Resultados típicos'   },
+    ctaContact:     { it: 'Parliamo',              en: "Let's talk",         es: 'Hablemos',           fr: 'Parlons',               de: 'Sprechen wir',        pt: 'Vamos falar'          },
+    ctaProjects:    { it: 'Vedi i progetti',       en: 'See projects',       es: 'Ver proyectos',      fr: 'Voir les projets',      de: 'Projekte ansehen',    pt: 'Ver projetos'         },
+    shellDemo:      { it: 'Demo Commerciale',      en: 'Commercial Demo',    es: 'Demo Comercial',     fr: 'Démo Commerciale',      de: 'Kommerzielle Demo',   pt: 'Demo Comercial'       },
+    shellBack:      { it: '← Torna',               en: '← Back',             es: '← Volver',           fr: '← Retour',              de: '← Zurück',            pt: '← Voltar'             },
+  },
+
+  projects: {
+    eyebrow:       { it: 'Casi di successo',     en: 'Success stories',   es: 'Casos de éxito',     fr: 'Cas de succès',         de: 'Erfolgsgeschichten',  pt: 'Casos de sucesso'   },
+    heading:       { it: 'Il nostro',            en: 'Our',               es: 'Nuestro',            fr: 'Notre',                  de: 'Unser',               pt: 'Nosso'              },
+    headingAccent: { it: 'Portfolio',            en: 'Portfolio',         es: 'Portafolio',         fr: 'Portfolio',              de: 'Portfolio',           pt: 'Portfólio'          },
+    sub:           { it: 'Risultati reali per clienti reali.', en: 'Real results for real clients.', es: 'Resultados reales para clientes reales.', fr: 'De vrais résultats pour de vrais clients.', de: 'Echte Ergebnisse für echte Kunden.', pt: 'Resultados reais para clientes reais.' },
+    results:       { it: 'Risultati',            en: 'Results',           es: 'Resultados',         fr: 'Résultats',              de: 'Ergebnisse',          pt: 'Resultados'         },
+    contractThis:  { it: 'Voglio questo',        en: 'Hire this',         es: 'Contratar esto',     fr: 'Je veux ça',             de: 'Das beauftragen',     pt: 'Contratar isso'     },
+    backBtn:       { it: '← Torna',             en: '← Back',            es: '← Volver',           fr: '← Retour',               de: '← Zurück',            pt: '← Voltar'           },
+    openApp:       { it: 'Apri la demo',         en: 'Open demo',         es: 'Abrir demo',         fr: 'Ouvrir la démo',         de: 'Demo öffnen',         pt: 'Abrir demo'         },
+    visitSite:     { it: 'Visita il sito',       en: 'Visit site',        es: 'Ver sitio',          fr: 'Visiter le site',        de: 'Website besuchen',    pt: 'Visitar site'       },
+  },
+
+  testimonials: {
+    eyebrow:       { it: 'Social Proof',         en: 'Social Proof',      es: 'Social Proof',       fr: 'Témoignages',            de: 'Kundenstimmen',       pt: 'Prova Social'       },
+    heading:       { it: 'Cosa dicono i nostri', en: 'What our',          es: 'Lo que dicen',       fr: 'Ce que disent nos',      de: 'Was unsere',          pt: 'O que dizem nossos' },
+    headingAccent: { it: 'clienti',              en: 'clients say',       es: 'nuestros clientes',  fr: 'clients',                de: 'Kunden sagen',        pt: 'clientes'           },
+  },
+
+  contact: {
+    eyebrow:        { it: 'Parliamo',              en: "Let's Talk",        es: 'Hablemos',           fr: 'Parlons',                de: 'Sprechen wir',        pt: 'Vamos Falar'        },
+    sendBtn:        { it: 'INVIA MESSAGGIO',        en: 'SEND MESSAGE',      es: 'ENVIAR MENSAJE',     fr: 'ENVOYER',                de: 'SENDEN',              pt: 'ENVIAR MENSAGEM'    },
+    whatsappBtn:    { it: 'WhatsApp',              en: 'WhatsApp',          es: 'WhatsApp',           fr: 'WhatsApp',               de: 'WhatsApp',            pt: 'WhatsApp'           },
+    privacy:        { it: 'Le tue informazioni sono private e non verranno condivise con terzi.', en: 'Your information is private and will never be shared with third parties.', es: 'Tu información es privada y nunca será compartida con terceros.', fr: 'Vos informations sont privées et ne seront jamais partagées.', de: 'Ihre Daten sind privat und werden nicht weitergegeben.', pt: 'Suas informações são privadas e nunca serão compartilhadas.' },
+    orEmail:        { it: 'oppure scrivici a',      en: 'or write to us at', es: 'o escríbenos a',     fr: 'ou écrivez-nous à',      de: 'oder schreiben Sie uns an', pt: 'ou escreva para' },
+    sendAnother:    { it: 'Invia un altro messaggio', en: 'Send another message', es: 'Enviar otro mensaje', fr: 'Envoyer un autre message', de: 'Weitere Nachricht senden', pt: 'Enviar outra mensagem' },
+    required:       { it: 'obbligatorio',           en: 'required',          es: 'obligatorio',        fr: 'obligatoire',            de: 'Pflichtfeld',         pt: 'obrigatório'        },
+    selectOpt:      { it: 'Seleziona…',             en: 'Select…',           es: 'Seleccionar…',       fr: 'Sélectionner…',          de: 'Auswählen…',          pt: 'Selecionar…'        },
+    sending:        { it: 'Invio in corso…',         en: 'Sending…',          es: 'Enviando…',          fr: 'Envoi en cours…',        de: 'Wird gesendet…',      pt: 'Enviando…'          },
+    errorRetry:     { it: "Errore durante l'invio. Riprova o contattaci via WhatsApp.", en: 'There was an error sending. Please try again or contact us via WhatsApp.', es: 'Hubo un error al enviar. Intenta de nuevo o contáctanos por WhatsApp.', fr: "Erreur lors de l'envoi. Réessayez ou contactez-nous via WhatsApp.", de: 'Fehler beim Senden. Bitte erneut versuchen oder per WhatsApp kontaktieren.', pt: 'Erro ao enviar. Tente novamente ou entre em contato pelo WhatsApp.' },
+    emailInvalid:   { it: 'Email non valida',        en: 'Invalid email',     es: 'Email inválido',     fr: 'Email invalide',         de: 'Ungültige E-Mail',    pt: 'E-mail inválido'    },
+    fieldRequired:  { it: 'Campo obbligatorio',      en: 'This field is required', es: 'Campo obligatorio', fr: 'Champ obligatoire', de: 'Pflichtfeld',          pt: 'Campo obrigatório'  },
+    // ── NUEVO: mensaje de éxito — reacciona al idioma en tiempo real ──
+    successTitle:   { it: 'Richiesta ricevuta!',     en: 'Request received!',  es: '¡Solicitud recibida!',   fr: 'Demande reçue !',           de: 'Anfrage erhalten!',         pt: 'Pedido recebido!'          },
+    successMessage: { it: 'Ti contatteremo entro 24 ore.', en: "We'll contact you within 24 hours.", es: 'Te contactaremos en menos de 24 horas.', fr: 'Nous vous contacterons dans les 24 heures.', de: 'Wir melden uns innerhalb von 24 Stunden.', pt: 'Entraremos em contato em até 24 horas.' },
+  },
+
+  footer: {
+    navigation:   { it: 'Navigazione',           en: 'Navigation',        es: 'Navegación',         fr: 'Navigation',             de: 'Navigation',          pt: 'Navegação'          },
+    services:     { it: 'Servizi',               en: 'Services',          es: 'Servicios',          fr: 'Services',               de: 'Leistungen',          pt: 'Serviços'           },
+    contact:      { it: 'Contatti',              en: 'Contact',           es: 'Contacto',           fr: 'Contact',                de: 'Kontakt',             pt: 'Contato'            },
+    whatsapp:     { it: 'WhatsApp Business',     en: 'WhatsApp Business', es: 'WhatsApp Business',  fr: 'WhatsApp Business',      de: 'WhatsApp Business',   pt: 'WhatsApp Business'  },
+    instagram:    { it: 'Instagram Studio',      en: 'Instagram Studio',  es: 'Instagram Studio',   fr: 'Instagram Studio',       de: 'Instagram Studio',    pt: 'Instagram Studio'   },
+  },
+
+  booking: {
+    title:         { it: 'Prenota il tuo appuntamento',  en: 'Book your appointment',       es: 'Reserva tu cita',             fr: 'Réservez votre rendez-vous',  de: 'Termin buchen',               pt: 'Agendar seu compromisso'      },
+    selectService: { it: 'Scegli il servizio',           en: 'Choose a service',            es: 'Elige el servicio',           fr: 'Choisissez un service',       de: 'Leistung wählen',             pt: 'Escolha o serviço'            },
+    selectDate:    { it: 'Scegli la data',               en: 'Choose a date',               es: 'Elige la fecha',              fr: 'Choisissez une date',         de: 'Datum wählen',                pt: 'Escolha a data'               },
+    selectTime:    { it: "Scegli l'orario",              en: 'Choose a time slot',          es: 'Elige el horario',            fr: 'Choisissez un créneau',       de: 'Uhrzeit wählen',              pt: 'Escolha o horário'            },
+    yourDetails:   { it: 'I tuoi dati',                  en: 'Your details',                es: 'Tus datos',                   fr: 'Vos coordonnées',             de: 'Ihre Daten',                  pt: 'Seus dados'                   },
+    confirm:       { it: 'Conferma prenotazione',        en: 'Confirm booking',             es: 'Confirmar reserva',           fr: 'Confirmer la réservation',    de: 'Buchung bestätigen',          pt: 'Confirmar reserva'            },
+    confirmed:     { it: 'Prenotazione confermata!',     en: 'Booking confirmed!',          es: '¡Reserva confirmada!',        fr: 'Réservation confirmée !',     de: 'Buchung bestätigt!',          pt: 'Reserva confirmada!'          },
+    name:          { it: 'Nome',                         en: 'Name',                        es: 'Nombre',                      fr: 'Nom',                         de: 'Name',                        pt: 'Nome'                         },
+    phone:         { it: 'Telefono',                     en: 'Phone',                       es: 'Teléfono',                    fr: 'Téléphone',                   de: 'Telefon',                     pt: 'Telefone'                     },
+    email:         { it: 'Email',                        en: 'Email',                       es: 'Email',                       fr: 'E-mail',                      de: 'E-Mail',                      pt: 'E-mail'                       },
+    notes:         { it: 'Note (facoltativo)',            en: 'Notes (optional)',            es: 'Notas (opcional)',            fr: 'Notes (facultatif)',           de: 'Hinweise (optional)',         pt: 'Notas (opcional)'             },
+    back:          { it: 'Indietro',                     en: 'Back',                        es: 'Atrás',                       fr: 'Retour',                      de: 'Zurück',                      pt: 'Voltar'                       },
+    next:          { it: 'Avanti',                       en: 'Next',                        es: 'Siguiente',                   fr: 'Suivant',                     de: 'Weiter',                      pt: 'Próximo'                      },
+    duration:      { it: 'min',                          en: 'min',                         es: 'min',                         fr: 'min',                         de: 'Min.',                        pt: 'min'                          },
+    price:         { it: 'Prezzo',                       en: 'Price',                       es: 'Precio',                      fr: 'Prix',                        de: 'Preis',                       pt: 'Preço'                        },
+    noSlots:       { it: 'Nessun orario disponibile',    en: 'No time slots available',     es: 'Sin horarios disponibles',    fr: 'Aucun créneau disponible',    de: 'Keine Zeiten verfügbar',      pt: 'Sem horários disponíveis'     },
+    loading:       { it: 'Caricamento…',                 en: 'Loading…',                    es: 'Cargando…',                   fr: 'Chargement…',                 de: 'Wird geladen…',               pt: 'Carregando…'                  },
+    step:          { it: 'Passo',                        en: 'Step',                        es: 'Paso',                        fr: 'Étape',                       de: 'Schritt',                     pt: 'Passo'                        },
+    of:            { it: 'di',                           en: 'of',                          es: 'de',                          fr: 'sur',                         de: 'von',                         pt: 'de'                           },
+    summary:       { it: 'Riepilogo',                    en: 'Summary',                     es: 'Resumen',                     fr: 'Récapitulatif',               de: 'Zusammenfassung',             pt: 'Resumo'                       },
+    months: {
+      it: ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'],
+      en: ['January','February','March','April','May','June','July','August','September','October','November','December'],
+      es: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
+      fr: ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'],
+      de: ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'],
+      pt: ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'],
+    },
+    weekdays: {
+      it: ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'],
+      en: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+      es: ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'],
+      fr: ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'],
+      de: ['So','Mo','Di','Mi','Do','Fr','Sa'],
+      pt: ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'],
+    },
+  },
+
+  admin: {
+    language: { it: 'Lingua del Sito',      en: 'Site Language',    es: 'Idioma del Sitio', fr: 'Langue du Site',       de: 'Website-Sprache',    pt: 'Idioma do Site'     },
+    saved:    { it: 'Salvato ✓',            en: 'Saved ✓',          es: 'Guardado ✓',       fr: 'Enregistré ✓',         de: 'Gespeichert ✓',      pt: 'Salvo ✓'            },
+    saving:   { it: 'Salvataggio…',         en: 'Saving…',          es: 'Guardando…',       fr: 'Enregistrement…',      de: 'Wird gespeichert…',  pt: 'Salvando…'          },
+    error:    { it: 'Errore durante il salvataggio', en: 'Error saving', es: 'Error al guardar', fr: "Erreur d'enregistrement", de: 'Speicherfehler', pt: 'Erro ao salvar' },
+  },
+
+  common: {
+    save:     { it: 'Salva',               en: 'Save',             es: 'Guardar',          fr: 'Enregistrer',          de: 'Speichern',          pt: 'Salvar'             },
+    cancel:   { it: 'Annulla',             en: 'Cancel',           es: 'Cancelar',         fr: 'Annuler',              de: 'Abbrechen',          pt: 'Cancelar'           },
+    delete:   { it: 'Elimina',             en: 'Delete',           es: 'Eliminar',         fr: 'Supprimer',            de: 'Löschen',            pt: 'Excluir'            },
+    edit:     { it: 'Modifica',            en: 'Edit',             es: 'Editar',           fr: 'Modifier',             de: 'Bearbeiten',         pt: 'Editar'             },
+    addNew:   { it: 'Aggiungi',            en: 'Add New',          es: 'Agregar',          fr: 'Ajouter',              de: 'Hinzufügen',         pt: 'Adicionar'          },
+    viewSite: { it: 'Vedi il sito',        en: 'View site',        es: 'Ver sitio',        fr: 'Voir le site',         de: 'Seite anzeigen',     pt: 'Ver site'           },
+    logout:   { it: 'Esci',               en: 'Logout',           es: 'Salir',            fr: 'Déconnexion',          de: 'Abmelden',           pt: 'Sair'               },
+    loading:  { it: 'Caricamento…',        en: 'Loading…',         es: 'Cargando…',        fr: 'Chargement…',          de: 'Wird geladen…',      pt: 'Carregando…'        },
+    close:    { it: 'Chiudi',              en: 'Close',            es: 'Cerrar',           fr: 'Fermer',               de: 'Schließen',          pt: 'Fechar'             },
+    back:     { it: 'Indietro',            en: 'Back',             es: 'Volver',           fr: 'Retour',               de: 'Zurück',             pt: 'Voltar'             },
+    prev:     { it: 'Precedente',          en: 'Previous',         es: 'Anterior',         fr: 'Précédent',            de: 'Vorherige',          pt: 'Anterior'           },
+    next:     { it: 'Successivo',          en: 'Next',             es: 'Siguiente',        fr: 'Suivant',              de: 'Weiter',             pt: 'Próximo'            },
+    of:       { it: 'di',                  en: 'of',               es: 'de',               fr: 'sur',                  de: 'von',                pt: 'de'                 },
+  },
+}
+
+export function getStrings(lang = DEFAULT_LANGUAGE) {
+  const l = SUPPORTED_LANGUAGES.find(x => x.code === lang)?.code ?? DEFAULT_LANGUAGE
+
+  function resolve(node) {
+    if (node === null || node === undefined) return ''
+    if (typeof node === 'object' && typeof node[l] !== 'undefined') {
+      if (Array.isArray(node[l])) return node[l]
+      return node[l]
+    }
+    const out = {}
+    for (const [k, v] of Object.entries(node)) {
+      out[k] = resolve(v)
+    }
+    return out
+  }
+
+  return resolve(strings)
+}
+</file>
+
 <file path="src/components/site/ContactSection.jsx">
 /**
  * ContactSection.jsx — PhoneInput + 100% responsivo + traducción editorial
@@ -7946,11 +8343,9 @@ export default function ContactSection({ contact, footer, brand, site }) {
 
   const translatedContact = useTranslatedContent(
     {
-      title:          contact?.title          || t.contact.eyebrow,
-      subtitle:       contact?.subtitle       || '',
-      ctaLabel:       contact?.ctaLabel       || t.contact.sendBtn,
-      successTitle:   contact?.successTitle   || '✓',
-      successMessage: contact?.successMessage || '',
+      title:    contact?.title    || t.contact.eyebrow,
+      subtitle: contact?.subtitle || '',
+      ctaLabel: contact?.ctaLabel || t.contact.sendBtn,
     },
     brand
   )
@@ -8078,9 +8473,9 @@ export default function ContactSection({ contact, footer, brand, site }) {
                 <path d="M8 18L15 25L28 11" stroke={primary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="60" style={{ animation: 'ctCheck 0.5s 0.2s cubic-bezier(0.23,1,0.32,1) both' }} />
               </svg>
             </div>
-            <h3 style={{ fontSize: 'clamp(1.4rem,3vw,1.8rem)', fontWeight: 800, marginBottom: 12, color: 'var(--text-main)' }}>{translatedContact.successTitle}</h3>
+            <h3 style={{ fontSize: 'clamp(1.4rem,3vw,1.8rem)', fontWeight: 800, marginBottom: 12, color: 'var(--text-main)' }}>{t.contact.successTitle}</h3>
             <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '16px 20px', margin: '20px auto', maxWidth: 440 }}>
-              <p style={{ color: 'var(--text-dim)', fontSize: 15, lineHeight: 1.7, margin: 0 }}>{agentMsg || translatedContact.successMessage}</p>
+              <p style={{ color: 'var(--text-dim)', fontSize: 15, lineHeight: 1.7, margin: 0 }}>{agentMsg || t.contact.successMessage}</p>
             </div>
             <button onClick={handleReset} style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.15)', padding: '10px 24px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', marginTop: 12 }}>
               {t.contact.sendAnother}
@@ -8176,310 +8571,6 @@ export default function ContactSection({ contact, footer, brand, site }) {
         )}
       </div>
     </section>
-  )
-}
-</file>
-
-<file path="src/components/site/NavBar.jsx">
-import { useState, useEffect } from 'react'
-import { useUIStrings }        from '../../hooks/useUIStrings'
-
-function BrandLogo({ brand, scrolled }) {
-  const logo    = brand?.logo    || ''
-  const name    = brand?.name    || 'POLARTRONIC'
-  const primary = brand?.primary || '#ff3c3c'
-  const layout  = brand?.logoLayout || (logo ? 'logo-only' : 'name-only')
-  const imgH    = scrolled ? 28 : 36
-
-  if (layout === 'logo-only') {
-    return logo
-      ? <img src={logo} alt={name} style={{ height: imgH, maxWidth: 180, objectFit: 'contain', transition: 'height 0.4s' }} />
-      : <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '2rem', color: primary, letterSpacing: 2 }}>{name}</span>
-  }
-  if (layout === 'logo-name-side') {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {logo && <img src={logo} alt={name} style={{ height: imgH - 4, maxWidth: 60, objectFit: 'contain', transition: 'height 0.4s' }} />}
-        <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: scrolled ? '1.5rem' : '1.8rem', color: primary, letterSpacing: 2, transition: 'font-size 0.4s' }}>{name}</span>
-      </div>
-    )
-  }
-  if (layout === 'logo-name-stack') {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1 }}>
-        {logo && <img src={logo} alt={name} style={{ height: scrolled ? 18 : 22, maxWidth: 100, objectFit: 'contain', transition: 'height 0.4s' }} />}
-        <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: scrolled ? '0.85rem' : '1rem', color: primary, letterSpacing: 2, lineHeight: 1, transition: 'font-size 0.4s' }}>{name}</span>
-      </div>
-    )
-  }
-  return <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '2rem', color: primary, letterSpacing: 2 }}>{name}</span>
-}
-
-function HamburgerIcon({ open, primary }) {
-  return (
-    <div style={{ width: 22, height: 16, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-      <span style={{
-        display: 'block', height: 2, borderRadius: 2,
-        background: open ? primary : 'rgba(255,255,255,0.8)',
-        transform: open ? 'translateY(7px) rotate(45deg)' : 'none',
-        transition: 'all 0.35s cubic-bezier(0.23,1,0.32,1)',
-        transformOrigin: 'center',
-      }} />
-      <span style={{
-        display: 'block', height: 2, borderRadius: 2,
-        background: open ? primary : 'rgba(255,255,255,0.8)',
-        transform: open ? 'scaleX(0)' : 'scaleX(1)',
-        opacity: open ? 0 : 1,
-        transition: 'all 0.25s cubic-bezier(0.23,1,0.32,1)',
-        transformOrigin: 'center',
-      }} />
-      <span style={{
-        display: 'block', height: 2, borderRadius: 2,
-        background: open ? primary : 'rgba(255,255,255,0.8)',
-        transform: open ? 'translateY(-7px) rotate(-45deg)' : 'none',
-        transition: 'all 0.35s cubic-bezier(0.23,1,0.32,1)',
-        transformOrigin: 'center',
-      }} />
-    </div>
-  )
-}
-
-export default function NavBar({ brand }) {
-  const [scrolled,    setScrolled]    = useState(false)
-  const [menuOpen,    setMenuOpen]    = useState(false)
-  const [activeLink,  setActiveLink]  = useState('#home')
-  const t       = useUIStrings(brand)
-  const primary = brand?.primary || '#ff3c3c'
-
-  const NAV_LINKS = [
-    { href: '#home',        label: t.nav.home        },
-    { href: '#servicios',   label: t.nav.services    },
-    { href: '#ecosistemas', label: t.nav.memberships },
-    { href: '#proyectos',   label: t.nav.projects    },
-    { href: '#testimonios', label: t.nav.clients     },
-    { href: '#contacto',    label: t.nav.contact     },
-  ]
-
-  useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 50)
-    window.addEventListener('scroll', fn, { passive: true })
-    return () => window.removeEventListener('scroll', fn)
-  }, [])
-
-  useEffect(() => {
-    const fn = () => { if (window.innerWidth > 768) setMenuOpen(false) }
-    window.addEventListener('resize', fn)
-    return () => window.removeEventListener('resize', fn)
-  }, [])
-
-  useEffect(() => {
-    document.body.style.overflow = menuOpen ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [menuOpen])
-
-  const handleLinkClick = (href) => {
-    setActiveLink(href)
-    setMenuOpen(false)
-  }
-
-  return (
-    <>
-      <style>{`
-        .desktop-nav { display: flex; }
-        .mobile-menu-btn { display: none !important; }
-
-        @media (max-width: 768px) {
-          .desktop-nav     { display: none !important; }
-          .mobile-menu-btn { display: flex !important; }
-        }
-
-        .nav-link {
-          color: rgba(255,255,255,0.6);
-          text-decoration: none;
-          font-size: 0.8rem;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 1.2px;
-          transition: color 0.2s;
-          white-space: nowrap;
-        }
-        .nav-link:hover { color: ${primary}; }
-
-        @keyframes glassMenuIn {
-          from { opacity: 0; transform: translateY(-8px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes glassItemIn {
-          from { opacity: 0; transform: translateX(-12px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-
-        .glass-menu-item {
-          display: flex;
-          align-items: center;
-          padding: 14px 20px;
-          text-decoration: none;
-          font-size: 15px;
-          font-weight: 600;
-          letter-spacing: 0.5px;
-          border-bottom: 0.5px solid rgba(255,255,255,0.05);
-          border-left: 2px solid transparent;
-          transition: all 0.2s cubic-bezier(0.23,1,0.32,1);
-          color: rgba(255,255,255,0.45);
-          position: relative;
-        }
-        .glass-menu-item.active {
-          color: white;
-          border-left-color: ${primary};
-          background: rgba(255,60,60,0.05);
-          padding-left: 22px;
-        }
-        .glass-menu-item:hover:not(.active) {
-          color: rgba(255,255,255,0.8);
-          border-left-color: rgba(255,60,60,0.3);
-          padding-left: 22px;
-          background: rgba(255,255,255,0.02);
-        }
-      `}</style>
-
-      {/* ── HEADER FIJO ── */}
-      <header style={{
-        position: 'fixed', top: 0, left: 0, right: 0, width: '100%',
-        zIndex: 1000,
-        height: scrolled ? 64 : 80,
-        padding: '0 5%',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        background: scrolled ? 'rgba(3,3,3,0.92)' : 'transparent',
-        backdropFilter: scrolled ? 'blur(20px)' : 'none',
-        WebkitBackdropFilter: scrolled ? 'blur(20px)' : 'none',
-        borderBottom: scrolled ? '1px solid rgba(255,255,255,0.06)' : 'none',
-        transition: 'all 0.4s cubic-bezier(0.23,1,0.32,1)',
-        boxSizing: 'border-box',
-      }}>
-        {/* Logo */}
-        <a href="#home" style={{ textDecoration: 'none', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-          <BrandLogo brand={brand} scrolled={scrolled} />
-        </a>
-
-        {/* Desktop nav */}
-        <nav className="desktop-nav" style={{ gap: 28, alignItems: 'center' }}>
-          {NAV_LINKS.map(l => (
-            <a key={l.href} href={l.href} className="nav-link">{l.label}</a>
-          ))}
-        </nav>
-
-        {/* Botón hamburguesa — ÚNICO botón de apertura/cierre en mobile */}
-        <button
-          onClick={() => setMenuOpen(p => !p)}
-          className="mobile-menu-btn"
-          aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
-          style={{
-            background: menuOpen ? `rgba(255,60,60,0.12)` : 'rgba(255,255,255,0.06)',
-            border: `1px solid ${menuOpen ? `rgba(255,60,60,0.4)` : 'rgba(255,255,255,0.12)'}`,
-            width: 44, height: 44,
-            borderRadius: 10,
-            cursor: 'pointer',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.3s',
-            flexShrink: 0,
-            padding: 0,
-            // Siempre visible encima del panel
-            position: 'relative',
-            zIndex: 1201,
-          }}
-        >
-          <HamburgerIcon open={menuOpen} primary={primary} />
-        </button>
-      </header>
-
-      {/* ── MOBILE MENU PANEL ── */}
-      {menuOpen && (
-        <>
-          {/* Backdrop */}
-          <div
-            onClick={() => setMenuOpen(false)}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 1098,
-              background: 'rgba(0,0,0,0.6)',
-              backdropFilter: 'blur(4px)',
-              WebkitBackdropFilter: 'blur(4px)',
-            }}
-          />
-
-          {/* Panel glass — SIN botón ✕ propio, el header lo gestiona */}
-          <div style={{
-            position: 'fixed',
-            top: 0, left: 0, right: 0,
-            zIndex: 1099,
-            background: 'rgba(8,8,12,0.97)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            borderBottom: `1px solid rgba(255,255,255,0.08)`,
-            animation: 'glassMenuIn 0.3s cubic-bezier(0.23,1,0.32,1) both',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
-          }}>
-
-            {/* Línea de acento top */}
-            <div style={{
-              height: 2,
-              background: `linear-gradient(90deg, ${primary}, ${primary}40, transparent)`,
-            }} />
-
-            {/* Spacer que ocupa el alto del header fijo para que los links no queden debajo */}
-            <div style={{ height: scrolled ? 64 : 80 }} />
-
-            {/* Links */}
-            <nav style={{ display: 'flex', flexDirection: 'column' }}>
-              {NAV_LINKS.map((l, i) => (
-                <a
-                  key={l.href}
-                  href={l.href}
-                  onClick={() => handleLinkClick(l.href)}
-                  className={`glass-menu-item${activeLink === l.href ? ' active' : ''}`}
-                  style={{
-                    animation: `glassItemIn 0.35s cubic-bezier(0.23,1,0.32,1) ${i * 0.05}s both`,
-                  }}
-                >
-                  {l.label}
-                  {activeLink === l.href && (
-                    <span style={{
-                      marginLeft: 'auto',
-                      width: 6, height: 6, borderRadius: '50%',
-                      background: primary,
-                      flexShrink: 0,
-                    }} />
-                  )}
-                </a>
-              ))}
-            </nav>
-
-            {/* Footer CTA — solo el botón de contacto, sin ✕ redundante */}
-            <div style={{
-              padding: '14px 20px 20px',
-              borderTop: '0.5px solid rgba(255,255,255,0.06)',
-            }}>
-              <a
-                href="#contacto"
-                onClick={() => handleLinkClick('#contacto')}
-                style={{
-                  display: 'block',
-                  padding: '14px',
-                  background: primary, color: 'white',
-                  borderRadius: 10, fontWeight: 800,
-                  fontSize: 13, letterSpacing: 0.8,
-                  textTransform: 'uppercase',
-                  textDecoration: 'none', textAlign: 'center',
-                  boxShadow: `0 4px 20px ${primary}35`,
-                }}
-              >
-                {t.nav.contact} →
-              </a>
-            </div>
-          </div>
-        </>
-      )}
-    </>
   )
 }
 </file>
@@ -8700,147 +8791,6 @@ export function useSiteData() {
     hasData: site !== null,
     setSite, setEcosystems, setProjects, setTestimonials, setServices,
   }
-}
-</file>
-
-<file path="src/pages/PublicSite.jsx">
-/**
- * PublicSite.jsx — v3 ANTI-FOUC
- * ─────────────────────────────────────────────────────────────────────────
- * Si loading=true y no hay cache → muestra spinner mínimo (fondo negro,
- * spinner del color primario del anti-FOUC script).
- * En cuanto llegan los datos reales de Firebase → render completo.
- * NUNCA se muestran los datos demo hardcoded durante la carga.
- */
-
-import { useEffect } from 'react'
-import { useSiteData }          from '../hooks/useSiteData'
-import NavBar                   from '../components/site/NavBar'
-import Hero                     from '../components/site/Hero'
-import ServicesSection          from '../components/site/ServicesSection'
-import EcosystemSection         from '../components/site/EcosystemSection'
-import ProjectsSection          from '../components/site/ProjectsSection'
-import TestimonialsSection      from '../components/site/TestimonialsSection'
-import ContactSection           from '../components/site/ContactSection'
-import Footer                   from '../components/site/Footer'
-
-// ─── Aplica colores de marca al DOM ──────────────────────────────────
-function isLightColor(hex = '') {
-  const h = hex.replace('#', '')
-  if (h.length < 6) return false
-  const r = parseInt(h.substring(0, 2), 16)
-  const g = parseInt(h.substring(2, 4), 16)
-  const b = parseInt(h.substring(4, 6), 16)
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5
-}
-
-export function applyBrandColors(brand) {
-  if (!brand) return
-  const root = document.documentElement
-
-  if (brand.primary) root.style.setProperty('--primary', brand.primary)
-
-  if (brand.bg) {
-    root.style.setProperty('--bg', brand.bg)
-    document.body.style.backgroundColor = brand.bg
-
-    const isLight = isLightColor(brand.bg)
-    const theme   = isLight ? 'light' : 'dark'
-    document.body.setAttribute('data-theme', theme)
-    root.setAttribute('data-theme', theme)
-
-    if (isLight) {
-      root.style.setProperty('--text-main',  '#0a0a0a')
-      root.style.setProperty('--text-dim',   'rgba(0,0,0,0.6)')
-      root.style.setProperty('--text-muted', 'rgba(0,0,0,0.4)')
-      root.style.setProperty('--border',     'rgba(0,0,0,0.1)')
-      root.style.setProperty('--card-bg',    '#f5f5f5')
-    } else {
-      root.style.setProperty('--text-main',  '#ffffff')
-      root.style.setProperty('--text-dim',   'rgba(255,255,255,0.55)')
-      root.style.setProperty('--text-muted', 'rgba(255,255,255,0.35)')
-      root.style.setProperty('--border',     'rgba(255,255,255,0.08)')
-      root.style.setProperty('--card-bg',    '#0d0d0d')
-    }
-  }
-
-  if (brand.language) window.__SITE_LANGUAGE__ = brand.language
-}
-
-// ─── Spinner minimalista ─────────────────────────────────────────────
-// Usa los CSS vars ya aplicados por el anti-FOUC script del index.html
-// El fondo ya es correcto gracias al anti-FOUC → sin flash
-function SiteLoader() {
-  const primary = getComputedStyle(document.documentElement)
-    .getPropertyValue('--primary').trim() || '#ff3c3c'
-
-  return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'var(--bg)',
-      gap: 20,
-    }}>
-      <div style={{
-        width: 40, height: 40,
-        borderRadius: '50%',
-        border: `3px solid rgba(255,255,255,0.08)`,
-        borderTopColor: primary,
-        animation: 'siteSpin 0.75s linear infinite',
-      }} />
-      <style>{`@keyframes siteSpin { to { transform: rotate(360deg) } }`}</style>
-    </div>
-  )
-}
-
-// ─── Componente principal ─────────────────────────────────────────────
-export default function PublicSite() {
-  const { site, ecosystems, projects, testimonials, services, loading, hasData } = useSiteData()
-
-  // Aplicar colores de marca en cuanto llegan (o desde cache)
-  useEffect(() => {
-    if (site?.brand) applyBrandColors(site.brand)
-  }, [site?.brand])
-
-  // Mostrar spinner solo si estamos cargando Y no tenemos datos todavía
-  if (loading && !hasData) {
-    return <SiteLoader />
-  }
-
-  return (
-    <div style={{ background: 'var(--bg)', color: 'var(--text-main)' }}>
-      <NavBar brand={site.brand} />
-      <Hero   hero={site.hero}   brand={site.brand} />
-      <ServicesSection
-        services={services}
-        brand={site.brand}
-      />
-      <EcosystemSection
-        ecosystems={ecosystems}
-        brand={site.brand}
-        projects={projects}
-      />
-      <ProjectsSection
-        projects={projects}
-        brand={site.brand}
-        site={site}
-      />
-      <TestimonialsSection
-        testimonials={testimonials}
-        brand={site.brand}
-      />
-      <ContactSection
-        contact={site.contact}
-        footer={site.footer}
-        brand={site.brand}
-        site={site}
-      />
-      <Footer site={site} />
-    </div>
-  )
 }
 </file>
 
@@ -9100,6 +9050,311 @@ export default function AdminSidebar({ activeTab, onTabChange, open, onToggle, b
         </a>
       </div>
     </aside>
+  )
+}
+</file>
+
+<file path="src/components/site/NavBar.jsx">
+import { useState, useEffect } from 'react'
+import { useUIStrings }        from '../../hooks/useUIStrings'
+
+function BrandLogo({ brand, scrolled }) {
+  const logo    = brand?.logo    || ''
+  const name    = brand?.name    || 'POLARTRONIC'
+  const primary = brand?.primary || '#ff3c3c'
+  const layout  = brand?.logoLayout || (logo ? 'logo-only' : 'name-only')
+  const imgH    = scrolled ? 28 : 36
+
+  if (layout === 'logo-only') {
+    return logo
+      ? <img src={logo} alt={name} style={{ height: imgH, maxWidth: 180, objectFit: 'contain', transition: 'height 0.4s' }} />
+      : <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '2rem', color: primary, letterSpacing: 2 }}>{name}</span>
+  }
+  if (layout === 'logo-name-side') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {logo && <img src={logo} alt={name} style={{ height: imgH - 4, maxWidth: 60, objectFit: 'contain', transition: 'height 0.4s' }} />}
+        <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: scrolled ? '1.5rem' : '1.8rem', color: primary, letterSpacing: 2, transition: 'font-size 0.4s' }}>{name}</span>
+      </div>
+    )
+  }
+  if (layout === 'logo-name-stack') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1 }}>
+        {logo && <img src={logo} alt={name} style={{ height: scrolled ? 18 : 22, maxWidth: 100, objectFit: 'contain', transition: 'height 0.4s' }} />}
+        <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: scrolled ? '0.85rem' : '1rem', color: primary, letterSpacing: 2, lineHeight: 1, transition: 'font-size 0.4s' }}>{name}</span>
+      </div>
+    )
+  }
+  return <span style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '2rem', color: primary, letterSpacing: 2 }}>{name}</span>
+}
+
+function HamburgerIcon({ open, primary }) {
+  return (
+    <div style={{ width: 22, height: 16, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+      <span style={{
+        display: 'block', height: 2, borderRadius: 2,
+        background: open ? primary : 'rgba(255,255,255,0.8)',
+        transform: open ? 'translateY(7px) rotate(45deg)' : 'none',
+        transition: 'all 0.35s cubic-bezier(0.23,1,0.32,1)',
+        transformOrigin: 'center',
+      }} />
+      <span style={{
+        display: 'block', height: 2, borderRadius: 2,
+        background: open ? primary : 'rgba(255,255,255,0.8)',
+        transform: open ? 'scaleX(0)' : 'scaleX(1)',
+        opacity: open ? 0 : 1,
+        transition: 'all 0.25s cubic-bezier(0.23,1,0.32,1)',
+        transformOrigin: 'center',
+      }} />
+      <span style={{
+        display: 'block', height: 2, borderRadius: 2,
+        background: open ? primary : 'rgba(255,255,255,0.8)',
+        transform: open ? 'translateY(-7px) rotate(-45deg)' : 'none',
+        transition: 'all 0.35s cubic-bezier(0.23,1,0.32,1)',
+        transformOrigin: 'center',
+      }} />
+    </div>
+  )
+}
+
+export default function NavBar({ brand }) {
+  const [scrolled,    setScrolled]    = useState(false)
+  const [menuOpen,    setMenuOpen]    = useState(false)
+  const [activeLink,  setActiveLink]  = useState('#home')
+  const t       = useUIStrings(brand)
+  const primary = brand?.primary || '#ff3c3c'
+
+  const NAV_LINKS = [
+    { href: '#home',        label: t.nav.home        },
+    { href: '#about',       label: t.nav.about       },
+    { href: '#servicios',   label: t.nav.services    },
+    { href: '#ecosistemas', label: t.nav.memberships },
+    { href: '#proyectos',   label: t.nav.projects    },
+    { href: '#testimonios', label: t.nav.clients     },
+    { href: '#contacto',    label: t.nav.contact     },
+  ]
+
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 50)
+    window.addEventListener('scroll', fn, { passive: true })
+    return () => window.removeEventListener('scroll', fn)
+  }, [])
+
+  useEffect(() => {
+    const fn = () => { if (window.innerWidth > 768) setMenuOpen(false) }
+    window.addEventListener('resize', fn)
+    return () => window.removeEventListener('resize', fn)
+  }, [])
+
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [menuOpen])
+
+  const handleLinkClick = (href) => {
+    setActiveLink(href)
+    setMenuOpen(false)
+  }
+
+  return (
+    <>
+      <style>{`
+        .desktop-nav { display: flex; }
+        .mobile-menu-btn { display: none !important; }
+
+        @media (max-width: 768px) {
+          .desktop-nav     { display: none !important; }
+          .mobile-menu-btn { display: flex !important; }
+        }
+
+        .nav-link {
+          color: rgba(255,255,255,0.6);
+          text-decoration: none;
+          font-size: 0.8rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 1.2px;
+          transition: color 0.2s;
+          white-space: nowrap;
+        }
+        .nav-link:hover { color: ${primary}; }
+
+        @keyframes glassMenuIn {
+          from { opacity: 0; transform: translateY(-8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes glassItemIn {
+          from { opacity: 0; transform: translateX(-12px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+
+        .glass-menu-item {
+          display: flex;
+          align-items: center;
+          padding: 14px 20px;
+          text-decoration: none;
+          font-size: 15px;
+          font-weight: 600;
+          letter-spacing: 0.5px;
+          border-bottom: 0.5px solid rgba(255,255,255,0.05);
+          border-left: 2px solid transparent;
+          transition: all 0.2s cubic-bezier(0.23,1,0.32,1);
+          color: rgba(255,255,255,0.45);
+          position: relative;
+        }
+        .glass-menu-item.active {
+          color: white;
+          border-left-color: ${primary};
+          background: rgba(255,60,60,0.05);
+          padding-left: 22px;
+        }
+        .glass-menu-item:hover:not(.active) {
+          color: rgba(255,255,255,0.8);
+          border-left-color: rgba(255,60,60,0.3);
+          padding-left: 22px;
+          background: rgba(255,255,255,0.02);
+        }
+      `}</style>
+
+      {/* ── HEADER FIJO ── */}
+      <header style={{
+        position: 'fixed', top: 0, left: 0, right: 0, width: '100%',
+        zIndex: 1000,
+        height: scrolled ? 64 : 80,
+        padding: '0 5%',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        background: scrolled ? 'rgba(3,3,3,0.92)' : 'transparent',
+        backdropFilter: scrolled ? 'blur(20px)' : 'none',
+        WebkitBackdropFilter: scrolled ? 'blur(20px)' : 'none',
+        borderBottom: scrolled ? '1px solid rgba(255,255,255,0.06)' : 'none',
+        transition: 'all 0.4s cubic-bezier(0.23,1,0.32,1)',
+        boxSizing: 'border-box',
+      }}>
+        {/* Logo */}
+        <a href="#home" style={{ textDecoration: 'none', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+          <BrandLogo brand={brand} scrolled={scrolled} />
+        </a>
+
+        {/* Desktop nav */}
+        <nav className="desktop-nav" style={{ gap: 28, alignItems: 'center' }}>
+          {NAV_LINKS.map(l => (
+            <a key={l.href} href={l.href} className="nav-link">{l.label}</a>
+          ))}
+        </nav>
+
+        {/* Botón hamburguesa — ÚNICO botón de apertura/cierre en mobile */}
+        <button
+          onClick={() => setMenuOpen(p => !p)}
+          className="mobile-menu-btn"
+          aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
+          style={{
+            background: menuOpen ? `rgba(255,60,60,0.12)` : 'rgba(255,255,255,0.06)',
+            border: `1px solid ${menuOpen ? `rgba(255,60,60,0.4)` : 'rgba(255,255,255,0.12)'}`,
+            width: 44, height: 44,
+            borderRadius: 10,
+            cursor: 'pointer',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.3s',
+            flexShrink: 0,
+            padding: 0,
+            // Siempre visible encima del panel
+            position: 'relative',
+            zIndex: 1201,
+          }}
+        >
+          <HamburgerIcon open={menuOpen} primary={primary} />
+        </button>
+      </header>
+
+      {/* ── MOBILE MENU PANEL ── */}
+      {menuOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setMenuOpen(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 1098,
+              background: 'rgba(0,0,0,0.6)',
+              backdropFilter: 'blur(4px)',
+              WebkitBackdropFilter: 'blur(4px)',
+            }}
+          />
+
+          {/* Panel glass — SIN botón ✕ propio, el header lo gestiona */}
+          <div style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0,
+            zIndex: 1099,
+            background: 'rgba(8,8,12,0.97)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            borderBottom: `1px solid rgba(255,255,255,0.08)`,
+            animation: 'glassMenuIn 0.3s cubic-bezier(0.23,1,0.32,1) both',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+          }}>
+
+            {/* Línea de acento top */}
+            <div style={{
+              height: 2,
+              background: `linear-gradient(90deg, ${primary}, ${primary}40, transparent)`,
+            }} />
+
+            {/* Spacer que ocupa el alto del header fijo para que los links no queden debajo */}
+            <div style={{ height: scrolled ? 64 : 80 }} />
+
+            {/* Links */}
+            <nav style={{ display: 'flex', flexDirection: 'column' }}>
+              {NAV_LINKS.map((l, i) => (
+                <a
+                  key={l.href}
+                  href={l.href}
+                  onClick={() => handleLinkClick(l.href)}
+                  className={`glass-menu-item${activeLink === l.href ? ' active' : ''}`}
+                  style={{
+                    animation: `glassItemIn 0.35s cubic-bezier(0.23,1,0.32,1) ${i * 0.05}s both`,
+                  }}
+                >
+                  {l.label}
+                  {activeLink === l.href && (
+                    <span style={{
+                      marginLeft: 'auto',
+                      width: 6, height: 6, borderRadius: '50%',
+                      background: primary,
+                      flexShrink: 0,
+                    }} />
+                  )}
+                </a>
+              ))}
+            </nav>
+
+            {/* Footer CTA — solo el botón de contacto, sin ✕ redundante */}
+            <div style={{
+              padding: '14px 20px 20px',
+              borderTop: '0.5px solid rgba(255,255,255,0.06)',
+            }}>
+              <a
+                href="#contacto"
+                onClick={() => handleLinkClick('#contacto')}
+                style={{
+                  display: 'block',
+                  padding: '14px',
+                  background: primary, color: 'white',
+                  borderRadius: 10, fontWeight: 800,
+                  fontSize: 13, letterSpacing: 0.8,
+                  textTransform: 'uppercase',
+                  textDecoration: 'none', textAlign: 'center',
+                  boxShadow: `0 4px 20px ${primary}35`,
+                }}
+              >
+                {t.nav.contact} →
+              </a>
+            </div>
+          </div>
+        </>
+      )}
+    </>
   )
 }
 </file>
@@ -9665,6 +9920,149 @@ export default function AdminPanel() {
 }
 </file>
 
+<file path="src/pages/PublicSite.jsx">
+/**
+ * PublicSite.jsx — con AboutSection integrada
+ */
+
+import { useEffect }            from 'react'
+import { useSiteData }          from '../hooks/useSiteData'
+import NavBar                   from '../components/site/NavBar'
+import Hero                     from '../components/site/Hero'
+import AboutSection             from '../components/site/AboutSection'
+import ServicesSection          from '../components/site/ServicesSection'
+import EcosystemSection         from '../components/site/EcosystemSection'
+import ProjectsSection          from '../components/site/ProjectsSection'
+import TestimonialsSection      from '../components/site/TestimonialsSection'
+import ContactSection           from '../components/site/ContactSection'
+import Footer                   from '../components/site/Footer'
+
+function isLightColor(hex = '') {
+  const h = hex.replace('#', '')
+  if (h.length < 6) return false
+  const r = parseInt(h.substring(0, 2), 16)
+  const g = parseInt(h.substring(2, 4), 16)
+  const b = parseInt(h.substring(4, 6), 16)
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5
+}
+
+export function applyBrandColors(brand) {
+  if (!brand) return
+  const root = document.documentElement
+
+  if (brand.primary) root.style.setProperty('--primary', brand.primary)
+
+  if (brand.bg) {
+    root.style.setProperty('--bg', brand.bg)
+    document.body.style.backgroundColor = brand.bg
+
+    const isLight = isLightColor(brand.bg)
+    const theme   = isLight ? 'light' : 'dark'
+    document.body.setAttribute('data-theme', theme)
+    root.setAttribute('data-theme', theme)
+
+    if (isLight) {
+      root.style.setProperty('--text-main',  '#0a0a0a')
+      root.style.setProperty('--text-dim',   'rgba(0,0,0,0.6)')
+      root.style.setProperty('--text-muted', 'rgba(0,0,0,0.4)')
+      root.style.setProperty('--border',     'rgba(0,0,0,0.1)')
+      root.style.setProperty('--card-bg',    '#f5f5f5')
+    } else {
+      root.style.setProperty('--text-main',  '#ffffff')
+      root.style.setProperty('--text-dim',   'rgba(255,255,255,0.55)')
+      root.style.setProperty('--text-muted', 'rgba(255,255,255,0.35)')
+      root.style.setProperty('--border',     'rgba(255,255,255,0.08)')
+      root.style.setProperty('--card-bg',    '#0d0d0d')
+    }
+  }
+
+  if (brand.language) window.__SITE_LANGUAGE__ = brand.language
+}
+
+function SiteLoader() {
+  const primary = getComputedStyle(document.documentElement)
+    .getPropertyValue('--primary').trim() || '#ff3c3c'
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'var(--bg)',
+      gap: 20,
+    }}>
+      <div style={{
+        width: 40, height: 40,
+        borderRadius: '50%',
+        border: `3px solid rgba(255,255,255,0.08)`,
+        borderTopColor: primary,
+        animation: 'siteSpin 0.75s linear infinite',
+      }} />
+      <style>{`@keyframes siteSpin { to { transform: rotate(360deg) } }`}</style>
+    </div>
+  )
+}
+
+export default function PublicSite() {
+  const { site, ecosystems, projects, testimonials, services, loading, hasData } = useSiteData()
+
+  useEffect(() => {
+    if (site?.brand) applyBrandColors(site.brand)
+  }, [site?.brand])
+
+  if (loading && !hasData) {
+    return <SiteLoader />
+  }
+
+  return (
+    <div style={{ background: 'var(--bg)', color: 'var(--text-main)' }}>
+      <NavBar brand={site.brand} />
+
+      {/* 1 — Portada */}
+      <Hero hero={site.hero} brand={site.brand} />
+
+      {/* 2 — Quiénes somos */}
+      <AboutSection brand={site.brand} about={site.about} />
+
+      {/* 3 — Servicios */}
+      <ServicesSection services={services} brand={site.brand} />
+
+      {/* 4 — Ecosistemas / Membresías */}
+      <EcosystemSection
+        ecosystems={ecosystems}
+        brand={site.brand}
+        projects={projects}
+      />
+
+      {/* 5 — Proyectos */}
+      <ProjectsSection
+        projects={projects}
+        brand={site.brand}
+        site={site}
+      />
+
+      {/* 6 — Testimonios */}
+      <TestimonialsSection
+        testimonials={testimonials}
+        brand={site.brand}
+      />
+
+      {/* 7 — Contacto */}
+      <ContactSection
+        contact={site.contact}
+        footer={site.footer}
+        brand={site.brand}
+        site={site}
+      />
+
+      <Footer site={site} />
+    </div>
+  )
+}
+</file>
+
 <file path="src/components/site/EcosystemSection.jsx">
 /**
  * EcosystemSection.jsx — v6 PREMIUM REDESIGN + traducción editorial
@@ -9737,20 +10135,6 @@ function EcosystemFullscreen({ eco, brand, onClose, t }) {
   function buildSrcDoc(html) {
     const targetLang = (typeof window !== 'undefined' && window.__SITE_LANGUAGE__) || brand?.language || 'it'
 
-    const stripCSS = `<style id="pt-strip">
-      button,input[type="submit"],input[type="button"],input[type="reset"],
-      form,.nav,nav,.navbar,.navigation,.hamburger,.menu-toggle,.burger,.menu-btn,
-      [class*="hamburger"],[class*="burger"],[id*="hamburger"],
-      [class*="menu-btn"],[id*="menu-btn"],
-      a[href^="mailto"],a[href^="tel"],a[href^="wa.me"],a[href*="whatsapp"],
-      a[href*="contacto"],a[href*="contact"],a[href*="reserva"],a[href*="book"],
-      [class*="cta"],[class*="btn"],[id*="cta"],[id*="btn"],
-      .cta,.btn,.button,.contact-form,.booking-form,[class*="form"],
-      textarea,select{display:none!important;visibility:hidden!important;pointer-events:none!important;}
-      a{pointer-events:none!important;cursor:default!important;}
-      html,body{overflow-x:hidden;}
-    </style>`
-
     // Script que traduce via postMessage — el lang llega del parent React
     const translateScript = `<script>
 (function() {
@@ -9819,7 +10203,7 @@ function EcosystemFullscreen({ eco, brand, onClose, t }) {
 })();
 <\/script>`
 
-    const inject = stripCSS + translateScript
+    const inject = translateScript
 
     if (/<!doctype\s+html/i.test(html) || /<html[\s>]/i.test(html)) {
       // Inyecta data-pt-lang en el tag <html> y el script en <head>

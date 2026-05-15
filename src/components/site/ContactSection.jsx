@@ -71,11 +71,9 @@ export default function ContactSection({ contact, footer, brand, site }) {
 
   const translatedContact = useTranslatedContent(
     {
-      title:          contact?.title          || t.contact.eyebrow,
-      subtitle:       contact?.subtitle       || '',
-      ctaLabel:       contact?.ctaLabel       || t.contact.sendBtn,
-      successTitle:   contact?.successTitle   || '✓',
-      successMessage: contact?.successMessage || '',
+      title:    contact?.title    || t.contact.eyebrow,
+      subtitle: contact?.subtitle || '',
+      ctaLabel: contact?.ctaLabel || t.contact.sendBtn,
     },
     brand
   )
@@ -203,9 +201,9 @@ export default function ContactSection({ contact, footer, brand, site }) {
                 <path d="M8 18L15 25L28 11" stroke={primary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="60" style={{ animation: 'ctCheck 0.5s 0.2s cubic-bezier(0.23,1,0.32,1) both' }} />
               </svg>
             </div>
-            <h3 style={{ fontSize: 'clamp(1.4rem,3vw,1.8rem)', fontWeight: 800, marginBottom: 12, color: 'var(--text-main)' }}>{translatedContact.successTitle}</h3>
+            <h3 style={{ fontSize: 'clamp(1.4rem,3vw,1.8rem)', fontWeight: 800, marginBottom: 12, color: 'var(--text-main)' }}>{t.contact.successTitle}</h3>
             <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '16px 20px', margin: '20px auto', maxWidth: 440 }}>
-              <p style={{ color: 'var(--text-dim)', fontSize: 15, lineHeight: 1.7, margin: 0 }}>{agentMsg || translatedContact.successMessage}</p>
+              <p style={{ color: 'var(--text-dim)', fontSize: 15, lineHeight: 1.7, margin: 0 }}>{agentMsg || t.contact.successMessage}</p>
             </div>
             <button onClick={handleReset} style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.15)', padding: '10px 24px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', marginTop: 12 }}>
               {t.contact.sendAnother}

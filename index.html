@@ -1,10 +1,47 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="it">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- ── SEO Italia ──────────────────────────────────────────────── -->
+    <title>Polartronic Studio — Siti Web & Branding Digitale</title>
+    <meta name="description" content="Studio digitale creativo con radici in Argentina e presenza in Europa. Siti web, branding e sviluppo digitale di alto impatto per aziende italiane." />
+    <meta name="keywords" content="studio web italia, siti web professionali, branding digitale, sviluppo web, agenzia digitale, design web italia, polartronic" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://polartronic.app-customer.com" />
+
+    <!-- ── Open Graph (WhatsApp, LinkedIn, Facebook) ──────────────── -->
+    <meta property="og:type"        content="website" />
+    <meta property="og:title"       content="Polartronic Studio — Siti Web & Branding Digitale" />
+    <meta property="og:description" content="Studio digitale creativo con radici in Argentina e presenza in Europa. Siti web, branding e sviluppo digitale di alto impatto." />
+    <meta property="og:url"         content="https://polartronic.app-customer.com" />
+    <meta property="og:site_name"   content="Polartronic Studio" />
+    <meta property="og:locale"      content="it_IT" />
+
+    <!-- ── Twitter Card ───────────────────────────────────────────── -->
+    <meta name="twitter:card"        content="summary_large_image" />
+    <meta name="twitter:title"       content="Polartronic Studio — Siti Web & Branding Digitale" />
+    <meta name="twitter:description" content="Studio digitale creativo con radici in Argentina e presenza in Europa." />
+
+    <!-- ── Schema.org structured data ────────────────────────────── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "ProfessionalService",
+      "name": "Polartronic Studio",
+      "url": "https://polartronic.app-customer.com",
+      "description": "Studio digitale creativo specializzato in siti web, branding e sviluppo digitale per aziende italiane ed europee.",
+      "areaServed": ["Italia", "Europa"],
+      "serviceType": ["Web Design", "Branding", "Sviluppo Web", "Marketing Digitale"],
+      "inLanguage": "it"
+    }
+    </script>
+
+    <!-- ── Google Site Verification ───────────────────────────────── -->
     <meta name="google-site-verification" content="fVDBv_QoaC2pSBLcWuHXeEBP-uhk2ym4o0dXK1zx15U" />
-    <title>Polartronic Studio</title>
+
+    <!-- ── Fonts ───────────────────────────────────────────────────── -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&family=Bebas+Neue&family=Cinzel:wght@700&display=swap" rel="stylesheet" />
@@ -18,7 +55,6 @@
     <script>
       (function () {
         try {
-          /* Saltar en rutas que no son el sitio público */
           var path = window.location.pathname;
           if (path.indexOf('/admin') === 0 || path.indexOf('/proposal') === 0) return;
 
@@ -26,7 +62,7 @@
           if (!raw) return;
 
           var parsed = JSON.parse(raw);
-          if (Date.now() - parsed.ts > 300000) return; /* TTL 5 min */
+          if (Date.now() - parsed.ts > 300000) return;
 
           var site  = parsed.data && parsed.data.site;
           var brand = site && site.brand;
@@ -65,7 +101,7 @@
 
           if (brand.language) window.__SITE_LANGUAGE__ = brand.language;
 
-        } catch(e) { /* nunca romper la página */ }
+        } catch(e) {}
       })();
     </script>
   </head>

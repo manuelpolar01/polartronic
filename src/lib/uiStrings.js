@@ -1,9 +1,7 @@
 /**
- * uiStrings.js — v4 COMPLETE I18N
- * ─────────────────────────────────────────────────────────────────────────
- * All UI strings fully translated for: it, en, es, fr, de, pt
- * Added: hero carousel labels, service image alt, ecosystem shell strings,
- * generic pagination/navigation strings.
+ * uiStrings.js — v5
+ * Añadido: contact.successTitle, contact.successMessage
+ * nav.about
  */
 
 export const SUPPORTED_LANGUAGES = [
@@ -19,10 +17,9 @@ export const DEFAULT_LANGUAGE = 'it'
 
 const strings = {
 
-  // ── NAVIGATION ─────────────────────────────────────────────────────────
   nav: {
     home:         { it: 'Home',         en: 'Home',         es: 'Inicio',       fr: 'Accueil',      de: 'Startseite',       pt: 'Início'        },
-    about: { it: 'Chi siamo', en: 'About', es: 'Nosotros', fr: 'À propos', de: 'Über uns', pt: 'Sobre nós' },
+    about:        { it: 'Chi siamo',    en: 'About',        es: 'Nosotros',     fr: 'À propos',     de: 'Über uns',         pt: 'Sobre nós'     },
     services:     { it: 'Servizi',      en: 'Services',     es: 'Servicios',    fr: 'Services',     de: 'Leistungen',       pt: 'Serviços'      },
     memberships:  { it: 'Memberships',  en: 'Memberships',  es: 'Membresías',   fr: 'Abonnements',  de: 'Mitgliedschaften', pt: 'Membros'       },
     projects:     { it: 'Progetti',     en: 'Projects',     es: 'Proyectos',    fr: 'Projets',      de: 'Projekte',         pt: 'Projetos'      },
@@ -31,17 +28,14 @@ const strings = {
     booking:      { it: 'Prenota',      en: 'Book Now',     es: 'Reservar',     fr: 'Réserver',     de: 'Buchen',           pt: 'Reservar'      },
   },
 
-  // ── HERO SECTION + CAROUSEL ────────────────────────────────────────────
   hero: {
     badge:        { it: 'Studio Digitale Creativo',  en: 'Digital Creative Studio', es: 'Estudio Digital Creativo', fr: 'Studio Créatif Digital', de: 'Digitales Kreativstudio', pt: 'Estúdio Digital Criativo' },
     exploreCta:   { it: 'ESPLORA LE AREE',           en: 'EXPLORE AREAS',           es: 'EXPLORAR ÁREAS',           fr: 'EXPLORER LES ZONES',     de: 'BEREICHE ENTDECKEN',       pt: 'EXPLORAR ÁREAS'           },
-    // Carousel accessibility / labels
     prevSlide:    { it: 'Slide precedente',           en: 'Previous slide',          es: 'Diapositiva anterior',     fr: 'Diapositive précédente',  de: 'Vorherige Folie',          pt: 'Slide anterior'           },
     nextSlide:    { it: 'Slide successiva',           en: 'Next slide',              es: 'Diapositiva siguiente',    fr: 'Diapositive suivante',    de: 'Nächste Folie',            pt: 'Próximo slide'            },
     slideOf:      { it: 'di',                         en: 'of',                      es: 'de',                       fr: 'sur',                     de: 'von',                      pt: 'de'                       },
   },
 
-  // ── SERVICES SECTION ───────────────────────────────────────────────────
   services: {
     eyebrow:       { it: 'Cosa facciamo',   en: 'What we do',      es: 'Lo que hacemos',  fr: 'Ce que nous faisons', de: 'Was wir machen',    pt: 'O que fazemos'     },
     heading:       { it: 'I nostri',        en: 'Our',             es: 'Nuestros',        fr: 'Nos',                  de: 'Unsere',            pt: 'Nossos'            },
@@ -49,7 +43,6 @@ const strings = {
     from:          { it: 'Da',              en: 'From',            es: 'Desde',           fr: 'À partir de',          de: 'Ab',                pt: 'A partir de'       },
   },
 
-  // ── ECOSYSTEMS / MEMBERSHIPS SECTION ──────────────────────────────────
   ecosystems: {
     eyebrow:        { it: 'Gruppi Partner',      en: 'Partner Groups',     es: 'Grupos Partners',    fr: 'Groupes Partenaires',  de: 'Partner-Gruppen',     pt: 'Grupos Parceiros'     },
     headingPrefix:  { it: 'Le nostre',            en: 'Our',                es: 'Nuestras',           fr: 'Nos',                   de: 'Unsere',              pt: 'Nossas'               },
@@ -63,12 +56,10 @@ const strings = {
     typicalResults: { it: 'Risultati tipici',      en: 'Typical results',    es: 'Resultados típicos', fr: 'Résultats typiques',    de: 'Typische Ergebnisse', pt: 'Resultados típicos'   },
     ctaContact:     { it: 'Parliamo',              en: "Let's talk",         es: 'Hablemos',           fr: 'Parlons',               de: 'Sprechen wir',        pt: 'Vamos falar'          },
     ctaProjects:    { it: 'Vedi i progetti',       en: 'See projects',       es: 'Ver proyectos',      fr: 'Voir les projets',      de: 'Projekte ansehen',    pt: 'Ver projetos'         },
-    // Shell bar strings
     shellDemo:      { it: 'Demo Commerciale',      en: 'Commercial Demo',    es: 'Demo Comercial',     fr: 'Démo Commerciale',      de: 'Kommerzielle Demo',   pt: 'Demo Comercial'       },
     shellBack:      { it: '← Torna',               en: '← Back',             es: '← Volver',           fr: '← Retour',              de: '← Zurück',            pt: '← Voltar'             },
   },
 
-  // ── PROJECTS SECTION ───────────────────────────────────────────────────
   projects: {
     eyebrow:       { it: 'Casi di successo',     en: 'Success stories',   es: 'Casos de éxito',     fr: 'Cas de succès',         de: 'Erfolgsgeschichten',  pt: 'Casos de sucesso'   },
     heading:       { it: 'Il nostro',            en: 'Our',               es: 'Nuestro',            fr: 'Notre',                  de: 'Unser',               pt: 'Nosso'              },
@@ -81,30 +72,30 @@ const strings = {
     visitSite:     { it: 'Visita il sito',       en: 'Visit site',        es: 'Ver sitio',          fr: 'Visiter le site',        de: 'Website besuchen',    pt: 'Visitar site'       },
   },
 
-  // ── TESTIMONIALS SECTION ───────────────────────────────────────────────
   testimonials: {
     eyebrow:       { it: 'Social Proof',         en: 'Social Proof',      es: 'Social Proof',       fr: 'Témoignages',            de: 'Kundenstimmen',       pt: 'Prova Social'       },
     heading:       { it: 'Cosa dicono i nostri', en: 'What our',          es: 'Lo que dicen',       fr: 'Ce que disent nos',      de: 'Was unsere',          pt: 'O que dizem nossos' },
     headingAccent: { it: 'clienti',              en: 'clients say',       es: 'nuestros clientes',  fr: 'clients',                de: 'Kunden sagen',        pt: 'clientes'           },
   },
 
-  // ── CONTACT SECTION ────────────────────────────────────────────────────
   contact: {
-    eyebrow:      { it: 'Parliamo',              en: "Let's Talk",        es: 'Hablemos',           fr: 'Parlons',                de: 'Sprechen wir',        pt: 'Vamos Falar'        },
-    sendBtn:      { it: 'INVIA MESSAGGIO',        en: 'SEND MESSAGE',      es: 'ENVIAR MENSAJE',     fr: 'ENVOYER',                de: 'SENDEN',              pt: 'ENVIAR MENSAGEM'    },
-    whatsappBtn:  { it: 'WhatsApp',              en: 'WhatsApp',          es: 'WhatsApp',           fr: 'WhatsApp',               de: 'WhatsApp',            pt: 'WhatsApp'           },
-    privacy:      { it: 'Le tue informazioni sono private e non verranno condivise con terzi.', en: 'Your information is private and will never be shared with third parties.', es: 'Tu información es privada y nunca será compartida con terceros.', fr: 'Vos informations sont privées et ne seront jamais partagées.', de: 'Ihre Daten sind privat und werden nicht weitergegeben.', pt: 'Suas informações são privadas e nunca serão compartilhadas.' },
-    orEmail:      { it: 'oppure scrivici a',      en: 'or write to us at', es: 'o escríbenos a',     fr: 'ou écrivez-nous à',      de: 'oder schreiben Sie uns an', pt: 'ou escreva para' },
-    sendAnother:  { it: 'Invia un altro messaggio', en: 'Send another message', es: 'Enviar otro mensaje', fr: 'Envoyer un autre message', de: 'Weitere Nachricht senden', pt: 'Enviar outra mensagem' },
-    required:     { it: 'obbligatorio',           en: 'required',          es: 'obligatorio',        fr: 'obligatoire',            de: 'Pflichtfeld',         pt: 'obrigatório'        },
-    selectOpt:    { it: 'Seleziona…',             en: 'Select…',           es: 'Seleccionar…',       fr: 'Sélectionner…',          de: 'Auswählen…',          pt: 'Selecionar…'        },
-    sending:      { it: 'Invio in corso…',         en: 'Sending…',          es: 'Enviando…',          fr: 'Envoi en cours…',        de: 'Wird gesendet…',      pt: 'Enviando…'          },
-    errorRetry:   { it: "Errore durante l'invio. Riprova o contattaci via WhatsApp.", en: 'There was an error sending. Please try again or contact us via WhatsApp.', es: 'Hubo un error al enviar. Intenta de nuevo o contáctanos por WhatsApp.', fr: "Erreur lors de l'envoi. Réessayez ou contactez-nous via WhatsApp.", de: 'Fehler beim Senden. Bitte erneut versuchen oder per WhatsApp kontaktieren.', pt: 'Erro ao enviar. Tente novamente ou entre em contato pelo WhatsApp.' },
-    emailInvalid: { it: 'Email non valida',        en: 'Invalid email',     es: 'Email inválido',     fr: 'Email invalide',         de: 'Ungültige E-Mail',    pt: 'E-mail inválido'    },
-    fieldRequired:{ it: 'Campo obbligatorio',      en: 'This field is required', es: 'Campo obligatorio', fr: 'Champ obligatoire', de: 'Pflichtfeld',          pt: 'Campo obrigatório'  },
+    eyebrow:        { it: 'Parliamo',              en: "Let's Talk",        es: 'Hablemos',           fr: 'Parlons',                de: 'Sprechen wir',        pt: 'Vamos Falar'        },
+    sendBtn:        { it: 'INVIA MESSAGGIO',        en: 'SEND MESSAGE',      es: 'ENVIAR MENSAJE',     fr: 'ENVOYER',                de: 'SENDEN',              pt: 'ENVIAR MENSAGEM'    },
+    whatsappBtn:    { it: 'WhatsApp',              en: 'WhatsApp',          es: 'WhatsApp',           fr: 'WhatsApp',               de: 'WhatsApp',            pt: 'WhatsApp'           },
+    privacy:        { it: 'Le tue informazioni sono private e non verranno condivise con terzi.', en: 'Your information is private and will never be shared with third parties.', es: 'Tu información es privada y nunca será compartida con terceros.', fr: 'Vos informations sont privées et ne seront jamais partagées.', de: 'Ihre Daten sind privat und werden nicht weitergegeben.', pt: 'Suas informações são privadas e nunca serão compartilhadas.' },
+    orEmail:        { it: 'oppure scrivici a',      en: 'or write to us at', es: 'o escríbenos a',     fr: 'ou écrivez-nous à',      de: 'oder schreiben Sie uns an', pt: 'ou escreva para' },
+    sendAnother:    { it: 'Invia un altro messaggio', en: 'Send another message', es: 'Enviar otro mensaje', fr: 'Envoyer un autre message', de: 'Weitere Nachricht senden', pt: 'Enviar outra mensagem' },
+    required:       { it: 'obbligatorio',           en: 'required',          es: 'obligatorio',        fr: 'obligatoire',            de: 'Pflichtfeld',         pt: 'obrigatório'        },
+    selectOpt:      { it: 'Seleziona…',             en: 'Select…',           es: 'Seleccionar…',       fr: 'Sélectionner…',          de: 'Auswählen…',          pt: 'Selecionar…'        },
+    sending:        { it: 'Invio in corso…',         en: 'Sending…',          es: 'Enviando…',          fr: 'Envoi en cours…',        de: 'Wird gesendet…',      pt: 'Enviando…'          },
+    errorRetry:     { it: "Errore durante l'invio. Riprova o contattaci via WhatsApp.", en: 'There was an error sending. Please try again or contact us via WhatsApp.', es: 'Hubo un error al enviar. Intenta de nuevo o contáctanos por WhatsApp.', fr: "Erreur lors de l'envoi. Réessayez ou contactez-nous via WhatsApp.", de: 'Fehler beim Senden. Bitte erneut versuchen oder per WhatsApp kontaktieren.', pt: 'Erro ao enviar. Tente novamente ou entre em contato pelo WhatsApp.' },
+    emailInvalid:   { it: 'Email non valida',        en: 'Invalid email',     es: 'Email inválido',     fr: 'Email invalide',         de: 'Ungültige E-Mail',    pt: 'E-mail inválido'    },
+    fieldRequired:  { it: 'Campo obbligatorio',      en: 'This field is required', es: 'Campo obligatorio', fr: 'Champ obligatoire', de: 'Pflichtfeld',          pt: 'Campo obrigatório'  },
+    // ── NUEVO: mensaje de éxito — reacciona al idioma en tiempo real ──
+    successTitle:   { it: 'Richiesta ricevuta!',     en: 'Request received!',  es: '¡Solicitud recibida!',   fr: 'Demande reçue !',           de: 'Anfrage erhalten!',         pt: 'Pedido recebido!'          },
+    successMessage: { it: 'Ti contatteremo entro 24 ore.', en: "We'll contact you within 24 hours.", es: 'Te contactaremos en menos de 24 horas.', fr: 'Nous vous contacterons dans les 24 heures.', de: 'Wir melden uns innerhalb von 24 Stunden.', pt: 'Entraremos em contato em até 24 horas.' },
   },
 
-  // ── FOOTER ─────────────────────────────────────────────────────────────
   footer: {
     navigation:   { it: 'Navigazione',           en: 'Navigation',        es: 'Navegación',         fr: 'Navigation',             de: 'Navigation',          pt: 'Navegação'          },
     services:     { it: 'Servizi',               en: 'Services',          es: 'Servicios',          fr: 'Services',               de: 'Leistungen',          pt: 'Serviços'           },
@@ -113,7 +104,6 @@ const strings = {
     instagram:    { it: 'Instagram Studio',      en: 'Instagram Studio',  es: 'Instagram Studio',   fr: 'Instagram Studio',       de: 'Instagram Studio',    pt: 'Instagram Studio'   },
   },
 
-  // ── BOOKING FLOW ───────────────────────────────────────────────────────
   booking: {
     title:         { it: 'Prenota il tuo appuntamento',  en: 'Book your appointment',       es: 'Reserva tu cita',             fr: 'Réservez votre rendez-vous',  de: 'Termin buchen',               pt: 'Agendar seu compromisso'      },
     selectService: { it: 'Scegli il servizio',           en: 'Choose a service',            es: 'Elige el servicio',           fr: 'Choisissez un service',       de: 'Leistung wählen',             pt: 'Escolha o serviço'            },
@@ -153,7 +143,6 @@ const strings = {
     },
   },
 
-  // ── ADMIN PANEL ────────────────────────────────────────────────────────
   admin: {
     language: { it: 'Lingua del Sito',      en: 'Site Language',    es: 'Idioma del Sitio', fr: 'Langue du Site',       de: 'Website-Sprache',    pt: 'Idioma do Site'     },
     saved:    { it: 'Salvato ✓',            en: 'Saved ✓',          es: 'Guardado ✓',       fr: 'Enregistré ✓',         de: 'Gespeichert ✓',      pt: 'Salvo ✓'            },
@@ -161,7 +150,6 @@ const strings = {
     error:    { it: 'Errore durante il salvataggio', en: 'Error saving', es: 'Error al guardar', fr: "Erreur d'enregistrement", de: 'Speicherfehler', pt: 'Erro ao salvar' },
   },
 
-  // ── GENERIC / SHARED ───────────────────────────────────────────────────
   common: {
     save:     { it: 'Salva',               en: 'Save',             es: 'Guardar',          fr: 'Enregistrer',          de: 'Speichern',          pt: 'Salvar'             },
     cancel:   { it: 'Annulla',             en: 'Cancel',           es: 'Cancelar',         fr: 'Annuler',              de: 'Abbrechen',          pt: 'Cancelar'           },
@@ -179,9 +167,6 @@ const strings = {
   },
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// RESOLVER
-// ─────────────────────────────────────────────────────────────────────
 export function getStrings(lang = DEFAULT_LANGUAGE) {
   const l = SUPPORTED_LANGUAGES.find(x => x.code === lang)?.code ?? DEFAULT_LANGUAGE
 
