@@ -137,7 +137,42 @@ function EcosystemFullscreen({ eco, brand, onClose, t }) {
 })();
 <\/script>`
 
-    const inject = translateScript
+    // CSS + Script que oculta CUALQUIER botón X dentro del demo HTML
+    const hideCloseScript = `<style>
+      /* Ocultar por clase/id comunes de cierre */
+      [class*="close"],[class*="Close"],[class*="cerrar"],[class*="cancel"],
+      [class*="Cancel"],[class*="dismiss"],[class*="chiudi"],[class*="fermer"],
+      [id*="close"],[id*="Close"],[id*="cancel"],[id*="dismiss"] {
+        display: none !important;
+      }
+    </style>
+    <script>
+(function() {
+  function hideX() {
+    document.querySelectorAll('button, a, span, div, i').forEach(function(el) {
+      // Sin hijos de tipo elemento — es un nodo hoja
+      var hasNoElementChildren = el.children.length === 0;
+      var txt = (el.innerText || el.textContent || '').trim();
+      // Texto que sea solo X en cualquier variante
+      var isX = hasNoElementChildren && /^[×✕✖xX❌]$|^[xX]\s*$/.test(txt);
+      // Clase o id que sugiera cierre
+      var cls = ((el.className || '') + ' ' + (el.id || '')).toLowerCase();
+      var isClose = /(close|cerrar|cancel|dismiss|chiudi|fermer|schlie|back|volver|zurück|retour)/.test(cls);
+      if (isX || isClose) {
+        el.style.cssText += 'display:none!important;visibility:hidden!important;pointer-events:none!important;';
+      }
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', hideX);
+  } else { hideX(); }
+  setTimeout(hideX, 300);
+  setTimeout(hideX, 800);
+  setTimeout(hideX, 2000);
+})();
+<\/script>`
+
+    const inject = hideCloseScript + translateScript
 
     if (/<!doctype\s+html/i.test(html) || /<html[\s>]/i.test(html)) {
       // Inyecta data-pt-lang en el tag <html> y el script en <head>
@@ -201,7 +236,7 @@ function EcosystemFullscreen({ eco, brand, onClose, t }) {
           </a>
           <button onClick={onClose} className="shell-back-btn"
             style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.55)', borderRadius: 9, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.18s', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
-            ✕ {t.ecosystems?.close || 'Cerrar'}
+            {t.ecosystems?.shellBack || '← Volver'}
           </button>
         </div>
       </div>
@@ -234,7 +269,7 @@ function EcosystemFullscreen({ eco, brand, onClose, t }) {
           style={{ flex: 1, padding: '13px', background: primary, color: 'white', borderRadius: 10, fontWeight: 800, fontSize: 13, textDecoration: 'none', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.8 }}>
           {t.ecosystems?.ctaContact || 'Contratar'} →
         </a>
-        <button onClick={onClose} style={{ padding: '13px 16px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>✕</button>
+        <button onClick={onClose} style={{ padding: '13px 16px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>← Volver</button>
       </div>
     </div>
   )

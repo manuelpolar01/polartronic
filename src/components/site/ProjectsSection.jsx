@@ -100,7 +100,35 @@ function buildSrcDoc(html, targetLang) {
     });
   <\/script>`
 
-  const inject = translateScript + injector
+  // Script que oculta botones X/cierre dentro del HTML del demo
+  const hideCloseScript = `<script>
+(function() {
+  function hideCloseBtns() {
+    var all = document.querySelectorAll('button, a, [role="button"], span, div');
+    all.forEach(function(el) {
+      var txt = (el.textContent || '').trim();
+      var cls = (el.className || '').toLowerCase();
+      var id  = (el.id || '').toLowerCase();
+      var isX = /^[x×✕✖xX]$/.test(txt);
+      var isClose = /(close|cerrar|cancel|dismiss|chiudi|fermer|schlie)/i.test(cls + ' ' + id);
+      if (isX || isClose) {
+        el.style.setProperty('display', 'none', 'important');
+        el.style.setProperty('visibility', 'hidden', 'important');
+        el.style.setProperty('pointer-events', 'none', 'important');
+      }
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', hideCloseBtns);
+  } else {
+    hideCloseBtns();
+  }
+  setTimeout(hideCloseBtns, 500);
+  setTimeout(hideCloseBtns, 1500);
+})();
+<\/script>`
+
+  const inject = hideCloseScript + translateScript + injector
 
   if (/<!doctype\s+html/i.test(html) || /<html[\s>]/i.test(html)) {
     return html
@@ -221,7 +249,7 @@ function ProjectShell({ project, brand, site, onClose }) {
           </button>
           <button onClick={onClose} className="proj-back-btn"
             style={{ padding: 'clamp(7px,1.5vw,9px) clamp(10px,2vw,14px)', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', borderRadius: 9, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.18s', whiteSpace: 'nowrap' }}>
-            ✕
+            {t.projects?.backBtn || '← Volver'}
           </button>
         </div>
       </div>
@@ -285,7 +313,7 @@ function ProjectShell({ project, brand, site, onClose }) {
           style={{ flex: 1, padding: '13px', background: primary, color: 'white', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 13, textTransform: 'uppercase', cursor: 'pointer' }}>
           {t.projects?.contractThis || 'Contratar'} →
         </button>
-        <button onClick={onClose} style={{ padding: '13px 18px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>✕</button>
+        <button onClick={onClose} style={{ padding: '13px 18px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{t.projects?.backBtn || '← Volver'}</button>
       </div>
     </div>
   )

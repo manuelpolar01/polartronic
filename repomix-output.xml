@@ -45,8 +45,10 @@ The content is organized as follows:
 cors.json
 firebase.json
 index.html
+middleware.js
 package.json
 postcss.config.js
+public/favicon.png
 public/index.html
 public/robots.txt
 public/sitemap.xml
@@ -2011,259 +2013,6 @@ export default function PhoneInput({ value, onChange, error, primary = '#ff3c3c'
 }
 </file>
 
-<file path="src/components/site/AboutSection.jsx">
-/**
- * AboutSection.jsx
- * ─────────────────────────────────────────────────────────────────────
- * Sección "Quiénes Somos" — empresa argentina expandiéndose a Europa.
- * - 100% responsiva con clamp()
- * - Traducción automática via useTranslatedContent
- * - Afectada por el idioma configurado en el panel admin
- * - Integra con brand.about si está configurado, sino usa defaults
- */
-
-import { useUIStrings }        from '../../hooks/useUIStrings'
-import { useTranslatedContent } from '../../hooks/useTranslatedContent'
-
-// ── Strings de UI (traducidos por idioma) ─────────────────────────────
-const ABOUT_UI = {
-  eyebrow:       { it: 'Chi siamo',        en: 'About us',        es: 'Quiénes somos',   fr: 'Qui sommes-nous', de: 'Über uns',          pt: 'Sobre nós'        },
-  origin:        { it: 'Origine',          en: 'Origin',          es: 'Origen',          fr: 'Origine',         de: 'Herkunft',          pt: 'Origem'           },
-  mission:       { it: 'Missione',         en: 'Mission',         es: 'Misión',          fr: 'Mission',         de: 'Mission',           pt: 'Missão'           },
-  vision:        { it: 'Visione',          en: 'Vision',          es: 'Visión',          fr: 'Vision',          de: 'Vision',            pt: 'Visão'            },
-  yearsLabel:    { it: 'Anni di exp.',     en: 'Years of exp.',   es: 'Años de exp.',    fr: "Ans d'exp.",      de: 'Jahre Erfahrung',   pt: 'Anos de exp.'     },
-  projectsLabel: { it: 'Progetti globali', en: 'Global projects', es: 'Proyectos glob.', fr: 'Projets globaux', de: 'Globale Projekte',  pt: 'Projetos globais' },
-  countriesLabel:{ it: 'Paesi attivi',     en: 'Active countries',es: 'Países activos',  fr: 'Pays actifs',     de: 'Aktive Länder',     pt: 'Países ativos'    },
-  teamLabel:     { it: 'Professionisti',   en: 'Professionals',   es: 'Profesionales',   fr: 'Professionnels',  de: 'Fachleute',         pt: 'Profissionais'    },
-  ctaLabel:      { it: 'Lavora con noi',   en: 'Work with us',    es: 'Trabajemos juntos',fr: 'Travaillons ensemble', de: 'Zusammenarbeiten', pt: 'Trabalhe conosco' },
-}
-
-function rl(dict, lang) {
-  return dict?.[lang] || dict?.['es'] || dict?.['en'] || ''
-}
-
-// ── Contenido editorial por defecto ───────────────────────────────────
-// Se usa si el admin no configuró nada en el panel → siempre se muestra algo
-const DEFAULT_ABOUT = {
-  title:   'Nacimos en Argentina,\ncrecemos en Europa.',
-  subtitle:'Somos un estudio digital con raíces en Buenos Aires y visión global. Combinamos la creatividad y el talento latinoamericano con los estándares de calidad del mercado europeo para crear experiencias digitales que realmente marcan la diferencia.',
-  origin:  'Fundados en Buenos Aires en 2018, llevamos años construyendo soluciones digitales para marcas y empresas en Argentina, Chile y Uruguay. Hoy damos el gran paso: llevamos ese talento y esa pasión directamente al corazón de Europa.',
-  mission: 'Democratizar el acceso a diseño y tecnología de alto impacto. Creemos que una PyME italiana merece la misma calidad digital que una gran corporación, a precios accesibles y con la energía creativa que solo América Latina sabe dar.',
-  vision:  'Ser el puente definitivo entre el talento digital latinoamericano y las empresas europeas que buscan diferenciarse en un mercado cada vez más competitivo.',
-}
-
-// ── Valores / pilares ─────────────────────────────────────────────────
-const VALORES = [
-  {
-    icon: '🧉',
-    title: { it: 'Anima Latina',         en: 'Latin Soul',        es: 'Alma Latina',        fr: 'Âme Latine',          de: 'Lateinische Seele',  pt: 'Alma Latina'          },
-    desc:  { it: 'La creatività e la passione del talento argentino in ogni progetto che realizziamo.', en: 'The creativity and passion of Argentine talent in every project we deliver.', es: 'La creatividad y pasión del talento argentino en cada proyecto que entregamos.', fr: 'La créativité et la passion du talent argentin dans chaque projet que nous réalisons.', de: 'Die Kreativität und Leidenschaft argentinischen Talents in jedem Projekt.', pt: 'A criatividade e paixão do talento argentino em cada projeto que entregamos.' },
-  },
-  {
-    icon: '🇪🇺',
-    title: { it: 'Standard Europei',     en: 'European Standards', es: 'Estándares Europeos', fr: 'Standards Européens', de: 'Europäische Standards', pt: 'Padrões Europeus'  },
-    desc:  { it: 'Qualità, puntualità e rigore tecnico che soddisfano le esigenze del mercato europeo.', en: 'Quality, punctuality and technical rigor that meet European market demands.', es: 'Calidad, puntualidad y rigor técnico que satisfacen las exigencias del mercado europeo.', fr: 'Qualité, ponctualité et rigueur technique pour le marché européen.', de: 'Qualität, Pünktlichkeit und technische Strenge für den europäischen Markt.', pt: 'Qualidade, pontualidade e rigor técnico para o mercado europeu.' },
-  },
-  {
-    icon: '🚀',
-    title: { it: 'Innovazione Continua', en: 'Continuous Innovation', es: 'Innovación Continua', fr: 'Innovation Continue', de: 'Kontinuierliche Innovation', pt: 'Inovação Contínua' },
-    desc:  { it: 'Tecnologie moderne, approcci freschi e soluzioni che anticipano le tendenze del mercato.', en: 'Modern technologies, fresh approaches and solutions that anticipate market trends.', es: 'Tecnologías modernas, enfoques frescos y soluciones que anticipan las tendencias del mercado.', fr: 'Technologies modernes et solutions qui anticipent les tendances du marché.', de: 'Moderne Technologien und Lösungen, die Markttrends antizipieren.', pt: 'Tecnologias modernas e soluções que antecipam as tendências do mercado.' },
-  },
-  {
-    icon: '🤝',
-    title: { it: 'Relazioni Durature',   en: 'Lasting Relationships', es: 'Relaciones Duraderas', fr: 'Relations Durables', de: 'Dauerhafte Beziehungen', pt: 'Relações Duradouras' },
-    desc:  { it: 'Non siamo solo fornitori: diventiamo il tuo team digitale a lungo termine.', en: "We're not just vendors — we become your long-term digital team.", es: 'No somos solo proveedores: nos convertimos en tu equipo digital a largo plazo.', fr: "Nous ne sommes pas que des prestataires : nous devenons votre équipe digitale à long terme.", de: 'Wir sind nicht nur Anbieter — wir werden Ihr langfristiges digitales Team.', pt: 'Não somos apenas fornecedores — tornamo-nos a sua equipa digital a longo prazo.' },
-  },
-]
-
-// ── Estadísticas ──────────────────────────────────────────────────────
-const STATS = [
-  { value: '6+',  keyLabel: 'yearsLabel'     },
-  { value: '80+', keyLabel: 'projectsLabel'  },
-  { value: '4',   keyLabel: 'countriesLabel' },
-  { value: '12',  keyLabel: 'teamLabel'      },
-]
-
-// ── Componente principal ──────────────────────────────────────────────
-export default function AboutSection({ brand, about }) {
-  const primary = brand?.primary || '#ff3c3c'
-  const t = useUIStrings(brand)
-  const lang = brand?.language
-    || (typeof window !== 'undefined' ? window.__SITE_LANGUAGE__ : null)
-    || 'it'
-
-  // Traducir contenido editorial (viene del panel admin o usa defaults)
-  const content = useTranslatedContent(
-    {
-      title:   about?.title   || DEFAULT_ABOUT.title,
-      subtitle:about?.subtitle|| DEFAULT_ABOUT.subtitle,
-      origin:  about?.text    || DEFAULT_ABOUT.origin,
-      mission: DEFAULT_ABOUT.mission,
-      vision:  DEFAULT_ABOUT.vision,
-    },
-    brand
-  )
-
-  return (
-    <section id="about" style={{ padding: 'clamp(60px,10vw,100px) clamp(20px,6%,80px)', background: 'var(--dark2, rgba(255,255,255,0.015))', position: 'relative', overflow: 'hidden' }}>
-      <style>{`
-        @keyframes abtFadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-        .abt-valor:hover{border-color:${primary}40!important;transform:translateY(-4px)!important;background:${primary}06!important;}
-        .abt-valor:hover .abt-icon{transform:scale(1.15)!important;}
-        .abt-cta:hover{background:${primary}!important;color:white!important;transform:translateY(-2px)!important;box-shadow:0 12px 36px ${primary}40!important;}
-        @media(max-width:768px){
-          .abt-grid{grid-template-columns:1fr!important;}
-          .abt-valores{grid-template-columns:1fr 1fr!important;}
-          .abt-stats{grid-template-columns:repeat(2,1fr)!important;}
-        }
-        @media(max-width:480px){
-          .abt-valores{grid-template-columns:1fr!important;}
-          .abt-stats{grid-template-columns:repeat(2,1fr)!important;}
-        }
-      `}</style>
-
-      {/* Decoración de fondo — mapa Argentina → Europa */}
-      <div style={{
-        position: 'absolute', top: 0, right: 0, bottom: 0,
-        width: '40%', zIndex: 0, overflow: 'hidden',
-        background: `radial-gradient(ellipse at 80% 50%, ${primary}06 0%, transparent 70%)`,
-        pointerEvents: 'none',
-      }}>
-        <div style={{
-          position: 'absolute', top: '50%', left: '50%',
-          transform: 'translate(-50%,-50%)',
-          fontSize: 'clamp(6rem,15vw,12rem)',
-          opacity: 0.04, userSelect: 'none',
-          filter: 'grayscale(1)',
-        }}>🌍</div>
-      </div>
-
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: 1200, margin: '0 auto' }}>
-
-        {/* ── HEADER ── */}
-        <div style={{ textAlign: 'center', marginBottom: 'clamp(40px,6vw,64px)', animation: 'abtFadeUp 0.7s ease both' }}>
-          <p style={{ color: primary, fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 14 }}>
-            {rl(ABOUT_UI.eyebrow, lang)}
-          </p>
-          <h2 style={{ fontSize: 'clamp(1.8rem,5vw,3rem)', fontWeight: 800, lineHeight: 1.15, color: 'var(--text-main)', margin: '0 auto', maxWidth: 700, whiteSpace: 'pre-line' }}>
-            {content.title}
-          </h2>
-          <p style={{ color: 'var(--text-dim)', fontSize: 'clamp(14px,2vw,17px)', lineHeight: 1.8, maxWidth: 640, margin: '20px auto 0', fontWeight: 300 }}>
-            {content.subtitle}
-          </p>
-        </div>
-
-        {/* ── STATS ── */}
-        <div className="abt-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 'clamp(12px,2vw,20px)', marginBottom: 'clamp(48px,7vw,72px)' }}>
-          {STATS.map((s, i) => (
-            <div key={i} style={{
-              padding: 'clamp(18px,3vw,28px) clamp(12px,2vw,20px)',
-              background: `${primary}06`, border: `1px solid ${primary}20`,
-              borderRadius: 14, textAlign: 'center',
-              animation: `abtFadeUp 0.6s ${i * 0.08}s ease both`,
-            }}>
-              <div style={{ fontSize: 'clamp(1.8rem,4vw,2.8rem)', fontWeight: 800, color: primary, lineHeight: 1 }}>{s.value}</div>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.4 }}>
-                {rl(ABOUT_UI[s.keyLabel], lang)}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* ── GRILLA PRINCIPAL: origen / misión / visión ── */}
-        <div className="abt-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'clamp(20px,4vw,40px)', marginBottom: 'clamp(48px,7vw,72px)', alignItems: 'start' }}>
-
-          {/* Columna izquierda — Origen */}
-          <div style={{ animation: 'abtFadeUp 0.7s 0.1s ease both' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: `${primary}15`, border: `1px solid ${primary}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🇦🇷</div>
-              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: primary }}>{rl(ABOUT_UI.origin, lang)}</span>
-            </div>
-            <p style={{ color: 'var(--text-dim)', fontSize: 'clamp(13px,1.8vw,15px)', lineHeight: 1.85 }}>
-              {content.origin}
-            </p>
-
-            {/* Bandera de ruta AR → EU */}
-            <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 28 }}>🇦🇷</span>
-              <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${primary}, ${primary}20)`, position: 'relative' }}>
-                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 8, height: 8, borderRadius: '50%', background: primary }} />
-              </div>
-              <span style={{ fontSize: 28 }}>🇪🇺</span>
-            </div>
-          </div>
-
-          {/* Columna derecha — Misión + Visión */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(16px,3vw,24px)', animation: 'abtFadeUp 0.7s 0.2s ease both' }}>
-            <div style={{ padding: 'clamp(16px,3vw,24px)', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, borderLeft: `3px solid ${primary}` }}>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: primary, marginBottom: 10 }}>{rl(ABOUT_UI.mission, lang)}</div>
-              <p style={{ color: 'var(--text-dim)', fontSize: 'clamp(13px,1.8vw,14px)', lineHeight: 1.8, margin: 0 }}>
-                {content.mission}
-              </p>
-            </div>
-            <div style={{ padding: 'clamp(16px,3vw,24px)', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, borderLeft: `3px solid ${primary}50` }}>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: `${primary}80`, marginBottom: 10 }}>{rl(ABOUT_UI.vision, lang)}</div>
-              <p style={{ color: 'var(--text-dim)', fontSize: 'clamp(13px,1.8vw,14px)', lineHeight: 1.8, margin: 0 }}>
-                {content.vision}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* ── VALORES ── */}
-        <div className="abt-valores" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 'clamp(12px,2vw,18px)', marginBottom: 'clamp(40px,6vw,56px)' }}>
-          {VALORES.map((v, i) => (
-            <div key={i} className="abt-valor" style={{
-              padding: 'clamp(18px,3vw,26px) clamp(14px,2vw,20px)',
-              background: 'rgba(255,255,255,0.02)',
-              border: '1px solid rgba(255,255,255,0.07)',
-              borderRadius: 14, cursor: 'default',
-              transition: 'all 0.35s cubic-bezier(0.16,1,0.3,1)',
-              animation: `abtFadeUp 0.6s ${0.1 + i * 0.07}s ease both`,
-            }}>
-              <div className="abt-icon" style={{ fontSize: 'clamp(1.6rem,3vw,2rem)', marginBottom: 14, transition: 'transform 0.3s', display: 'block' }}>
-                {v.icon}
-              </div>
-              <div style={{ fontWeight: 700, fontSize: 'clamp(0.9rem,2vw,1rem)', color: 'var(--text-main)', marginBottom: 8, lineHeight: 1.3 }}>
-                {rl(v.title, lang)}
-              </div>
-              <p style={{ color: 'var(--text-muted)', fontSize: 12, lineHeight: 1.7, margin: 0 }}>
-                {rl(v.desc, lang)}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* ── CTA ── */}
-        <div style={{ textAlign: 'center', animation: 'abtFadeUp 0.7s 0.4s ease both' }}>
-          <a
-            href="#contacto"
-            className="abt-cta"
-            style={{
-              display: 'inline-block',
-              padding: 'clamp(14px,2vw,18px) clamp(32px,5vw,56px)',
-              background: 'transparent',
-              color: primary,
-              border: `2px solid ${primary}`,
-              borderRadius: 8,
-              fontWeight: 800,
-              fontSize: 'clamp(12px,2vw,14px)',
-              letterSpacing: 1.5,
-              textTransform: 'uppercase',
-              textDecoration: 'none',
-              transition: 'all 0.3s cubic-bezier(0.16,1,0.3,1)',
-            }}
-          >
-            {rl(ABOUT_UI.ctaLabel, lang)} →
-          </a>
-        </div>
-
-      </div>
-    </section>
-  )
-}
-</file>
-
 <file path="src/functions/index.js">
 // ─────────────────────────────────────────────────────────────────────
 // functions/index.js — Cloud Function proxy para Twilio SMS
@@ -3322,6 +3071,210 @@ dist
 .DS_Store
 </file>
 
+<file path="middleware.js">
+/**
+ * middleware.js — Polartronic Studio
+ * RUTA: middleware.js (raíz del proyecto)
+ *
+ * Detecta bots (Googlebot, etc.) e inyecta SEO completo y robusto:
+ *  - Lee idioma, nombre y tagline desde Firebase Firestore en tiempo real
+ *  - Elige las meta tags en el idioma configurado en el panel admin
+ *  - Keywords específicas para diferenciarse de competidores con mismo nombre
+ *  - Schema.org completo tipo ProfessionalService
+ */
+
+export const config = { matcher: ['/', '/index.html'] }
+
+// ─── Config ───────────────────────────────────────────────────────────
+const FIREBASE_PROJECT_ID = process.env.VITE_FIREBASE_PROJECT_ID || 'polartronic-27bf7'
+const SITE_URL            = 'https://polartronic.app-customer.com'
+const GOOGLE_VERIFICATION = 'fVDBv_QoaC2pSBLcWuHXeEBP-uhk2ym4o0dXK1zx15U'
+
+// ─── Bots que deben recibir el HTML con SEO ───────────────────────────
+const BOT_AGENTS = [
+  'googlebot', 'bingbot', 'slurp', 'duckduckbot', 'baiduspider',
+  'yandexbot', 'sogou', 'exabot', 'facebot', 'ia_archiver',
+  'twitterbot', 'linkedinbot', 'whatsapp', 'telegrambot',
+]
+
+// ─── SEO por idioma ───────────────────────────────────────────────────
+// Keywords específicas de nicho para diferenciarse de Polartronic China
+// y posicionarse en el mercado correcto (agencia digital latina en Europa)
+const SEO_BY_LANG = {
+  it: {
+    lang:        'it',
+    locale:      'it_IT',
+    title:       (name) => `${name} — Studio Web & Branding Digitale in Italia`,
+    description: (name, tagline) =>
+      `${tagline || 'Studio digitale creativo'} con radici in Argentina e presenza in Europa. Siti web professionali, branding e sviluppo digitale di alto impatto per aziende italiane. Creatività latina, standard europei.`,
+    keywords:    'studio web Italia, siti web professionali Milano, branding digitale italiano, agenzia web Argentina Europa, sviluppo web Italia, design web professionale, web agency latina Europa, siti web aziendali Italia',
+    serviceType: ['Web Design', 'Branding', 'Sviluppo Web', 'Marketing Digitale'],
+    areaServed:  ['Italia', 'Europa'],
+  },
+  es: {
+    lang:        'es',
+    locale:      'es_ES',
+    title:       (name) => `${name} — Diseño Web & Branding Digital`,
+    description: (name, tagline) =>
+      `${tagline || 'Estudio digital creativo'} con raíces en Argentina y presencia en Europa. Diseño web profesional, branding y desarrollo digital de alto impacto. Creatividad latina, estándares europeos.`,
+    keywords:    'estudio web Italia, diseño web profesional, branding digital, agencia web Argentina Europa, desarrollo web Italia, diseño web empresas, web agency latina Europa',
+    serviceType: ['Diseño Web', 'Branding', 'Desarrollo Web', 'Marketing Digital'],
+    areaServed:  ['Italia', 'Europa'],
+  },
+  en: {
+    lang:        'en',
+    locale:      'en_GB',
+    title:       (name) => `${name} — Web Design & Digital Branding Studio`,
+    description: (name, tagline) =>
+      `${tagline || 'Creative digital studio'} with roots in Argentina and presence in Europe. Professional web design, branding and digital development for European businesses. Latin creativity, European standards.`,
+    keywords:    'web design studio Italy, professional websites, digital branding, Argentina Europe web agency, web development Italy, business web design, Latin web agency Europe',
+    serviceType: ['Web Design', 'Branding', 'Web Development', 'Digital Marketing'],
+    areaServed:  ['Italy', 'Europe'],
+  },
+  fr: {
+    lang:        'fr',
+    locale:      'fr_FR',
+    title:       (name) => `${name} — Studio Web & Branding Digital`,
+    description: (name, tagline) =>
+      `${tagline || 'Studio créatif digital'} avec des racines en Argentine et une présence en Europe. Sites web professionnels, branding et développement digital de haute qualité.`,
+    keywords:    'studio web Italie, sites web professionnels, branding digital, agence web Argentine Europe, développement web Italie',
+    serviceType: ['Web Design', 'Branding', 'Développement Web', 'Marketing Digital'],
+    areaServed:  ['Italie', 'Europe'],
+  },
+  de: {
+    lang:        'de',
+    locale:      'de_DE',
+    title:       (name) => `${name} — Webdesign & Digitales Branding Studio`,
+    description: (name, tagline) =>
+      `${tagline || 'Kreatives Digital-Studio'} mit Wurzeln in Argentinien und Präsenz in Europa. Professionelle Webseiten, Branding und digitale Entwicklung für europäische Unternehmen.`,
+    keywords:    'Webdesign Studio Italien, professionelle Webseiten, digitales Branding, Webagentur Argentinien Europa, Webentwicklung Italien',
+    serviceType: ['Webdesign', 'Branding', 'Webentwicklung', 'Digitales Marketing'],
+    areaServed:  ['Italien', 'Europa'],
+  },
+  pt: {
+    lang:        'pt',
+    locale:      'pt_PT',
+    title:       (name) => `${name} — Studio Web & Branding Digital`,
+    description: (name, tagline) =>
+      `${tagline || 'Estúdio digital criativo'} com raízes na Argentina e presença na Europa. Sites profissionais, branding e desenvolvimento digital de alto impacto.`,
+    keywords:    'estúdio web Itália, sites profissionais, branding digital, agência web Argentina Europa, desenvolvimento web Itália',
+    serviceType: ['Web Design', 'Branding', 'Desenvolvimento Web', 'Marketing Digital'],
+    areaServed:  ['Itália', 'Europa'],
+  },
+}
+
+const DEFAULT_LANG = 'it'
+
+// ─── Helpers ──────────────────────────────────────────────────────────
+function isBot(userAgent = '') {
+  const ua = userAgent.toLowerCase()
+  return BOT_AGENTS.some(bot => ua.includes(bot))
+}
+
+function extractString(firestoreValue) {
+  return firestoreValue?.stringValue || null
+}
+
+// ─── Leer configuración desde Firebase Firestore ──────────────────────
+async function fetchSiteConfig() {
+  try {
+    const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/site/config`
+    const res = await fetch(url)
+    if (!res.ok) return null
+
+    const data   = await res.json()
+    const fields = data.fields || {}
+    const brand  = fields.brand?.mapValue?.fields || {}
+
+    return {
+      name:     extractString(brand.name)     || 'Polartronic Studio',
+      tagline:  extractString(brand.tagline)  || '',
+      language: extractString(brand.language) || DEFAULT_LANG,
+    }
+  } catch {
+    return null
+  }
+}
+
+// ─── Middleware principal ─────────────────────────────────────────────
+export default async function middleware(request) {
+  const ua = request.headers.get('user-agent') || ''
+  if (!isBot(ua)) return
+
+  // Leer datos reales de Firebase en tiempo real
+  const config = await fetchSiteConfig()
+
+  const name    = config?.name     || 'Polartronic Studio'
+  const tagline = config?.tagline  || ''
+  const lang    = config?.language || DEFAULT_LANG
+
+  // Elegir SEO según idioma configurado en el panel admin
+  const seo = SEO_BY_LANG[lang] || SEO_BY_LANG[DEFAULT_LANG]
+
+  const title       = seo.title(name)
+  const description = seo.description(name, tagline)
+  const keywords    = seo.keywords
+  const locale      = seo.locale
+  const htmlLang    = seo.lang
+  const serviceType = JSON.stringify(seo.serviceType)
+  const areaServed  = JSON.stringify(seo.areaServed)
+
+  const html = `<!DOCTYPE html>
+<html lang="${htmlLang}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>${title}</title>
+  <meta name="description" content="${description}" />
+  <meta name="keywords"    content="${keywords}" />
+  <meta name="robots"      content="index, follow" />
+  <link rel="canonical"    href="${SITE_URL}" />
+
+  <meta property="og:type"        content="website" />
+  <meta property="og:title"       content="${title}" />
+  <meta property="og:description" content="${description}" />
+  <meta property="og:url"         content="${SITE_URL}" />
+  <meta property="og:site_name"   content="${name}" />
+  <meta property="og:locale"      content="${locale}" />
+
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:title"       content="${title}" />
+  <meta name="twitter:description" content="${description}" />
+
+  <meta name="google-site-verification" content="${GOOGLE_VERIFICATION}" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ProfessionalService",
+    "name": "${name}",
+    "url": "${SITE_URL}",
+    "description": "${description}",
+    "areaServed": ${areaServed},
+    "serviceType": ${serviceType},
+    "inLanguage": "${htmlLang}",
+    "foundingLocation": {
+      "@type": "Place",
+      "name": "Buenos Aires, Argentina"
+    },
+    "knowsAbout": ["Web Design", "Branding", "Digital Marketing", "Web Development"]
+  }
+  <\/script>
+</head>
+<body>
+  <h1>${name}</h1>
+  <p>${description}</p>
+</body>
+</html>`
+
+  return new Response(html, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+  })
+}
+</file>
+
 <file path="package.json">
 {
   "name": "polartronic-studio",
@@ -3987,6 +3940,263 @@ export default function TestimonialsTab({ data }) {
 }
 </file>
 
+<file path="src/components/site/AboutSection.jsx">
+/**
+ * AboutSection.jsx — v2
+ * TODO el texto visible hardcodeado en 6 idiomas.
+ * Cambia instantáneamente al cambiar el idioma en el panel.
+ * Sin useTranslatedContent, sin Google Translate, sin delay.
+ */
+
+import { useState, useEffect } from 'react'
+
+function rl(dict, lang) {
+  return dict?.[lang] || dict?.['es'] || dict?.['en'] || ''
+}
+
+const CONTENT = {
+  eyebrow: {
+    it: 'Chi siamo', en: 'About us', es: 'Quiénes somos',
+    fr: 'Qui sommes-nous', de: 'Über uns', pt: 'Sobre nós',
+  },
+  title: {
+    it: 'Nati in Argentina,\ncresciamo in Europa.',
+    en: 'Born in Argentina,\ngrowing across Europe.',
+    es: 'Nacimos en Argentina,\ncrecemos en Europa.',
+    fr: 'Nés en Argentine,\nnous grandissons en Europe.',
+    de: 'In Argentinien geboren,\nin Europa gewachsen.',
+    pt: 'Nascemos na Argentina,\ncrescemos na Europa.',
+  },
+  subtitle: {
+    it: 'Siamo uno studio digitale con radici a Buenos Aires e visione globale. Combiniamo la creatività e il talento latinoamericano con gli standard di qualità del mercato europeo per creare esperienze digitali che fanno davvero la differenza.',
+    en: 'We are a digital studio rooted in Buenos Aires with a global vision. We combine Latin American creativity and talent with European market quality standards to create digital experiences that truly make a difference.',
+    es: 'Somos un estudio digital con raíces en Buenos Aires y visión global. Combinamos la creatividad y el talento latinoamericano con los estándares de calidad del mercado europeo para crear experiencias digitales que realmente marcan la diferencia.',
+    fr: "Nous sommes un studio digital ancré à Buenos Aires avec une vision mondiale. Nous combinons la créativité et le talent latino-américain avec les standards de qualité du marché européen pour créer des expériences digitales qui font vraiment la différence.",
+    de: 'Wir sind ein digitales Studio mit Wurzeln in Buenos Aires und globaler Vision. Wir kombinieren lateinamerikanische Kreativität und Talent mit europäischen Qualitätsstandards, um digitale Erlebnisse zu schaffen, die wirklich einen Unterschied machen.',
+    pt: 'Somos um estúdio digital com raízes em Buenos Aires e visão global. Combinamos a criatividade e o talento latino-americano com os padrões de qualidade do mercado europeu para criar experiências digitais que realmente fazem a diferença.',
+  },
+  originLabel: {
+    it: 'Origine', en: 'Origin', es: 'Origen',
+    fr: 'Origine', de: 'Herkunft', pt: 'Origem',
+  },
+  originText: {
+    it: "Fondati a Buenos Aires nel 2018, abbiamo trascorso anni a costruire soluzioni digitali per brand e aziende in Argentina, Cile e Uruguay. Oggi facciamo il grande passo: portiamo quel talento e quella passione direttamente nel cuore dell'Europa.",
+    en: 'Founded in Buenos Aires in 2018, we spent years building digital solutions for brands and companies across Argentina, Chile and Uruguay. Today we take the big step: bringing that talent and passion directly to the heart of Europe.',
+    es: 'Fundados en Buenos Aires en 2018, llevamos años construyendo soluciones digitales para marcas y empresas en Argentina, Chile y Uruguay. Hoy damos el gran paso: llevamos ese talento y esa pasión directamente al corazón de Europa.',
+    fr: "Fondés à Buenos Aires en 2018, nous avons passé des années à construire des solutions digitales pour des marques et entreprises en Argentine, Chili et Uruguay. Aujourd'hui nous franchissons le grand pas : apporter ce talent et cette passion au cœur de l'Europe.",
+    de: 'Gegründet in Buenos Aires im Jahr 2018, haben wir Jahre damit verbracht, digitale Lösungen für Marken und Unternehmen in Argentinien, Chile und Uruguay zu entwickeln. Heute machen wir den großen Schritt: Wir bringen dieses Talent und diese Leidenschaft direkt ins Herz Europas.',
+    pt: 'Fundados em Buenos Aires em 2018, passamos anos construindo soluções digitais para marcas e empresas na Argentina, Chile e Uruguai. Hoje damos o grande passo: levamos esse talento e essa paixão diretamente ao coração da Europa.',
+  },
+  missionLabel: {
+    it: 'Missione', en: 'Mission', es: 'Misión',
+    fr: 'Mission', de: 'Mission', pt: 'Missão',
+  },
+  missionText: {
+    it: "Democratizzare l'accesso al design e alla tecnologia di alto impatto. Crediamo che una PMI italiana meriti la stessa qualità digitale di una grande corporation, a prezzi accessibili e con l'energia creativa che solo l'America Latina sa dare.",
+    en: 'Democratizing access to high-impact design and technology. We believe an Italian SME deserves the same digital quality as a large corporation, at accessible prices and with the creative energy that only Latin America can provide.',
+    es: 'Democratizar el acceso a diseño y tecnología de alto impacto. Creemos que una PyME italiana merece la misma calidad digital que una gran corporación, a precios accesibles y con la energía creativa que solo América Latina sabe dar.',
+    fr: "Démocratiser l'accès au design et à la technologie à fort impact. Nous croyons qu'une PME italienne mérite la même qualité digitale qu'une grande corporation, à des prix accessibles et avec l'énergie créative que seule l'Amérique latine sait donner.",
+    de: 'Demokratisierung des Zugangs zu wirkungsvollem Design und Technologie. Wir glauben, dass ein italienisches KMU die gleiche digitale Qualität wie ein großer Konzern verdient, zu erschwinglichen Preisen und mit der kreativen Energie, die nur Lateinamerika bieten kann.',
+    pt: 'Democratizar o acesso a design e tecnologia de alto impacto. Acreditamos que uma PME italiana merece a mesma qualidade digital que uma grande corporação, a preços acessíveis e com a energia criativa que só a América Latina sabe dar.',
+  },
+  visionLabel: {
+    it: 'Visione', en: 'Vision', es: 'Visión',
+    fr: 'Vision', de: 'Vision', pt: 'Visão',
+  },
+  visionText: {
+    it: 'Essere il ponte definitivo tra il talento digitale latinoamericano e le aziende europee che cercano di differenziarsi in un mercato sempre più competitivo.',
+    en: 'Being the definitive bridge between Latin American digital talent and European companies looking to stand out in an increasingly competitive market.',
+    es: 'Ser el puente definitivo entre el talento digital latinoamericano y las empresas europeas que buscan diferenciarse en un mercado cada vez más competitivo.',
+    fr: 'Être le pont définitif entre le talent digital latino-américain et les entreprises européennes qui cherchent à se différencier dans un marché de plus en plus compétitif.',
+    de: 'Die definitive Brücke zwischen lateinamerikanischem digitalem Talent und europäischen Unternehmen zu sein, die sich in einem immer wettbewerbsfähigeren Markt abheben wollen.',
+    pt: 'Ser a ponte definitiva entre o talento digital latino-americano e as empresas europeias que buscam se diferenciar em um mercado cada vez mais competitivo.',
+  },
+  ctaLabel: {
+    it: 'Lavora con noi', en: 'Work with us', es: 'Trabajemos juntos',
+    fr: 'Travaillons ensemble', de: 'Zusammenarbeiten', pt: 'Trabalhe conosco',
+  },
+}
+
+const STATS = [
+  {
+    value: '6+',
+    label: { it: 'Anni di esperienza', en: 'Years of experience', es: 'Años de experiencia', fr: "Ans d'expérience", de: 'Jahre Erfahrung', pt: 'Anos de experiência' },
+  },
+  {
+    value: '80+',
+    label: { it: 'Progetti globali', en: 'Global projects', es: 'Proyectos globales', fr: 'Projets globaux', de: 'Globale Projekte', pt: 'Projetos globais' },
+  },
+  {
+    value: '4',
+    label: { it: 'Paesi attivi', en: 'Active countries', es: 'Países activos', fr: 'Pays actifs', de: 'Aktive Länder', pt: 'Países ativos' },
+  },
+  {
+    value: '12',
+    label: { it: 'Professionisti', en: 'Professionals', es: 'Profesionales', fr: 'Professionnels', de: 'Fachleute', pt: 'Profissionais' },
+  },
+]
+
+const VALORES = [
+  {
+    icon: '🧉',
+    title: { it: 'Anima Latina', en: 'Latin Soul', es: 'Alma Latina', fr: 'Âme Latine', de: 'Lateinische Seele', pt: 'Alma Latina' },
+    desc:  { it: 'La creatività e la passione del talento argentino in ogni progetto che realizziamo.', en: 'The creativity and passion of Argentine talent in every project we deliver.', es: 'La creatividad y pasión del talento argentino en cada proyecto que entregamos.', fr: 'La créativité et la passion du talent argentin dans chaque projet.', de: 'Die Kreativität und Leidenschaft argentinischen Talents in jedem Projekt.', pt: 'A criatividade e paixão do talento argentino em cada projeto.' },
+  },
+  {
+    icon: '🇪🇺',
+    title: { it: 'Standard Europei', en: 'European Standards', es: 'Estándares Europeos', fr: 'Standards Européens', de: 'Europäische Standards', pt: 'Padrões Europeus' },
+    desc:  { it: 'Qualità, puntualità e rigore tecnico che soddisfano le esigenze del mercato europeo.', en: 'Quality, punctuality and technical rigor that meet European market demands.', es: 'Calidad, puntualidad y rigor técnico que satisfacen las exigencias del mercado europeo.', fr: 'Qualité, ponctualité et rigueur technique pour le marché européen.', de: 'Qualität, Pünktlichkeit und technische Strenge für den europäischen Markt.', pt: 'Qualidade, pontualidade e rigor técnico para o mercado europeu.' },
+  },
+  {
+    icon: '🚀',
+    title: { it: 'Innovazione Continua', en: 'Continuous Innovation', es: 'Innovación Continua', fr: 'Innovation Continue', de: 'Kontinuierliche Innovation', pt: 'Inovação Contínua' },
+    desc:  { it: 'Tecnologie moderne, approcci freschi e soluzioni che anticipano le tendenze del mercato.', en: 'Modern technologies, fresh approaches and solutions that anticipate market trends.', es: 'Tecnologías modernas, enfoques frescos y soluciones que anticipan las tendencias.', fr: 'Technologies modernes et solutions qui anticipent les tendances du marché.', de: 'Moderne Technologien und Lösungen, die Markttrends antizipieren.', pt: 'Tecnologias modernas e soluções que antecipam as tendências do mercado.' },
+  },
+  {
+    icon: '🤝',
+    title: { it: 'Relazioni Durature', en: 'Lasting Relationships', es: 'Relaciones Duraderas', fr: 'Relations Durables', de: 'Dauerhafte Beziehungen', pt: 'Relações Duradouras' },
+    desc:  { it: 'Non siamo solo fornitori: diventiamo il tuo team digitale a lungo termine.', en: "We're not just vendors — we become your long-term digital team.", es: 'No somos solo proveedores: nos convertimos en tu equipo digital a largo plazo.', fr: "Nous devenons votre équipe digitale à long terme.", de: 'Wir werden Ihr langfristiges digitales Team.', pt: 'Tornamo-nos a sua equipa digital a longo prazo.' },
+  },
+]
+
+export default function AboutSection({ brand }) {
+  const primary = brand?.primary || '#ff3c3c'
+
+  const [lang, setLang] = useState(
+    () => brand?.language
+      || (typeof window !== 'undefined' ? window.__SITE_LANGUAGE__ : null)
+      || 'it'
+  )
+
+  useEffect(() => {
+    if (brand?.language) setLang(brand.language)
+  }, [brand?.language])
+
+  useEffect(() => {
+    const handler = (e) => setLang(e.detail || window.__SITE_LANGUAGE__ || 'it')
+    window.addEventListener('sitelang', handler)
+    return () => window.removeEventListener('sitelang', handler)
+  }, [])
+
+  return (
+    <section id="about" style={{ padding: 'clamp(60px,10vw,100px) clamp(20px,6%,80px)', background: 'rgba(255,255,255,0.015)', position: 'relative', overflow: 'hidden' }}>
+      <style>{`
+        @keyframes abtFadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        .abt-valor:hover{border-color:${primary}40!important;transform:translateY(-4px)!important;background:${primary}06!important;}
+        .abt-valor:hover .abt-icon{transform:scale(1.15)!important;}
+        .abt-cta:hover{background:${primary}!important;color:white!important;transform:translateY(-2px)!important;box-shadow:0 12px 36px ${primary}40!important;}
+        .abt-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(20px,4vw,40px);margin-bottom:clamp(48px,7vw,72px);align-items:start;}
+        .abt-valores{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(12px,2vw,18px);margin-bottom:clamp(40px,6vw,56px);}
+        .abt-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(12px,2vw,20px);margin-bottom:clamp(48px,7vw,72px);}
+        @media(max-width:900px){.abt-valores{grid-template-columns:1fr 1fr!important;}}
+        @media(max-width:768px){.abt-grid{grid-template-columns:1fr!important;}.abt-stats{grid-template-columns:repeat(2,1fr)!important;}}
+        @media(max-width:480px){.abt-valores{grid-template-columns:1fr!important;}.abt-stats{grid-template-columns:repeat(2,1fr)!important;}}
+      `}</style>
+
+      {/* Fondo decorativo */}
+      <div style={{ position:'absolute', top:0, right:0, bottom:0, width:'40%', zIndex:0, pointerEvents:'none', background:`radial-gradient(ellipse at 80% 50%, ${primary}06 0%, transparent 70%)` }}>
+        <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', fontSize:'clamp(6rem,15vw,12rem)', opacity:0.04, userSelect:'none', filter:'grayscale(1)' }}>🌍</div>
+      </div>
+
+      <div style={{ position:'relative', zIndex:1, maxWidth:1200, margin:'0 auto' }}>
+
+        {/* HEADER */}
+        <div style={{ textAlign:'center', marginBottom:'clamp(40px,6vw,64px)', animation:'abtFadeUp 0.7s ease both' }}>
+          <p style={{ color:primary, fontSize:'0.72rem', fontWeight:800, textTransform:'uppercase', letterSpacing:4, marginBottom:14 }}>
+            {rl(CONTENT.eyebrow, lang)}
+          </p>
+          <h2 style={{ fontSize:'clamp(1.8rem,5vw,3rem)', fontWeight:800, lineHeight:1.15, color:'var(--text-main)', margin:'0 auto', maxWidth:700, whiteSpace:'pre-line' }}>
+            {rl(CONTENT.title, lang)}
+          </h2>
+          <p style={{ color:'var(--text-dim)', fontSize:'clamp(14px,2vw,17px)', lineHeight:1.8, maxWidth:640, margin:'20px auto 0', fontWeight:300 }}>
+            {rl(CONTENT.subtitle, lang)}
+          </p>
+        </div>
+
+        {/* STATS */}
+        <div className="abt-stats">
+          {STATS.map((s, i) => (
+            <div key={i} style={{ padding:'clamp(18px,3vw,28px) clamp(12px,2vw,20px)', background:`${primary}06`, border:`1px solid ${primary}20`, borderRadius:14, textAlign:'center', animation:`abtFadeUp 0.6s ${i*0.08}s ease both` }}>
+              <div style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)', fontWeight:800, color:primary, lineHeight:1 }}>{s.value}</div>
+              <div style={{ fontSize:11, fontWeight:600, letterSpacing:1.5, textTransform:'uppercase', color:'var(--text-muted)', marginTop:8, lineHeight:1.4 }}>
+                {rl(s.label, lang)}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* GRILLA ORIGEN / MISIÓN / VISIÓN */}
+        <div className="abt-grid">
+
+          {/* Origen */}
+          <div style={{ animation:'abtFadeUp 0.7s 0.1s ease both' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
+              <div style={{ width:32, height:32, borderRadius:'50%', background:`${primary}15`, border:`1px solid ${primary}30`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>🇦🇷</div>
+              <span style={{ fontSize:11, fontWeight:700, letterSpacing:2, textTransform:'uppercase', color:primary }}>{rl(CONTENT.originLabel, lang)}</span>
+            </div>
+            <p style={{ color:'var(--text-dim)', fontSize:'clamp(13px,1.8vw,15px)', lineHeight:1.85 }}>
+              {rl(CONTENT.originText, lang)}
+            </p>
+            <div style={{ marginTop:24, display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ fontSize:28 }}>🇦🇷</span>
+              <div style={{ flex:1, height:1, background:`linear-gradient(90deg, ${primary}, ${primary}20)`, position:'relative' }}>
+                <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', width:8, height:8, borderRadius:'50%', background:primary }} />
+              </div>
+              <span style={{ fontSize:28 }}>🇪🇺</span>
+            </div>
+          </div>
+
+          {/* Misión + Visión */}
+          <div style={{ display:'flex', flexDirection:'column', gap:'clamp(16px,3vw,24px)', animation:'abtFadeUp 0.7s 0.2s ease both' }}>
+            <div style={{ padding:'clamp(16px,3vw,24px)', background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:14, borderLeft:`3px solid ${primary}` }}>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:2, textTransform:'uppercase', color:primary, marginBottom:10 }}>
+                {rl(CONTENT.missionLabel, lang)}
+              </div>
+              <p style={{ color:'var(--text-dim)', fontSize:'clamp(13px,1.8vw,14px)', lineHeight:1.8, margin:0 }}>
+                {rl(CONTENT.missionText, lang)}
+              </p>
+            </div>
+            <div style={{ padding:'clamp(16px,3vw,24px)', background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:14, borderLeft:`3px solid ${primary}50` }}>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:2, textTransform:'uppercase', color:`${primary}90`, marginBottom:10 }}>
+                {rl(CONTENT.visionLabel, lang)}
+              </div>
+              <p style={{ color:'var(--text-dim)', fontSize:'clamp(13px,1.8vw,14px)', lineHeight:1.8, margin:0 }}>
+                {rl(CONTENT.visionText, lang)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* VALORES */}
+        <div className="abt-valores">
+          {VALORES.map((v, i) => (
+            <div key={i} className="abt-valor" style={{ padding:'clamp(18px,3vw,26px) clamp(14px,2vw,20px)', background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:14, cursor:'default', transition:'all 0.35s cubic-bezier(0.16,1,0.3,1)', animation:`abtFadeUp 0.6s ${0.1+i*0.07}s ease both` }}>
+              <div className="abt-icon" style={{ fontSize:'clamp(1.6rem,3vw,2rem)', marginBottom:14, transition:'transform 0.3s', display:'block' }}>
+                {v.icon}
+              </div>
+              <div style={{ fontWeight:700, fontSize:'clamp(0.9rem,2vw,1rem)', color:'var(--text-main)', marginBottom:8, lineHeight:1.3 }}>
+                {rl(v.title, lang)}
+              </div>
+              <p style={{ color:'var(--text-muted)', fontSize:12, lineHeight:1.7, margin:0 }}>
+                {rl(v.desc, lang)}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div style={{ textAlign:'center', animation:'abtFadeUp 0.7s 0.4s ease both' }}>
+          <a href="#contacto" className="abt-cta" style={{ display:'inline-block', padding:'clamp(14px,2vw,18px) clamp(32px,5vw,56px)', background:'transparent', color:primary, border:`2px solid ${primary}`, borderRadius:8, fontWeight:800, fontSize:'clamp(12px,2vw,14px)', letterSpacing:1.5, textTransform:'uppercase', textDecoration:'none', transition:'all 0.3s cubic-bezier(0.16,1,0.3,1)' }}>
+            {rl(CONTENT.ctaLabel, lang)} →
+          </a>
+        </div>
+
+      </div>
+    </section>
+  )
+}
+</file>
+
 <file path="src/hooks/useUIStrings.js">
 /**
  * useUIStrings.js — FIXED v2
@@ -4366,85 +4576,6 @@ export default defineConfig({
     },
   },
 })
-</file>
-
-<file path="index.html">
-<!DOCTYPE html>
-<html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="google-site-verification" content="fVDBv_QoaC2pSBLcWuHXeEBP-uhk2ym4o0dXK1zx15U" />
-    <title>Polartronic Studio</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&family=Bebas+Neue&family=Cinzel:wght@700&display=swap" rel="stylesheet" />
-
-    <!--
-      ANTI-FOUC SCRIPT
-      Aplica colores desde caché ANTES del primer render de React.
-      NO usa opacity ni visibility — nunca bloquea nada.
-      Si la ruta es /admin o /proposal → skip (no necesitan anti-FOUC).
-    -->
-    <script>
-      (function () {
-        try {
-          /* Saltar en rutas que no son el sitio público */
-          var path = window.location.pathname;
-          if (path.indexOf('/admin') === 0 || path.indexOf('/proposal') === 0) return;
-
-          var raw = localStorage.getItem('polartronic_cache');
-          if (!raw) return;
-
-          var parsed = JSON.parse(raw);
-          if (Date.now() - parsed.ts > 300000) return; /* TTL 5 min */
-
-          var site  = parsed.data && parsed.data.site;
-          var brand = site && site.brand;
-          if (!brand) return;
-
-          var root = document.documentElement;
-
-          if (brand.primary) root.style.setProperty('--primary', brand.primary);
-
-          if (brand.bg) {
-            root.style.setProperty('--bg', brand.bg);
-
-            var hex = brand.bg.replace('#', '');
-            if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
-            var r = parseInt(hex.slice(0,2),16);
-            var g = parseInt(hex.slice(2,4),16);
-            var b = parseInt(hex.slice(4,6),16);
-            var light = (0.299*r + 0.587*g + 0.114*b)/255 > 0.5;
-
-            if (light) {
-              root.style.setProperty('--text-main',  '#0a0a0a');
-              root.style.setProperty('--text-dim',   'rgba(0,0,0,0.6)');
-              root.style.setProperty('--text-muted', 'rgba(0,0,0,0.4)');
-              root.style.setProperty('--border',     'rgba(0,0,0,0.1)');
-              root.style.setProperty('--card-bg',    '#f5f5f5');
-              root.setAttribute('data-theme', 'light');
-            } else {
-              root.style.setProperty('--text-main',  '#ffffff');
-              root.style.setProperty('--text-dim',   'rgba(255,255,255,0.55)');
-              root.style.setProperty('--text-muted', 'rgba(255,255,255,0.35)');
-              root.style.setProperty('--border',     'rgba(255,255,255,0.08)');
-              root.style.setProperty('--card-bg',    '#0d0d0d');
-              root.setAttribute('data-theme', 'dark');
-            }
-          }
-
-          if (brand.language) window.__SITE_LANGUAGE__ = brand.language;
-
-        } catch(e) { /* nunca romper la página */ }
-      })();
-    </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
-</html>
 </file>
 
 <file path="public/robots.txt">
@@ -7773,6 +7904,123 @@ setPersistence(auth, browserLocalPersistence)
 export default app
 </file>
 
+<file path="index.html">
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- ── SEO Italia ──────────────────────────────────────────────── -->
+    <title>Polartronic Studio — Siti Web & Branding Digitale</title>
+    <meta name="description" content="Studio digitale creativo con radici in Argentina e presenza in Europa. Siti web, branding e sviluppo digitale di alto impatto per aziende italiane." />
+    <meta name="keywords" content="studio web italia, siti web professionali, branding digitale, sviluppo web, agenzia digitale, design web italia, polartronic" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://polartronic.app-customer.com" />
+
+    <!-- ── Open Graph (WhatsApp, LinkedIn, Facebook) ──────────────── -->
+    <meta property="og:type"        content="website" />
+    <meta property="og:title"       content="Polartronic Studio — Siti Web & Branding Digitale" />
+    <meta property="og:description" content="Studio digitale creativo con radici in Argentina e presenza in Europa. Siti web, branding e sviluppo digitale di alto impatto." />
+    <meta property="og:url"         content="https://polartronic.app-customer.com" />
+    <meta property="og:site_name"   content="Polartronic Studio" />
+    <meta property="og:locale"      content="it_IT" />
+
+    <!-- ── Twitter Card ───────────────────────────────────────────── -->
+    <meta name="twitter:card"        content="summary_large_image" />
+    <meta name="twitter:title"       content="Polartronic Studio — Siti Web & Branding Digitale" />
+    <meta name="twitter:description" content="Studio digitale creativo con radici in Argentina e presenza in Europa." />
+
+    <!-- ── Schema.org structured data ────────────────────────────── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "ProfessionalService",
+      "name": "Polartronic Studio",
+      "url": "https://polartronic.app-customer.com",
+      "description": "Studio digitale creativo specializzato in siti web, branding e sviluppo digitale per aziende italiane ed europee.",
+      "areaServed": ["Italia", "Europa"],
+      "serviceType": ["Web Design", "Branding", "Sviluppo Web", "Marketing Digitale"],
+      "inLanguage": "it"
+    }
+    </script>
+
+    <!-- ── Google Site Verification ───────────────────────────────── -->
+    <meta name="google-site-verification" content="fVDBv_QoaC2pSBLcWuHXeEBP-uhk2ym4o0dXK1zx15U" />
+
+    <!-- ── Fonts ───────────────────────────────────────────────────── -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&family=Bebas+Neue&family=Cinzel:wght@700&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+       <link rel="apple-touch-icon" href="/favicon.png" />
+
+    <!--
+      ANTI-FOUC SCRIPT
+      Aplica colores desde caché ANTES del primer render de React.
+      NO usa opacity ni visibility — nunca bloquea nada.
+      Si la ruta es /admin o /proposal → skip (no necesitan anti-FOUC).
+    -->
+    <script>
+      (function () {
+        try {
+          var path = window.location.pathname;
+          if (path.indexOf('/admin') === 0 || path.indexOf('/proposal') === 0) return;
+
+          var raw = localStorage.getItem('polartronic_cache');
+          if (!raw) return;
+
+          var parsed = JSON.parse(raw);
+          if (Date.now() - parsed.ts > 300000) return;
+
+          var site  = parsed.data && parsed.data.site;
+          var brand = site && site.brand;
+          if (!brand) return;
+
+          var root = document.documentElement;
+
+          if (brand.primary) root.style.setProperty('--primary', brand.primary);
+
+          if (brand.bg) {
+            root.style.setProperty('--bg', brand.bg);
+
+            var hex = brand.bg.replace('#', '');
+            if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+            var r = parseInt(hex.slice(0,2),16);
+            var g = parseInt(hex.slice(2,4),16);
+            var b = parseInt(hex.slice(4,6),16);
+            var light = (0.299*r + 0.587*g + 0.114*b)/255 > 0.5;
+
+            if (light) {
+              root.style.setProperty('--text-main',  '#0a0a0a');
+              root.style.setProperty('--text-dim',   'rgba(0,0,0,0.6)');
+              root.style.setProperty('--text-muted', 'rgba(0,0,0,0.4)');
+              root.style.setProperty('--border',     'rgba(0,0,0,0.1)');
+              root.style.setProperty('--card-bg',    '#f5f5f5');
+              root.setAttribute('data-theme', 'light');
+            } else {
+              root.style.setProperty('--text-main',  '#ffffff');
+              root.style.setProperty('--text-dim',   'rgba(255,255,255,0.55)');
+              root.style.setProperty('--text-muted', 'rgba(255,255,255,0.35)');
+              root.style.setProperty('--border',     'rgba(255,255,255,0.08)');
+              root.style.setProperty('--card-bg',    '#0d0d0d');
+              root.setAttribute('data-theme', 'dark');
+            }
+          }
+
+          if (brand.language) window.__SITE_LANGUAGE__ = brand.language;
+
+        } catch(e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+</file>
+
 <file path="src/App.jsx">
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth }     from './lib/useAuth'
@@ -8076,6 +8324,225 @@ export async function uploadImage(file, folder = 'images', onProgress = null) {
 
   // Devuelve el base64 directamente — funciona como src en cualquier <img>
   return base64
+}
+</file>
+
+<file path="src/hooks/useSiteData.js">
+/**
+ * useSiteData.js — v3 ANTI-FOUC DEFINITIVO
+ * ─────────────────────────────────────────────────────────────────────────
+ * PROBLEMA RESUELTO:
+ *   Antes: si no había cache válido, se renderizaban los DEFAULT_* (datos demo)
+ *   durante ~1-2s hasta que Firebase respondía → flash visual de contenido falso.
+ *
+ * SOLUCIÓN:
+ *   - Si hay cache válido → render inmediato con datos reales (sin flash)
+ *   - Si NO hay cache → loading=true, NO se muestran defaults, esperar Firebase
+ *   - TTL aumentado a 30 minutos
+ *   - Cache se escribe también con datos parciales (evita segunda carga)
+ *   - Los DEFAULT_* solo se usan como fallback si Firebase FALLA (error real)
+ *
+ * RESULTADO: El sitio o muestra datos reales (desde cache o Firebase)
+ *            o muestra el spinner — nunca los datos demo hardcoded.
+ */
+
+import { useState, useEffect } from 'react'
+import {
+  getSiteConfig, getEcosystems, getProjects,
+  getTestimonials, getServices,
+} from '../lib/firebaseHelpers'
+
+// ─── Cache config ─────────────────────────────────────────────────────
+const CACHE_KEY = 'polartronic_cache'
+const CACHE_TTL = 30 * 60 * 1000  // 30 minutos (antes: 5)
+
+function readCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+    const { ts, data } = JSON.parse(raw)
+    if (Date.now() - ts > CACHE_TTL) return null
+    // Validar que el cache tiene datos reales (no vacíos)
+    if (!data?.site) return null
+    return data
+  } catch { return null }
+}
+
+function writeCache(data) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data }))
+  } catch { /* storage lleno */ }
+}
+
+export function invalidateCache() {
+  try { localStorage.removeItem(CACHE_KEY) } catch {}
+}
+
+// ─── Datos por defecto — SOLO para fallback de error Firebase ────────
+// NO se usan en el render inicial normal
+export const DEFAULT_SITE = {
+  hero: {
+    slides: [{
+      badge:    'Digital Creative Studio',
+      headline: 'ESTÉTICA QUE VENDE.',
+      sub:      'Fusionamos el arte cinematográfico con la ingeniería web para crear negocios digitales imparables.',
+      cta:      'EXPLORAR ÁREAS',
+      bgImage:  'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?auto=format&fit=crop&w=1920&q=80',
+    }],
+  },
+  brand: {
+    name:    'POLARTRONIC',
+    tagline: 'Elite Digital Studio',
+    primary: '#ff3c3c',
+    bg:      '#030303',
+  },
+  about: {
+    title: 'Quiénes Somos',
+    text:  'Somos un estudio de diseño y desarrollo web de alto impacto.',
+  },
+  footer: {
+    email:     'hello@polartronic.com',
+    whatsapp:  '#',
+    instagram: '#',
+    copy:      '© 2026 Polartronic Studio. Todos los derechos reservados.',
+    sub:       'Diseño Web & Branding de Alto Impacto.',
+  },
+  contact: {
+    title:    '¿Listo para el siguiente nivel?',
+    subtitle: 'Cuéntanos tu proyecto.',
+    fields:   JSON.stringify([
+      { id: 'name',    label: 'Nombre',  type: 'text',     required: true },
+      { id: 'email',   label: 'Email',   type: 'email',    required: true },
+      { id: 'phone',   label: 'Teléfono',type: 'tel',      required: true },
+      { id: 'zona',    label: 'Zona',    type: 'text',     required: true },
+      { id: 'service', label: 'Servicio',type: 'select',   required: false, options: 'Diseño Web,Desarrollo,Branding,Marketing,Otro' },
+      { id: 'message', label: 'Mensaje', type: 'textarea', required: false },
+    ]),
+    ctaLabel:       'ENVIAR MENSAJE',
+    successTitle:   '¡Solicitud recibida!',
+    successMessage: 'Te contactaremos en menos de 24 horas.',
+  },
+  agents:        [],
+  notifications: {
+    emailjs:   { serviceId: '', templateIdCliente: '', templateIdInterno: '', publicKey: '', attivo: false },
+    whatsapp:  { apiKey: '', number: '', attivo: false },
+    sms:       { accountSid: '', authToken: '', fromNumber: '', toNumber: '', attivo: false },
+    templates: { emailCliente: '', whatsappAgente: '', smsAdmin: '' },
+    notificaAdmin: '',
+  },
+}
+
+export const DEFAULT_ECOSYSTEMS  = []
+export const DEFAULT_PROJECTS    = []
+export const DEFAULT_TESTIMONIALS = []
+export const DEFAULT_SERVICES    = []
+
+// ─── Merge site config preservando todos los campos ──────────────────
+function mergeSite(cfg) {
+  if (!cfg) return DEFAULT_SITE
+  return {
+    ...DEFAULT_SITE,
+    ...cfg,
+    brand:         { ...DEFAULT_SITE.brand,         ...(cfg.brand         || {}) },
+    hero:          { ...DEFAULT_SITE.hero,           ...(cfg.hero          || {}) },
+    contact:       { ...DEFAULT_SITE.contact,        ...(cfg.contact       || {}) },
+    footer:        { ...DEFAULT_SITE.footer,         ...(cfg.footer        || {}) },
+    notifications: { ...DEFAULT_SITE.notifications,  ...(cfg.notifications || {}) },
+    agents:        cfg.agents ?? DEFAULT_SITE.agents,
+  }
+}
+
+function sortByOrder(arr) {
+  return [...arr].sort((a, b) => (a.order || 0) - (b.order || 0))
+}
+
+// ─── Hook principal ───────────────────────────────────────────────────
+export function useSiteData() {
+  const cached = readCache()
+
+  // Si hay cache válido → inicializar con datos reales, loading=false
+  // Si NO hay cache → inicializar con null/[], loading=true (NO con defaults)
+  const [site,         setSite]         = useState(cached ? mergeSite(cached.site) : null)
+  const [ecosystems,   setEcosystems]   = useState(cached?.ecosystems   ?? null)
+  const [projects,     setProjects]     = useState(cached?.projects     ?? null)
+  const [testimonials, setTestimonials] = useState(cached?.testimonials ?? null)
+  const [services,     setServices]     = useState(cached?.services     ?? null)
+  const [loading,      setLoading]      = useState(!cached)  // true solo si no hay cache
+
+  useEffect(() => {
+    // Si ya tenemos cache válido, hacer fetch en background silencioso
+    // para actualizar datos sin mostrar loading
+    let cancelled = false
+
+    async function hydrate() {
+      // Si no hay cache: mostrar loading
+      // Si hay cache: fetch silencioso (sin cambiar loading)
+      if (!cached) setLoading(true)
+
+      try {
+        const [cfg, eco, proj, test, svc] = await Promise.all([
+          getSiteConfig(),
+          getEcosystems(),
+          getProjects(),
+          getTestimonials(),
+          getServices(),
+        ])
+
+        if (cancelled) return
+
+        const freshSite = mergeSite(cfg)
+        const freshEco  = eco.length  ? sortByOrder(eco)  : []
+        const freshProj = proj.length ? sortByOrder(proj) : []
+        const freshTest = test.length ? sortByOrder(test) : []
+        const freshSvc  = svc.length  ? sortByOrder(svc)  : []
+
+        setSite(freshSite)
+        setEcosystems(freshEco)
+        setProjects(freshProj)
+        setTestimonials(freshTest)
+        setServices(freshSvc)
+
+        writeCache({
+          site:         freshSite,
+          ecosystems:   freshEco,
+          projects:     freshProj,
+          testimonials: freshTest,
+          services:     freshSvc,
+        })
+
+      } catch (e) {
+        console.warn('[useSiteData] Firebase error:', e.message)
+        // Solo usar defaults si no tenemos NADA (ni cache ni datos previos)
+        if (!cached) {
+          setSite(DEFAULT_SITE)
+          setEcosystems(DEFAULT_ECOSYSTEMS)
+          setProjects(DEFAULT_PROJECTS)
+          setTestimonials(DEFAULT_TESTIMONIALS)
+          setServices(DEFAULT_SERVICES)
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    hydrate()
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Mientras loading y sin datos: devolver estado de carga
+  // Los componentes deben manejar site=null como "aún cargando"
+  return {
+    site:         site         ?? DEFAULT_SITE,
+    ecosystems:   ecosystems   ?? [],
+    projects:     projects     ?? [],
+    testimonials: testimonials ?? [],
+    services:     services     ?? [],
+    loading,
+    // Flags para saber si tenemos datos reales o estamos esperando
+    hasData: site !== null,
+    setSite, setEcosystems, setProjects, setTestimonials, setServices,
+  }
 }
 </file>
 
@@ -8572,225 +9039,6 @@ export default function ContactSection({ contact, footer, brand, site }) {
       </div>
     </section>
   )
-}
-</file>
-
-<file path="src/hooks/useSiteData.js">
-/**
- * useSiteData.js — v3 ANTI-FOUC DEFINITIVO
- * ─────────────────────────────────────────────────────────────────────────
- * PROBLEMA RESUELTO:
- *   Antes: si no había cache válido, se renderizaban los DEFAULT_* (datos demo)
- *   durante ~1-2s hasta que Firebase respondía → flash visual de contenido falso.
- *
- * SOLUCIÓN:
- *   - Si hay cache válido → render inmediato con datos reales (sin flash)
- *   - Si NO hay cache → loading=true, NO se muestran defaults, esperar Firebase
- *   - TTL aumentado a 30 minutos
- *   - Cache se escribe también con datos parciales (evita segunda carga)
- *   - Los DEFAULT_* solo se usan como fallback si Firebase FALLA (error real)
- *
- * RESULTADO: El sitio o muestra datos reales (desde cache o Firebase)
- *            o muestra el spinner — nunca los datos demo hardcoded.
- */
-
-import { useState, useEffect } from 'react'
-import {
-  getSiteConfig, getEcosystems, getProjects,
-  getTestimonials, getServices,
-} from '../lib/firebaseHelpers'
-
-// ─── Cache config ─────────────────────────────────────────────────────
-const CACHE_KEY = 'polartronic_cache'
-const CACHE_TTL = 30 * 60 * 1000  // 30 minutos (antes: 5)
-
-function readCache() {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY)
-    if (!raw) return null
-    const { ts, data } = JSON.parse(raw)
-    if (Date.now() - ts > CACHE_TTL) return null
-    // Validar que el cache tiene datos reales (no vacíos)
-    if (!data?.site) return null
-    return data
-  } catch { return null }
-}
-
-function writeCache(data) {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data }))
-  } catch { /* storage lleno */ }
-}
-
-export function invalidateCache() {
-  try { localStorage.removeItem(CACHE_KEY) } catch {}
-}
-
-// ─── Datos por defecto — SOLO para fallback de error Firebase ────────
-// NO se usan en el render inicial normal
-export const DEFAULT_SITE = {
-  hero: {
-    slides: [{
-      badge:    'Digital Creative Studio',
-      headline: 'ESTÉTICA QUE VENDE.',
-      sub:      'Fusionamos el arte cinematográfico con la ingeniería web para crear negocios digitales imparables.',
-      cta:      'EXPLORAR ÁREAS',
-      bgImage:  'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?auto=format&fit=crop&w=1920&q=80',
-    }],
-  },
-  brand: {
-    name:    'POLARTRONIC',
-    tagline: 'Elite Digital Studio',
-    primary: '#ff3c3c',
-    bg:      '#030303',
-  },
-  about: {
-    title: 'Quiénes Somos',
-    text:  'Somos un estudio de diseño y desarrollo web de alto impacto.',
-  },
-  footer: {
-    email:     'hello@polartronic.com',
-    whatsapp:  '#',
-    instagram: '#',
-    copy:      '© 2026 Polartronic Studio. Todos los derechos reservados.',
-    sub:       'Diseño Web & Branding de Alto Impacto.',
-  },
-  contact: {
-    title:    '¿Listo para el siguiente nivel?',
-    subtitle: 'Cuéntanos tu proyecto.',
-    fields:   JSON.stringify([
-      { id: 'name',    label: 'Nombre',  type: 'text',     required: true },
-      { id: 'email',   label: 'Email',   type: 'email',    required: true },
-      { id: 'phone',   label: 'Teléfono',type: 'tel',      required: true },
-      { id: 'zona',    label: 'Zona',    type: 'text',     required: true },
-      { id: 'service', label: 'Servicio',type: 'select',   required: false, options: 'Diseño Web,Desarrollo,Branding,Marketing,Otro' },
-      { id: 'message', label: 'Mensaje', type: 'textarea', required: false },
-    ]),
-    ctaLabel:       'ENVIAR MENSAJE',
-    successTitle:   '¡Solicitud recibida!',
-    successMessage: 'Te contactaremos en menos de 24 horas.',
-  },
-  agents:        [],
-  notifications: {
-    emailjs:   { serviceId: '', templateIdCliente: '', templateIdInterno: '', publicKey: '', attivo: false },
-    whatsapp:  { apiKey: '', number: '', attivo: false },
-    sms:       { accountSid: '', authToken: '', fromNumber: '', toNumber: '', attivo: false },
-    templates: { emailCliente: '', whatsappAgente: '', smsAdmin: '' },
-    notificaAdmin: '',
-  },
-}
-
-export const DEFAULT_ECOSYSTEMS  = []
-export const DEFAULT_PROJECTS    = []
-export const DEFAULT_TESTIMONIALS = []
-export const DEFAULT_SERVICES    = []
-
-// ─── Merge site config preservando todos los campos ──────────────────
-function mergeSite(cfg) {
-  if (!cfg) return DEFAULT_SITE
-  return {
-    ...DEFAULT_SITE,
-    ...cfg,
-    brand:         { ...DEFAULT_SITE.brand,         ...(cfg.brand         || {}) },
-    hero:          { ...DEFAULT_SITE.hero,           ...(cfg.hero          || {}) },
-    contact:       { ...DEFAULT_SITE.contact,        ...(cfg.contact       || {}) },
-    footer:        { ...DEFAULT_SITE.footer,         ...(cfg.footer        || {}) },
-    notifications: { ...DEFAULT_SITE.notifications,  ...(cfg.notifications || {}) },
-    agents:        cfg.agents ?? DEFAULT_SITE.agents,
-  }
-}
-
-function sortByOrder(arr) {
-  return [...arr].sort((a, b) => (a.order || 0) - (b.order || 0))
-}
-
-// ─── Hook principal ───────────────────────────────────────────────────
-export function useSiteData() {
-  const cached = readCache()
-
-  // Si hay cache válido → inicializar con datos reales, loading=false
-  // Si NO hay cache → inicializar con null/[], loading=true (NO con defaults)
-  const [site,         setSite]         = useState(cached ? mergeSite(cached.site) : null)
-  const [ecosystems,   setEcosystems]   = useState(cached?.ecosystems   ?? null)
-  const [projects,     setProjects]     = useState(cached?.projects     ?? null)
-  const [testimonials, setTestimonials] = useState(cached?.testimonials ?? null)
-  const [services,     setServices]     = useState(cached?.services     ?? null)
-  const [loading,      setLoading]      = useState(!cached)  // true solo si no hay cache
-
-  useEffect(() => {
-    // Si ya tenemos cache válido, hacer fetch en background silencioso
-    // para actualizar datos sin mostrar loading
-    let cancelled = false
-
-    async function hydrate() {
-      // Si no hay cache: mostrar loading
-      // Si hay cache: fetch silencioso (sin cambiar loading)
-      if (!cached) setLoading(true)
-
-      try {
-        const [cfg, eco, proj, test, svc] = await Promise.all([
-          getSiteConfig(),
-          getEcosystems(),
-          getProjects(),
-          getTestimonials(),
-          getServices(),
-        ])
-
-        if (cancelled) return
-
-        const freshSite = mergeSite(cfg)
-        const freshEco  = eco.length  ? sortByOrder(eco)  : []
-        const freshProj = proj.length ? sortByOrder(proj) : []
-        const freshTest = test.length ? sortByOrder(test) : []
-        const freshSvc  = svc.length  ? sortByOrder(svc)  : []
-
-        setSite(freshSite)
-        setEcosystems(freshEco)
-        setProjects(freshProj)
-        setTestimonials(freshTest)
-        setServices(freshSvc)
-
-        writeCache({
-          site:         freshSite,
-          ecosystems:   freshEco,
-          projects:     freshProj,
-          testimonials: freshTest,
-          services:     freshSvc,
-        })
-
-      } catch (e) {
-        console.warn('[useSiteData] Firebase error:', e.message)
-        // Solo usar defaults si no tenemos NADA (ni cache ni datos previos)
-        if (!cached) {
-          setSite(DEFAULT_SITE)
-          setEcosystems(DEFAULT_ECOSYSTEMS)
-          setProjects(DEFAULT_PROJECTS)
-          setTestimonials(DEFAULT_TESTIMONIALS)
-          setServices(DEFAULT_SERVICES)
-        }
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    hydrate()
-    return () => { cancelled = true }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Mientras loading y sin datos: devolver estado de carga
-  // Los componentes deben manejar site=null como "aún cargando"
-  return {
-    site:         site         ?? DEFAULT_SITE,
-    ecosystems:   ecosystems   ?? [],
-    projects:     projects     ?? [],
-    testimonials: testimonials ?? [],
-    services:     services     ?? [],
-    loading,
-    // Flags para saber si tenemos datos reales o estamos esperando
-    hasData: site !== null,
-    setSite, setEcosystems, setProjects, setTestimonials, setServices,
-  }
 }
 </file>
 
