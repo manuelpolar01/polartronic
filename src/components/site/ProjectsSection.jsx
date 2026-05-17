@@ -100,31 +100,34 @@ function buildSrcDoc(html, targetLang) {
     });
   <\/script>`
 
-  // Script que oculta botones X/cierre dentro del HTML del demo
-  const hideCloseScript = `<script>
+  // CSS + Script que oculta CUALQUIER botón X dentro del demo HTML
+  const hideCloseScript = `<style>
+    [class*="close"],[class*="Close"],[class*="cerrar"],[class*="cancel"],
+    [class*="Cancel"],[class*="dismiss"],[class*="chiudi"],[class*="fermer"],
+    [id*="close"],[id*="Close"],[id*="cancel"],[id*="dismiss"] {
+      display: none !important;
+    }
+  </style>
+  <script>
 (function() {
-  function hideCloseBtns() {
-    var all = document.querySelectorAll('button, a, [role="button"], span, div');
-    all.forEach(function(el) {
-      var txt = (el.textContent || '').trim();
-      var cls = (el.className || '').toLowerCase();
-      var id  = (el.id || '').toLowerCase();
-      var isX = /^[x×✕✖xX]$/.test(txt);
-      var isClose = /(close|cerrar|cancel|dismiss|chiudi|fermer|schlie)/i.test(cls + ' ' + id);
+  function hideX() {
+    document.querySelectorAll('button, a, span, div, i').forEach(function(el) {
+      var hasNoElementChildren = el.children.length === 0;
+      var txt = (el.innerText || el.textContent || '').trim();
+      var isX = hasNoElementChildren && /^[×✕✖xX❌]$|^[xX]\s*$/.test(txt);
+      var cls = ((el.className || '') + ' ' + (el.id || '')).toLowerCase();
+      var isClose = /(close|cerrar|cancel|dismiss|chiudi|fermer|schlie)/.test(cls);
       if (isX || isClose) {
-        el.style.setProperty('display', 'none', 'important');
-        el.style.setProperty('visibility', 'hidden', 'important');
-        el.style.setProperty('pointer-events', 'none', 'important');
+        el.style.cssText += 'display:none!important;visibility:hidden!important;pointer-events:none!important;';
       }
     });
   }
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', hideCloseBtns);
-  } else {
-    hideCloseBtns();
-  }
-  setTimeout(hideCloseBtns, 500);
-  setTimeout(hideCloseBtns, 1500);
+    document.addEventListener('DOMContentLoaded', hideX);
+  } else { hideX(); }
+  setTimeout(hideX, 300);
+  setTimeout(hideX, 800);
+  setTimeout(hideX, 2000);
 })();
 <\/script>`
 
@@ -313,7 +316,7 @@ function ProjectShell({ project, brand, site, onClose }) {
           style={{ flex: 1, padding: '13px', background: primary, color: 'white', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 13, textTransform: 'uppercase', cursor: 'pointer' }}>
           {t.projects?.contractThis || 'Contratar'} →
         </button>
-        <button onClick={onClose} style={{ padding: '13px 18px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{t.projects?.backBtn || '← Volver'}</button>
+
       </div>
     </div>
   )

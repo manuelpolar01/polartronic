@@ -269,7 +269,7 @@ function EcosystemFullscreen({ eco, brand, onClose, t }) {
           style={{ flex: 1, padding: '13px', background: primary, color: 'white', borderRadius: 10, fontWeight: 800, fontSize: 13, textDecoration: 'none', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.8 }}>
           {t.ecosystems?.ctaContact || 'Contratar'} →
         </a>
-        <button onClick={onClose} style={{ padding: '13px 16px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>← Volver</button>
+
       </div>
     </div>
   )

@@ -195,17 +195,48 @@ export default function ContactSection({ contact, footer, brand, site }) {
         </div>
 
         {success ? (
-          <div style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${primary}40`, borderRadius: 20, padding: 'clamp(28px,5vw,56px)', textAlign: 'center', animation: 'ctIn 0.5s cubic-bezier(0.23,1,0.32,1) both' }}>
-            <div style={{ width: 80, height: 80, borderRadius: '50%', background: `${primary}15`, border: `2px solid ${primary}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px' }}>
-              <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                <path d="M8 18L15 25L28 11" stroke={primary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="60" style={{ animation: 'ctCheck 0.5s 0.2s cubic-bezier(0.23,1,0.32,1) both' }} />
+          <div style={{ borderRadius: 20, padding: 'clamp(28px,5vw,56px)', textAlign: 'center', animation: 'ctIn 0.5s cubic-bezier(0.23,1,0.32,1) both', background: `${primary}08`, border: `1px solid ${primary}30` }}>
+
+            {/* Icono animado */}
+            <div style={{ width: 88, height: 88, borderRadius: '50%', background: `${primary}15`, border: `2px solid ${primary}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px', boxShadow: `0 0 40px ${primary}20` }}>
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                <circle cx="20" cy="20" r="18" stroke={primary} strokeWidth="1.5" strokeOpacity="0.3"/>
+                <path d="M10 20L17 27L30 13" stroke={primary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="60" style={{ animation: 'ctCheck 0.6s 0.15s cubic-bezier(0.23,1,0.32,1) both' }} />
               </svg>
             </div>
-            <h3 style={{ fontSize: 'clamp(1.4rem,3vw,1.8rem)', fontWeight: 800, marginBottom: 12, color: 'var(--text-main)' }}>{t.contact.successTitle}</h3>
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '16px 20px', margin: '20px auto', maxWidth: 440 }}>
-              <p style={{ color: 'var(--text-dim)', fontSize: 15, lineHeight: 1.7, margin: 0 }}>{agentMsg || t.contact.successMessage}</p>
-            </div>
-            <button onClick={handleReset} style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.15)', padding: '10px 24px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', marginTop: 12 }}>
+
+            {/* Título */}
+            <h3 style={{ fontSize: 'clamp(1.4rem,3vw,1.8rem)', fontWeight: 800, marginBottom: 10, color: 'var(--text-main)' }}>
+              {t.contact.successTitle}
+            </h3>
+
+            {/* Mensaje */}
+            <p style={{ color: 'var(--text-dim)', fontSize: 'clamp(13px,2vw,15px)', lineHeight: 1.7, maxWidth: 420, margin: '0 auto 24px' }}>
+              {agentMsg || t.contact.successMessage}
+            </p>
+
+            {/* Separador con color primario */}
+            <div style={{ width: 48, height: 2, background: `linear-gradient(90deg, transparent, ${primary}, transparent)`, margin: '0 auto 24px' }} />
+
+            {/* Botón enviar otro */}
+            <button
+              onClick={handleReset}
+              style={{
+                background: 'transparent',
+                color: primary,
+                border: `1px solid ${primary}50`,
+                padding: '11px 28px',
+                borderRadius: 8,
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 700,
+                fontFamily: 'inherit',
+                letterSpacing: 0.5,
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = `${primary}15`; e.currentTarget.style.borderColor = primary }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = `${primary}50` }}
+            >
               {t.contact.sendAnother}
             </button>
           </div>
