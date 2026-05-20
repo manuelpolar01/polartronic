@@ -1,37 +1,49 @@
 /**
- * useUIStrings.js — FIXED v2
+ * useUIStrings.js — v3
  *
- * FIX IDIOMA (Problema 3):
- * useMemo no detecta cambios en window.__SITE_LANGUAGE__ porque es una
- * variable global, no estado React. Fix: useState + listener del custom
- * event 'sitelang' que LanguageTab dispara al guardar. Cuando el evento
- * llega, el hook re-calcula el idioma y todos los componentes que lo usan
- * se re-renderizan automáticamente con los strings correctos.
+ * Prioridad de idioma:
+ *  1. langOverride (pasado explícitamente al hook)
+ *  2. brand.language (lo que el admin configuró en el panel)
+ *  3. window.__SITE_LANGUAGE__ (ya resuelto por applyBrandColors)
+ *  4. navigator.language del visitante (detección automática por país/browser)
+ *  5. DEFAULT_LANGUAGE ('it') como último fallback
+ *
+ * Esto significa:
+ *  - Si el admin configuró español → todos ven español
+ *  - Si el admin NO configuró idioma → el visitante ve el idioma de su browser
+ *  - Si el browser del visitante no está soportado → italiano por defecto
  */
 
 import { useState, useEffect, useMemo } from 'react'
 import { getStrings, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from '../lib/uiStrings'
 
+const SUPPORTED_CODES = SUPPORTED_LANGUAGES.map(l => l.code)
+
+function detectBrowserLang() {
+  if (typeof navigator === 'undefined') return null
+  const lang = (navigator.language || navigator.userLanguage || '').slice(0, 2).toLowerCase()
+  return SUPPORTED_CODES.includes(lang) ? lang : null
+}
+
 function resolveLang(themeLang) {
-  const supported = SUPPORTED_LANGUAGES.map(l => l.code)
+  // 1. Idioma pasado directamente
+  if (themeLang && SUPPORTED_CODES.includes(themeLang)) return themeLang
 
-  if (themeLang && supported.includes(themeLang)) return themeLang
-
+  // 2. Variable global (seteada por applyBrandColors)
   if (typeof window !== 'undefined' && window.__SITE_LANGUAGE__) {
     const wl = window.__SITE_LANGUAGE__
-    if (supported.includes(wl)) return wl
+    if (SUPPORTED_CODES.includes(wl)) return wl
   }
 
-  if (typeof navigator !== 'undefined' && navigator.language) {
-    const bl = navigator.language.slice(0, 2).toLowerCase()
-    if (supported.includes(bl)) return bl
-  }
+  // 3. Idioma del navegador del visitante
+  const browserLang = detectBrowserLang()
+  if (browserLang) return browserLang
 
+  // 4. Fallback
   return DEFAULT_LANGUAGE
 }
 
 export function useUIStrings(brand = null, langOverride = null) {
-  // FIX: estado local que se actualiza cuando llega el custom event 'sitelang'
   const [globalLang, setGlobalLang] = useState(
     () => (typeof window !== 'undefined' ? window.__SITE_LANGUAGE__ : null)
   )

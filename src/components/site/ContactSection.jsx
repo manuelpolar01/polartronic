@@ -195,47 +195,81 @@ export default function ContactSection({ contact, footer, brand, site }) {
         </div>
 
         {success ? (
-          <div style={{ borderRadius: 20, padding: 'clamp(28px,5vw,56px)', textAlign: 'center', animation: 'ctIn 0.5s cubic-bezier(0.23,1,0.32,1) both', background: `${primary}08`, border: `1px solid ${primary}30` }}>
+          <div style={{
+            borderRadius: 20,
+            padding: 'clamp(28px,5vw,56px)',
+            textAlign: 'center',
+            animation: 'ctIn 0.5s cubic-bezier(0.23,1,0.32,1) both',
+            // Usa var(--card-bg) y var(--border) que cambian con el tema claro/oscuro
+            background: 'var(--card-bg)',
+            border: `2px solid ${primary}`,
+            boxShadow: `0 8px 40px ${primary}15`,
+          }}>
 
-            {/* Icono animado */}
-            <div style={{ width: 88, height: 88, borderRadius: '50%', background: `${primary}15`, border: `2px solid ${primary}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px', boxShadow: `0 0 40px ${primary}20` }}>
-              <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-                <circle cx="20" cy="20" r="18" stroke={primary} strokeWidth="1.5" strokeOpacity="0.3"/>
-                <path d="M10 20L17 27L30 13" stroke={primary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="60" style={{ animation: 'ctCheck 0.6s 0.15s cubic-bezier(0.23,1,0.32,1) both' }} />
+            {/* Icono animado — círculo con check */}
+            <div style={{
+              width: 90, height: 90, borderRadius: '50%',
+              background: primary,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 28px',
+              boxShadow: `0 0 0 12px ${primary}18, 0 0 0 24px ${primary}08`,
+              animation: 'ctIn 0.5s cubic-bezier(0.23,1,0.32,1) both',
+            }}>
+              <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+                <path
+                  d="M10 22L19 31L34 13"
+                  stroke="white"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray="70"
+                  style={{ animation: 'ctCheck 0.6s 0.2s cubic-bezier(0.23,1,0.32,1) both' }}
+                />
               </svg>
             </div>
 
-            {/* Título */}
-            <h3 style={{ fontSize: 'clamp(1.4rem,3vw,1.8rem)', fontWeight: 800, marginBottom: 10, color: 'var(--text-main)' }}>
+            {/* Título — usa var(--text-main) que cambia con el tema */}
+            <h3 style={{
+              fontSize: 'clamp(1.4rem,3vw,1.9rem)',
+              fontWeight: 800,
+              marginBottom: 12,
+              color: 'var(--text-main)',
+              letterSpacing: '-0.3px',
+            }}>
               {t.contact.successTitle}
             </h3>
 
-            {/* Mensaje */}
-            <p style={{ color: 'var(--text-dim)', fontSize: 'clamp(13px,2vw,15px)', lineHeight: 1.7, maxWidth: 420, margin: '0 auto 24px' }}>
+            {/* Mensaje — usa var(--text-dim) que cambia con el tema */}
+            <p style={{
+              color: 'var(--text-dim)',
+              fontSize: 'clamp(13px,2vw,15px)',
+              lineHeight: 1.8,
+              maxWidth: 400,
+              margin: '0 auto 28px',
+            }}>
               {agentMsg || t.contact.successMessage}
             </p>
 
-            {/* Separador con color primario */}
-            <div style={{ width: 48, height: 2, background: `linear-gradient(90deg, transparent, ${primary}, transparent)`, margin: '0 auto 24px' }} />
-
-            {/* Botón enviar otro */}
+            {/* Botón — usa primary y var(--text-main) */}
             <button
               onClick={handleReset}
               style={{
-                background: 'transparent',
-                color: primary,
-                border: `1px solid ${primary}50`,
-                padding: '11px 28px',
+                background: primary,
+                color: 'white',
+                border: 'none',
+                padding: '12px 32px',
                 borderRadius: 8,
                 cursor: 'pointer',
                 fontSize: 13,
                 fontWeight: 700,
                 fontFamily: 'inherit',
-                letterSpacing: 0.5,
+                letterSpacing: 1,
+                textTransform: 'uppercase',
                 transition: 'all 0.2s',
+                boxShadow: `0 4px 20px ${primary}35`,
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = `${primary}15`; e.currentTarget.style.borderColor = primary }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = `${primary}50` }}
+              onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+              onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)' }}
             >
               {t.contact.sendAnother}
             </button>

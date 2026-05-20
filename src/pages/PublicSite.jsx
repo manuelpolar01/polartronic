@@ -53,7 +53,14 @@ export function applyBrandColors(brand) {
     }
   }
 
-  if (brand.language) window.__SITE_LANGUAGE__ = brand.language
+  // Prioridad: 1) admin configuró idioma  2) navegador del visitante  3) italiano por defecto
+  const SUPPORTED = ['it', 'en', 'es', 'fr', 'de', 'pt']
+  if (brand.language) {
+    window.__SITE_LANGUAGE__ = brand.language
+  } else {
+    const browserLang = (navigator.language || 'it').slice(0, 2).toLowerCase()
+    window.__SITE_LANGUAGE__ = SUPPORTED.includes(browserLang) ? browserLang : 'it'
+  }
 }
 
 function SiteLoader() {
