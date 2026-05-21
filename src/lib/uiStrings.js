@@ -94,6 +94,55 @@ const strings = {
     // ── NUEVO: mensaje de éxito — reacciona al idioma en tiempo real ──
     successTitle:   { it: 'Richiesta ricevuta!',     en: 'Request received!',  es: '¡Solicitud recibida!',   fr: 'Demande reçue !',           de: 'Anfrage erhalten!',         pt: 'Pedido recebido!'          },
     successMessage: { it: 'Ti contatteremo entro 24 ore.', en: "We'll contact you within 24 hours.", es: 'Te contactaremos en menos de 24 horas.', fr: 'Nous vous contacterons dans les 24 heures.', de: 'Wir melden uns innerhalb von 24 Stunden.', pt: 'Entraremos em contato em até 24 horas.' },
+    // ── GDPR / Privacy checkbox ──────────────────────────────────────
+    privacyCheckbox: {
+      it: 'Ho letto e accetto la',
+      en: 'I have read and accept the',
+      es: 'He leído y acepto la',
+      fr: "J'ai lu et j'accepte la",
+      de: 'Ich habe die gelesen und akzeptiere die',
+      pt: 'Li e aceito a',
+    },
+    privacyLink: {
+      it: 'Informativa sulla Privacy',
+      en: 'Privacy Policy',
+      es: 'Política de Privacidad',
+      fr: 'Politique de Confidentialité',
+      de: 'Datenschutzerklärung',
+      pt: 'Política de Privacidade',
+    },
+    privacyModalTitle: {
+      it: 'La tua Privacy',
+      en: 'Your Privacy',
+      es: 'Tu Privacidad',
+      fr: 'Votre Confidentialité',
+      de: 'Deine Privatsphäre',
+      pt: 'A sua Privacidade',
+    },
+    privacyModalText: {
+      it: 'I dati che ci invii (nome, email e telefono) vengono utilizzati esclusivamente per rispondere alla tua richiesta. Non li vendiamo, non li condividiamo con nessuno e non ti invieremo pubblicità. Li conserviamo in modo sicuro e li eliminiamo quando non sono più necessari. Hai il diritto di chiedere la loro cancellazione in qualsiasi momento scrivendo a noi direttamente.',
+      en: 'The information you send us (name, email and phone) is used only to reply to your enquiry. We do not sell it, share it with anyone, or send you advertising. We store it securely and delete it when it is no longer needed. You can ask us to delete your data at any time by contacting us directly.',
+      es: 'Los datos que nos envías (nombre, email y teléfono) se usan únicamente para responderte. No los vendemos, no los compartimos con nadie y no te enviaremos publicidad. Los guardamos de forma segura y los eliminamos cuando ya no son necesarios. Puedes pedirnos que los eliminemos en cualquier momento escribiéndonos directamente.',
+      fr: "Les informations que vous nous envoyez (nom, e-mail et téléphone) sont utilisées uniquement pour répondre à votre demande. Nous ne les vendons pas, ne les partageons avec personne et ne vous enverrons pas de publicité. Nous les conservons en sécurité et les supprimons dès qu'elles ne sont plus nécessaires. Vous pouvez nous demander de les supprimer à tout moment en nous contactant directement.",
+      de: 'Die Daten, die du uns sendest (Name, E-Mail und Telefon), werden ausschließlich verwendet, um deine Anfrage zu beantworten. Wir verkaufen sie nicht, teilen sie mit niemandem und senden dir keine Werbung. Wir speichern sie sicher und löschen sie, wenn sie nicht mehr benötigt werden. Du kannst jederzeit die Löschung deiner Daten verlangen, indem du uns direkt kontaktierst.',
+      pt: 'Os dados que nos envia (nome, e-mail e telefone) são usados apenas para responder à sua solicitação. Não os vendemos, não os partilhamos com ninguém e não lhe enviaremos publicidade. Guardamo-los de forma segura e eliminamo-los quando já não são necessários. Pode pedir-nos que os eliminemos a qualquer momento contactando-nos diretamente.',
+    },
+    privacyModalClose: {
+      it: 'Ho capito',
+      en: 'Got it',
+      es: 'Entendido',
+      fr: 'Compris',
+      de: 'Verstanden',
+      pt: 'Entendido',
+    },
+    privacyRequired: {
+      it: 'Devi accettare la privacy policy per continuare',
+      en: 'You must accept the privacy policy to continue',
+      es: 'Debes aceptar la política de privacidad para continuar',
+      fr: 'Vous devez accepter la politique de confidentialité pour continuer',
+      de: 'Sie müssen die Datenschutzerklärung akzeptieren um fortzufahren',
+      pt: 'Você deve aceitar a política de privacidade para continuar',
+    },
   },
 
   footer: {

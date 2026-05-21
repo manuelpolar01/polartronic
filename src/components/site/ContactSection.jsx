@@ -95,6 +95,9 @@ export default function ContactSection({ contact, footer, brand, site }) {
   const [success,  setSuccess] = useState(false)
   const [apiErr,   setApiErr]  = useState('')
   const [agentMsg, setAgentMsg]= useState('')
+  const [privacyChecked, setPrivacyChecked] = useState(false)
+  const [privacyError,   setPrivacyError]   = useState(false)
+  const [privacyModal,   setPrivacyModal]   = useState(false)
 
   const setValue = (id, val) => {
     setValues(p => ({ ...p, [id]: val }))
@@ -102,6 +105,12 @@ export default function ContactSection({ contact, footer, brand, site }) {
   }
 
   const validate = () => {
+    // Validar checkbox de privacidad (obligatorio RGPD)
+    if (!privacyChecked) {
+      setPrivacyError(true)
+      return false
+    }
+    setPrivacyError(false)
     const next = {}
     fields.forEach(f => {
       if (f.required && !values[f.id]?.trim()) next[f.id] = t.contact.fieldRequired
@@ -146,6 +155,7 @@ export default function ContactSection({ contact, footer, brand, site }) {
     setSuccess(false); setAgentMsg('')
     setValues(Object.fromEntries(fields.map(f => [f.id, ''])))
     setErrors({}); setApiErr('')
+    setPrivacyChecked(false); setPrivacyError(false)
   }
 
   const serviceOptions = SERVICE_OPTIONS[lang] || SERVICE_OPTIONS['en']
@@ -351,9 +361,140 @@ export default function ContactSection({ contact, footer, brand, site }) {
                   </a>
                 )}
               </div>
-              <p style={{ marginTop: 16, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>{t.contact.privacy}</p>
+              {/* GDPR / Privacy checkbox — obligatorio para UE, Suiza, Brasil */}
+              <div style={{ marginTop: 18 }}>
+                <label style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 12,
+                  cursor: 'pointer',
+                }}>
+                  {/* Checkbox personalizado */}
+                  <div
+                    onClick={() => { setPrivacyChecked(p => !p); setPrivacyError(false) }}
+                    style={{
+                      flexShrink: 0,
+                      width: 20, height: 20,
+                      borderRadius: 5,
+                      border: `2px solid ${privacyError ? 'rgba(255,80,80,0.8)' : privacyChecked ? primary : 'rgba(255,255,255,0.2)'}`,
+                      background: privacyChecked ? primary : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.2s',
+                      marginTop: 1,
+                    }}
+                  >
+                    {privacyChecked && (
+                      <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                        <path d="M1 4L4 7L10 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                  {/* Texto del checkbox */}
+                  <span style={{ fontSize: 12, color: privacyError ? 'rgba(255,100,100,0.9)' : 'var(--text-muted)', lineHeight: 1.6 }}>
+                    {t.contact.privacyCheckbox}{' '}
+                    <button
+                      type="button"
+                      onClick={e => { e.preventDefault(); setPrivacyModal(true) }}
+                      style={{ background: 'none', border: 'none', padding: 0, color: primary, textDecoration: 'underline', fontWeight: 600, cursor: 'pointer', fontSize: 'inherit', fontFamily: 'inherit' }}
+                    >
+                      {t.contact.privacyLink}
+                    </button>
+                    {' '}*
+                  </span>
+                </label>
+                {privacyError && (
+                  <p style={{ margin: '6px 0 0 32px', fontSize: 11, color: 'rgba(255,100,100,0.9)' }}>
+                    {t.contact.privacyRequired}
+                  </p>
+                )}
+              </div>
             </form>
           </div>
+        )}
+
+        {/* ── MODAL PRIVACIDAD ── */}
+        {privacyModal && (
+          <>
+            {/* Backdrop */}
+            <div
+              onClick={() => setPrivacyModal(false)}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 9000,
+                background: 'rgba(0,0,0,0.6)',
+                backdropFilter: 'blur(6px)',
+                WebkitBackdropFilter: 'blur(6px)',
+                animation: 'ctIn 0.25s ease both',
+              }}
+            />
+            {/* Panel */}
+            <div style={{
+              position: 'fixed',
+              top: '50%', left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 9001,
+              width: 'min(520px, 92vw)',
+              background: 'var(--card-bg)',
+              border: `1px solid ${primary}40`,
+              borderRadius: 20,
+              padding: 'clamp(28px,5vw,48px)',
+              boxShadow: `0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px ${primary}20`,
+              animation: 'ctIn 0.3s cubic-bezier(0.16,1,0.3,1) both',
+            }}>
+              {/* Icono */}
+              <div style={{
+                width: 52, height: 52, borderRadius: '50%',
+                background: `${primary}15`,
+                border: `1px solid ${primary}40`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 24, margin: '0 auto 20px',
+              }}>
+                🔒
+              </div>
+
+              {/* Título */}
+              <h3 style={{
+                textAlign: 'center',
+                fontSize: 'clamp(1.1rem,3vw,1.4rem)',
+                fontWeight: 800,
+                marginBottom: 16,
+                color: 'var(--text-main)',
+              }}>
+                {t.contact.privacyModalTitle}
+              </h3>
+
+              {/* Texto simple y humano */}
+              <p style={{
+                fontSize: 'clamp(13px,2vw,15px)',
+                color: 'var(--text-dim)',
+                lineHeight: 1.85,
+                marginBottom: 28,
+                textAlign: 'center',
+              }}>
+                {t.contact.privacyModalText}
+              </p>
+
+              {/* Botón cerrar */}
+              <button
+                onClick={() => { setPrivacyModal(false); setPrivacyChecked(true); setPrivacyError(false) }}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  background: primary,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 10,
+                  fontWeight: 800,
+                  fontSize: 14,
+                  letterSpacing: 0.5,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  transition: 'opacity 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.opacity = '0.85' }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
+              >
+                {t.contact.privacyModalClose} ✓
+              </button>
+            </div>
+          </>
         )}
 
         {footer?.email && (
