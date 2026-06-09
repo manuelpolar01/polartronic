@@ -49,6 +49,7 @@ middleware.js
 package.json
 postcss.config.js
 public/favicon.png
+public/googlea93a21120524b423.html
 public/index.html
 public/robots.txt
 public/sitemap.xml
@@ -148,6 +149,10 @@ This section contains the contents of the repository's files.
 export default {
   plugins: { tailwindcss: {}, autoprefixer: {} },
 }
+</file>
+
+<file path="public/googlea93a21120524b423.html">
+
 </file>
 
 <file path="public/index.html">
@@ -716,503 +721,6 @@ export default function AgentsTab({ data }) {
           dalla sezione Inbox Lead.
         </div>
       )}
-    </div>
-  )
-}
-</file>
-
-<file path="src/components/admin/tabs/LeadsTab.jsx">
-/**
- * LeadsTab.jsx
- * ─────────────────────────────────────────────────────────────────────────
- * Inbox completa dei lead nel pannello admin.
- * Funzionalità:
- *  - Lista lead con stati: nuovo / assegnato / in trattativa / chiuso
- *  - Filtri per zona, stato, agente, data
- *  - Apertura WhatsApp/email direttamente dal lead
- *  - Assegnazione agente manuale
- *  - Note interne
- *  - Export CSV
- */
-
-import { useState, useEffect, useMemo } from 'react'
-import {
-  collection, getDocs, updateDoc, doc, query,
-  orderBy, onSnapshot,
-} from 'firebase/firestore'
-import { db } from '../../../lib/firebase'
-import toast from 'react-hot-toast'
-
-// ── Costanti ──────────────────────────────────────────────────────────
-const STATI = [
-  { id: 'nuovo',       label: 'Nuovo',        color: '#3B8BD4' },
-  { id: 'assegnato',   label: 'Assegnato',    color: '#EF9F27' },
-  { id: 'trattativa',  label: 'In trattativa',color: '#7F77DD' },
-  { id: 'chiuso',      label: 'Chiuso',       color: '#1D9E75' },
-  { id: 'perso',       label: 'Perso',        color: '#888780' },
-]
-
-function StatoBadge({ stato }) {
-  const s = STATI.find(x => x.id === stato) || STATI[0]
-  return (
-    <span style={{
-      fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-      letterSpacing: 1, padding: '3px 10px', borderRadius: 20,
-      background: `${s.color}18`, color: s.color,
-      border: `1px solid ${s.color}40`,
-    }}>
-      {s.label}
-    </span>
-  )
-}
-
-function formatDate(ts) {
-  if (!ts) return '—'
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleDateString('it-IT', {
-    day: '2-digit', month: '2-digit', year: '2-digit',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
-
-function exportCSV(leads) {
-  const header = ['Data', 'Nome', 'Email', 'Telefono', 'Zona', 'Servizio', 'Messaggio', 'Stato', 'Agente']
-  const rows = leads.map(l => [
-    formatDate(l.createdAt),
-    l.name || '', l.email || '', l.phone || '',
-    l.zona || '', l.servizio || '',
-    (l.message || '').replace(/,/g, ';'),
-    l.stato || 'nuovo', l.agente || '',
-  ])
-  const csv = [header, ...rows].map(r => r.join(',')).join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url  = URL.createObjectURL(blob)
-  const a    = document.createElement('a')
-  a.href = url; a.download = `lead_${Date.now()}.csv`; a.click()
-  URL.revokeObjectURL(url)
-}
-
-// ── Componente principale ─────────────────────────────────────────────
-export default function LeadsTab({ data }) {
-  const [leads,        setLeads]        = useState([])
-  const [loading,      setLoading]      = useState(true)
-  const [selected,     setSelected]     = useState(null)
-  const [filtroStato,  setFiltroStato]  = useState('tutti')
-  const [filtroZona,   setFiltroZona]   = useState('')
-  const [search,       setSearch]       = useState('')
-  const [noteText,     setNoteText]     = useState('')
-  const [savingNote,   setSavingNote]   = useState(false)
-
-  // Agenti disponibili dal site config
-  const agenti = data?.site?.agents || []
-
-  // ── Carica lead in realtime ────────────────────────────────────────
-  useEffect(() => {
-    const q = query(collection(db, 'leads'), orderBy('createdAt', 'desc'))
-    const unsub = onSnapshot(q, snap => {
-      setLeads(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-      setLoading(false)
-    }, err => {
-      console.error('[LeadsTab]', err)
-      setLoading(false)
-    })
-    return unsub
-  }, [])
-
-  // ── Zone uniche per filtro ─────────────────────────────────────────
-  const zoneUniche = useMemo(() =>
-    [...new Set(leads.map(l => l.zona).filter(Boolean))].sort(),
-  [leads])
-
-  // ── Filtri ─────────────────────────────────────────────────────────
-  const leadsFiltrati = useMemo(() => {
-    return leads.filter(l => {
-      const matchStato = filtroStato === 'tutti' || (l.stato || 'nuovo') === filtroStato
-      const matchZona  = !filtroZona || l.zona === filtroZona
-      const matchSearch = !search || [l.name, l.email, l.phone, l.zona, l.servizio]
-        .some(v => v?.toLowerCase().includes(search.toLowerCase()))
-      return matchStato && matchZona && matchSearch
-    })
-  }, [leads, filtroStato, filtroZona, search])
-
-  // ── Aggiorna stato ─────────────────────────────────────────────────
-  const updateStato = async (leadId, nuovoStato) => {
-    try {
-      await updateDoc(doc(db, 'leads', leadId), { stato: nuovoStato })
-      if (selected?.id === leadId) setSelected(p => ({ ...p, stato: nuovoStato }))
-      toast.success('Stato aggiornato')
-    } catch { toast.error('Errore aggiornamento') }
-  }
-
-  // ── Assegna agente ─────────────────────────────────────────────────
-  const assignAgent = async (leadId, agente) => {
-    try {
-      await updateDoc(doc(db, 'leads', leadId), {
-        agente, stato: 'assegnato',
-      })
-      if (selected?.id === leadId) setSelected(p => ({ ...p, agente, stato: 'assegnato' }))
-      toast.success(`Assegnato a ${agente}`)
-    } catch { toast.error('Errore assegnazione') }
-  }
-
-  // ── Salva nota ─────────────────────────────────────────────────────
-  const saveNote = async () => {
-    if (!selected || !noteText.trim()) return
-    setSavingNote(true)
-    try {
-      const nota = {
-        testo: noteText.trim(),
-        data: new Date().toISOString(),
-      }
-      const nuoveNote = [...(selected.note || []), nota]
-      await updateDoc(doc(db, 'leads', selected.id), { note: nuoveNote })
-      setSelected(p => ({ ...p, note: nuoveNote }))
-      setNoteText('')
-      toast.success('Nota salvata')
-    } catch { toast.error('Errore') }
-    finally { setSavingNote(false) }
-  }
-
-  // ── Conteggi per tab stati ─────────────────────────────────────────
-  const conteggioPerStato = useMemo(() => {
-    const c = { tutti: leads.length }
-    STATI.forEach(s => {
-      c[s.id] = leads.filter(l => (l.stato || 'nuovo') === s.id).length
-    })
-    return c
-  }, [leads])
-
-  // ── WhatsApp URL ────────────────────────────────────────────────────
-  const whatsappUrl = (phone, name) => {
-    const tel = phone?.replace(/\D/g, '')
-    const msg = encodeURIComponent(`Ciao ${name || ''}, sono del team Polartronic. La contatto riguardo alla sua richiesta.`)
-    return `https://wa.me/${tel}?text=${msg}`
-  }
-
-  return (
-    <div>
-      {/* ── Header ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 4 }}>
-            📥 Inbox Lead
-          </h2>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>
-            {leads.length} lead totali · {conteggioPerStato.nuovo || 0} nuovi
-          </p>
-        </div>
-        <button
-          onClick={() => exportCSV(leadsFiltrati)}
-          style={{
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.15)',
-            color: 'rgba(255,255,255,0.6)',
-            padding: '8px 16px', borderRadius: 8,
-            cursor: 'pointer', fontSize: 12, fontWeight: 600,
-          }}
-        >
-          ↓ Esporta CSV
-        </button>
-      </div>
-
-      {/* ── Stats cards ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10, marginBottom: 20 }}>
-        {[{ id: 'tutti', label: 'Totali', color: 'rgba(255,255,255,0.4)' }, ...STATI].map(s => (
-          <button
-            key={s.id}
-            onClick={() => setFiltroStato(s.id)}
-            style={{
-              background: filtroStato === s.id ? 'rgba(255,60,60,0.08)' : 'rgba(255,255,255,0.02)',
-              border: `1px solid ${filtroStato === s.id ? 'var(--primary)' : 'rgba(255,255,255,0.07)'}`,
-              borderRadius: 10, padding: '12px 10px',
-              cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s',
-            }}
-          >
-            <div style={{ fontSize: 22, fontWeight: 800, color: s.color || 'var(--primary)' }}>
-              {conteggioPerStato[s.id] || 0}
-            </div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 1, marginTop: 3 }}>
-              {s.label}
-            </div>
-          </button>
-        ))}
-      </div>
-
-      {/* ── Filtri ── */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-        <input
-          className="admin-input"
-          style={{ flex: 1, minWidth: 200 }}
-          placeholder="Cerca per nome, email, telefono..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-        {zoneUniche.length > 0 && (
-          <select
-            className="admin-input"
-            style={{ width: 180 }}
-            value={filtroZona}
-            onChange={e => setFiltroZona(e.target.value)}
-          >
-            <option value="">Tutte le zone</option>
-            {zoneUniche.map(z => <option key={z} value={z}>{z}</option>)}
-          </select>
-        )}
-      </div>
-
-      {/* ── Layout: lista + dettaglio ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 1fr' : '1fr', gap: 16 }}>
-
-        {/* Lista lead */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {loading && (
-            <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.3)' }}>
-              Caricamento...
-            </div>
-          )}
-          {!loading && leadsFiltrati.length === 0 && (
-            <div style={{
-              textAlign: 'center', padding: 40,
-              color: 'rgba(255,255,255,0.25)', fontSize: 14,
-              border: '1px dashed rgba(255,255,255,0.1)',
-              borderRadius: 12,
-            }}>
-              Nessun lead trovato
-            </div>
-          )}
-          {leadsFiltrati.map(lead => (
-            <div
-              key={lead.id}
-              onClick={() => { setSelected(lead); setNoteText('') }}
-              style={{
-                background: selected?.id === lead.id
-                  ? 'rgba(255,60,60,0.06)'
-                  : 'rgba(255,255,255,0.02)',
-                border: `1px solid ${selected?.id === lead.id ? 'rgba(255,60,60,0.3)' : 'rgba(255,255,255,0.07)'}`,
-                borderRadius: 12, padding: '14px 16px',
-                cursor: 'pointer', transition: 'all 0.15s',
-              }}
-              onMouseEnter={e => { if (selected?.id !== lead.id) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)' }}
-              onMouseLeave={e => { if (selected?.id !== lead.id) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 700, fontSize: 14 }}>{lead.name || 'Senza nome'}</span>
-                    <StatoBadge stato={lead.stato || 'nuovo'} />
-                    {lead.agente && (
-                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>
-                        → {lead.agente}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>
-                    {[lead.zona, lead.servizio].filter(Boolean).join(' · ')}
-                  </div>
-                  {lead.email && (
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>
-                      {lead.email}
-                    </div>
-                  )}
-                </div>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', flexShrink: 0, textAlign: 'right' }}>
-                  {formatDate(lead.createdAt)}
-                  {(lead.note?.length > 0) && (
-                    <div style={{ marginTop: 4, color: 'rgba(255,200,0,0.5)' }}>
-                      📝 {lead.note.length}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Dettaglio lead */}
-        {selected && (
-          <div style={{
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 14, padding: 20,
-            position: 'sticky', top: 20, alignSelf: 'start',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{selected.name}</h3>
-              <button
-                onClick={() => setSelected(null)}
-                style={{
-                  background: 'none', border: 'none',
-                  color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 18,
-                }}
-              >✕</button>
-            </div>
-
-            {/* Dati contatto */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-              {[
-                { label: 'Email', value: selected.email },
-                { label: 'Telefono', value: selected.phone },
-                { label: 'Zona', value: selected.zona },
-                { label: 'Servizio', value: selected.servizio },
-                { label: 'Data', value: formatDate(selected.createdAt) },
-              ].filter(r => r.value).map(row => (
-                <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                  <span style={{ color: 'rgba(255,255,255,0.4)' }}>{row.label}</span>
-                  <span style={{ fontWeight: 500 }}>{row.value}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Messaggio */}
-            {selected.message && (
-              <div style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.07)',
-                borderRadius: 8, padding: '10px 12px',
-                fontSize: 13, color: 'rgba(255,255,255,0.6)',
-                lineHeight: 1.6, marginBottom: 16,
-              }}>
-                "{selected.message}"
-              </div>
-            )}
-
-            {/* Azioni rapide */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-              {selected.phone && (
-                <a
-                  href={whatsappUrl(selected.phone, selected.name)}
-                  target="_blank" rel="noreferrer"
-                  style={{
-                    flex: 1, textAlign: 'center',
-                    background: 'rgba(37,211,102,0.1)',
-                    border: '1px solid rgba(37,211,102,0.3)',
-                    color: '#25d366', padding: '8px 12px',
-                    borderRadius: 8, textDecoration: 'none',
-                    fontSize: 12, fontWeight: 700,
-                  }}
-                >
-                  💬 WhatsApp
-                </a>
-              )}
-              {selected.email && (
-                <a
-                  href={`mailto:${selected.email}?subject=Risposta alla tua richiesta — Polartronic`}
-                  style={{
-                    flex: 1, textAlign: 'center',
-                    background: 'rgba(55,138,221,0.1)',
-                    border: '1px solid rgba(55,138,221,0.3)',
-                    color: '#378add', padding: '8px 12px',
-                    borderRadius: 8, textDecoration: 'none',
-                    fontSize: 12, fontWeight: 700,
-                  }}
-                >
-                  ✉️ Email
-                </a>
-              )}
-              {selected.phone && (
-                <a
-                  href={`tel:${selected.phone}`}
-                  style={{
-                    flex: 1, textAlign: 'center',
-                    background: 'rgba(29,158,117,0.1)',
-                    border: '1px solid rgba(29,158,117,0.3)',
-                    color: '#1D9E75', padding: '8px 12px',
-                    borderRadius: 8, textDecoration: 'none',
-                    fontSize: 12, fontWeight: 700,
-                  }}
-                >
-                  📞 Chiama
-                </a>
-              )}
-            </div>
-
-            {/* Cambio stato */}
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
-                Stato
-              </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {STATI.map(s => (
-                  <button
-                    key={s.id}
-                    onClick={() => updateStato(selected.id, s.id)}
-                    style={{
-                      padding: '5px 12px', borderRadius: 20, fontSize: 11,
-                      fontWeight: 700, cursor: 'pointer', border: 'none',
-                      background: (selected.stato || 'nuovo') === s.id
-                        ? s.color
-                        : `${s.color}20`,
-                      color: (selected.stato || 'nuovo') === s.id
-                        ? 'white'
-                        : s.color,
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Assegna agente */}
-            {agenti.length > 0 && (
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
-                  Agente assegnato
-                </div>
-                <select
-                  className="admin-input"
-                  value={selected.agente || ''}
-                  onChange={e => assignAgent(selected.id, e.target.value)}
-                >
-                  <option value="">Non assegnato</option>
-                  {agenti.map(a => (
-                    <option key={a.id || a.nome} value={a.nome}>{a.nome} — {a.zone?.join(', ')}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Note interne */}
-            <div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
-                Note interne
-              </div>
-              {(selected.note || []).map((n, i) => (
-                <div key={i} style={{
-                  background: 'rgba(255,200,0,0.04)',
-                  border: '1px solid rgba(255,200,0,0.1)',
-                  borderRadius: 6, padding: '8px 10px',
-                  fontSize: 12, marginBottom: 6,
-                }}>
-                  <div style={{ color: 'rgba(255,255,255,0.5)' }}>{n.testo}</div>
-                  <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10, marginTop: 3 }}>
-                    {new Date(n.data).toLocaleString('it-IT')}
-                  </div>
-                </div>
-              ))}
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <input
-                  className="admin-input"
-                  style={{ flex: 1 }}
-                  placeholder="Aggiungi nota..."
-                  value={noteText}
-                  onChange={e => setNoteText(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && saveNote()}
-                />
-                <button
-                  className="save-btn"
-                  onClick={saveNote}
-                  disabled={savingNote || !noteText.trim()}
-                  style={{ padding: '10px 14px', fontSize: 12 }}
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   )
 }
@@ -2134,214 +1642,6 @@ exports.sendSMS = onRequest(
     "firebase-admin": "^12.0.0"
   },
   "private": true
-}
-</file>
-
-<file path="src/hooks/useTranslatedContent.js">
-/**
- * useTranslatedContent.js
- * ─────────────────────────────────────────────────────────────────────────
- * Hook React que traduce un objeto de contenido (o string simple)
- * al idioma activo configurado en el panel.
- *
- * COMPORTAMIENTO:
- *  - Mientras traduce → devuelve el contenido ORIGINAL (sin flash vacío)
- *  - Cuando termina   → devuelve el contenido TRADUCIDO
- *  - Si lang === sourceLang → devuelve original sin llamar a la API
- *  - Si la API falla  → devuelve original (silencioso)
- *  - Escucha el evento 'sitelang' para reaccionar al cambio de idioma
- *    en tiempo real sin recargar la página
- *
- * USO:
- *   // String simple
- *   const title = useTranslatedContent(hero.headline, brand)
- *
- *   // Objeto con múltiples campos
- *   const { headline, sub, badge } = useTranslatedContent(
- *     { headline: hero.headline, sub: hero.sub, badge: hero.badge },
- *     brand
- *   )
- *
- * PARÁMETROS:
- *   content    {string|object}  Texto o mapa de textos a traducir
- *   brand      {object}         Objeto brand del site (necesita brand.language)
- *   sourceLang {string}         Idioma en que está escrito el contenido.
- *                               Si no se especifica se usa brand.language como
- *                               idioma origen (el admin escribe en el lang activo
- *                               al momento de guardar — asumimos que no cambia).
- *                               Pasa 'auto' para detección automática.
- */
-
-import { useState, useEffect, useRef } from 'react'
-import { translateBatch, shouldTranslate } from '../lib/translate'
-import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from '../lib/uiStrings'
-
-function resolveTargetLang(brand) {
-  const supported = SUPPORTED_LANGUAGES.map(l => l.code)
-  const fromBrand = brand?.language
-  const fromWindow = typeof window !== 'undefined' ? window.__SITE_LANGUAGE__ : null
-
-  const candidate = fromBrand || fromWindow || DEFAULT_LANGUAGE
-  return supported.includes(candidate) ? candidate : DEFAULT_LANGUAGE
-}
-
-/**
- * Extrae todos los valores string de un objeto (un nivel de profundidad)
- * Ignora valores que no son string, arrays de objetos, etc.
- */
-function extractStrings(content) {
-  if (typeof content === 'string') return [content]
-  if (typeof content !== 'object' || content === null) return []
-  return Object.values(content).filter(v => typeof v === 'string' && v.trim())
-}
-
-/**
- * Reconstruye el objeto traducido dado el original y el array de traducciones
- */
-function rebuildObject(original, keys, translations) {
-  if (typeof original === 'string') return translations[0] ?? original
-  const result = { ...original }
-  let i = 0
-  for (const key of keys) {
-    if (typeof original[key] === 'string' && original[key].trim()) {
-      result[key] = translations[i] ?? original[key]
-      i++
-    }
-  }
-  return result
-}
-
-export function useTranslatedContent(content, brand, sourceLang = 'auto') {
-  const [translated, setTranslated] = useState(content)
-  const abortRef = useRef(false)
-
-  // Escuchar cambio de idioma en tiempo real
-  const [langTick, setLangTick] = useState(0)
-  useEffect(() => {
-    const handler = () => setLangTick(t => t + 1)
-    window.addEventListener('sitelang', handler)
-    return () => window.removeEventListener('sitelang', handler)
-  }, [])
-
-  useEffect(() => {
-    // Reset: mostrar original mientras se traduce (sin flash vacío)
-    setTranslated(content)
-    abortRef.current = false
-
-    const targetLang = resolveTargetLang(brand)
-
-    // Si no hace falta traducir → salir inmediatamente
-    if (!shouldTranslate(targetLang, sourceLang)) return
-    if (!content) return
-
-    // Preparar textos a traducir
-    const isString = typeof content === 'string'
-    const keys = isString ? null : Object.keys(content).filter(
-      k => typeof content[k] === 'string' && content[k].trim()
-    )
-    const texts = isString ? [content] : keys.map(k => content[k])
-
-    if (!texts.length) return
-
-    let cancelled = false
-
-    translateBatch(texts, targetLang, sourceLang).then(results => {
-      if (cancelled || abortRef.current) return
-      if (isString) {
-        setTranslated(results[0] ?? content)
-      } else {
-        setTranslated(rebuildObject(content, keys, results))
-      }
-    })
-
-    return () => { cancelled = true }
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    // Serializar content para comparación estable
-    typeof content === 'string' ? content : JSON.stringify(content),
-    brand?.language,
-    langTick,
-    sourceLang,
-  ])
-
-  return translated
-}
-
-/**
- * useTranslatedArray — para arrays de objetos (servicios, testimonios, etc.)
- * Traduce cada item del array de forma independiente y en paralelo.
- *
- * USO:
- *   const translatedServices = useTranslatedArray(services, ['title','desc'], brand)
- *
- * @param {object[]} items     Array de objetos
- * @param {string[]} fields    Campos a traducir en cada objeto
- * @param {object}   brand     Objeto brand
- * @param {string}   sourceLang
- */
-export function useTranslatedArray(items, fields, brand, sourceLang = 'auto') {
-  const [translated, setTranslated] = useState(items)
-  const [langTick, setLangTick] = useState(0)
-
-  useEffect(() => {
-    const handler = () => setLangTick(t => t + 1)
-    window.addEventListener('sitelang', handler)
-    return () => window.removeEventListener('sitelang', handler)
-  }, [])
-
-  useEffect(() => {
-    setTranslated(items)
-    if (!items || !items.length) return
-
-    const targetLang = resolveTargetLang(brand)
-    if (!shouldTranslate(targetLang, sourceLang)) return
-
-    let cancelled = false
-
-    async function run() {
-      // Traducir todos los items en paralelo
-      const promises = items.map(async item => {
-        const texts = fields
-          .filter(f => typeof item[f] === 'string' && item[f].trim())
-          .map(f => item[f])
-
-        if (!texts.length) return item
-
-        const results = await translateBatch(texts, targetLang, sourceLang)
-
-        const updated = { ...item }
-        let i = 0
-        for (const f of fields) {
-          if (typeof item[f] === 'string' && item[f].trim()) {
-            updated[f] = results[i] ?? item[f]
-            i++
-          }
-        }
-        return updated
-      })
-
-      const results = await Promise.allSettled(promises)
-      if (cancelled) return
-
-      setTranslated(
-        results.map((r, i) => r.status === 'fulfilled' ? r.value : items[i])
-      )
-    }
-
-    run()
-
-    return () => { cancelled = true }
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    JSON.stringify(items?.map(i => fields.map(f => i[f]))),
-    brand?.language,
-    langTick,
-    sourceLang,
-  ])
-
-  return translated
 }
 </file>
 
@@ -3799,6 +3099,466 @@ export default function BookingFlow({ theme = {}, services = [], slots = {}, onB
 }
 </file>
 
+<file path="src/components/admin/tabs/LeadsTab.jsx">
+/**
+ * LeadsTab.jsx
+ * ─────────────────────────────────────────────────────────────────────────
+ * AÑADIDO quirúrgico:
+ *  - Botón 🗑 por cada lead → elimina uno
+ *  - Botón "Eliminar todos" → limpia toda la bandeja con confirmación
+ *  Todo lo demás INTACTO.
+ */
+
+import { useState, useEffect, useMemo } from 'react'
+import {
+  collection, getDocs, updateDoc, doc, query,
+  orderBy, onSnapshot, deleteDoc, writeBatch,
+} from 'firebase/firestore'
+import { db } from '../../../lib/firebase'
+import toast from 'react-hot-toast'
+
+// ── Constantes ──────────────────────────────────────────────────────────
+const STATI = [
+  { id: 'nuovo',      label: 'Nuevo',         color: '#3B8BD4' },
+  { id: 'assegnato',  label: 'Asignado',      color: '#EF9F27' },
+  { id: 'trattativa', label: 'En trattativa', color: '#7F77DD' },
+  { id: 'chiuso',     label: 'Cerrado',       color: '#1D9E75' },
+  { id: 'perso',      label: 'Perdido',       color: '#888780' },
+]
+
+function StatoBadge({ stato }) {
+  const s = STATI.find(x => x.id === stato) || STATI[0]
+  return (
+    <span style={{
+      fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+      letterSpacing: 1, padding: '3px 10px', borderRadius: 20,
+      background: `${s.color}18`, color: s.color,
+      border: `1px solid ${s.color}40`,
+    }}>
+      {s.label}
+    </span>
+  )
+}
+
+function formatDate(ts) {
+  if (!ts) return '—'
+  const d = ts.toDate ? ts.toDate() : new Date(ts)
+  return d.toLocaleDateString('it-IT', {
+    day: '2-digit', month: '2-digit', year: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
+function exportCSV(leads) {
+  const header = ['Data', 'Nome', 'Email', 'Telefono', 'Zona', 'Servizio', 'Messaggio', 'Stato', 'Agente']
+  const rows = leads.map(l => [
+    formatDate(l.createdAt),
+    l.name || '', l.email || '', l.phone || '',
+    l.zona || '', l.servizio || '',
+    (l.message || '').replace(/,/g, ';'),
+    l.stato || 'nuovo', l.agente || '',
+  ])
+  const csv = [header, ...rows].map(r => r.join(',')).join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href = url; a.download = `lead_${Date.now()}.csv`; a.click()
+  URL.revokeObjectURL(url)
+}
+
+// ── Componente principale ─────────────────────────────────────────────
+export default function LeadsTab({ data }) {
+  const [leads,        setLeads]        = useState([])
+  const [loading,      setLoading]      = useState(true)
+  const [selected,     setSelected]     = useState(null)
+  const [filtroStato,  setFiltroStato]  = useState('tutti')
+  const [filtroZona,   setFiltroZona]   = useState('')
+  const [search,       setSearch]       = useState('')
+  const [noteText,     setNoteText]     = useState('')
+  const [savingNote,   setSavingNote]   = useState(false)
+  const [deletingId,   setDeletingId]   = useState(null)   // ← NUEVO
+  const [deletingAll,  setDeletingAll]  = useState(false)  // ← NUEVO
+
+  const agenti = data?.site?.agents || []
+
+  // ── Carica lead in realtime ────────────────────────────────────────
+  useEffect(() => {
+    const q = query(collection(db, 'leads'), orderBy('createdAt', 'desc'))
+    const unsub = onSnapshot(q, snap => {
+      setLeads(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      setLoading(false)
+    }, err => {
+      console.error('[LeadsTab]', err)
+      setLoading(false)
+    })
+    return unsub
+  }, [])
+
+  // ── Zone uniche per filtro ─────────────────────────────────────────
+  const zoneUniche = useMemo(() =>
+    [...new Set(leads.map(l => l.zona).filter(Boolean))].sort(),
+  [leads])
+
+  // ── Filtri ─────────────────────────────────────────────────────────
+  const leadsFiltrati = useMemo(() => {
+    return leads.filter(l => {
+      const matchStato  = filtroStato === 'tutti' || (l.stato || 'nuovo') === filtroStato
+      const matchZona   = !filtroZona || l.zona === filtroZona
+      const matchSearch = !search || [l.name, l.email, l.phone, l.zona, l.servizio]
+        .some(v => v?.toLowerCase().includes(search.toLowerCase()))
+      return matchStato && matchZona && matchSearch
+    })
+  }, [leads, filtroStato, filtroZona, search])
+
+  // ── Aggiorna stato ─────────────────────────────────────────────────
+  const updateStato = async (leadId, nuovoStato) => {
+    try {
+      await updateDoc(doc(db, 'leads', leadId), { stato: nuovoStato })
+      if (selected?.id === leadId) setSelected(p => ({ ...p, stato: nuovoStato }))
+      toast.success('Estado actualizado')
+    } catch { toast.error('Error al actualizar') }
+  }
+
+  // ── Assegna agente ─────────────────────────────────────────────────
+  const assignAgent = async (leadId, agente) => {
+    try {
+      await updateDoc(doc(db, 'leads', leadId), { agente, stato: 'assegnato' })
+      if (selected?.id === leadId) setSelected(p => ({ ...p, agente, stato: 'assegnato' }))
+      toast.success(`Asignado a ${agente}`)
+    } catch { toast.error('Error al asignar') }
+  }
+
+  // ── Salva nota ─────────────────────────────────────────────────────
+  const saveNote = async () => {
+    if (!selected || !noteText.trim()) return
+    setSavingNote(true)
+    try {
+      const nota = { testo: noteText.trim(), data: new Date().toISOString() }
+      const nuoveNote = [...(selected.note || []), nota]
+      await updateDoc(doc(db, 'leads', selected.id), { note: nuoveNote })
+      setSelected(p => ({ ...p, note: nuoveNote }))
+      setNoteText('')
+      toast.success('Nota guardada')
+    } catch { toast.error('Error') }
+    finally { setSavingNote(false) }
+  }
+
+  // ── NUEVO: Eliminar un lead ────────────────────────────────────────
+  const handleDeleteLead = async (leadId) => {
+    if (!window.confirm('¿Eliminar este lead? Esta acción no se puede deshacer.')) return
+    setDeletingId(leadId)
+    try {
+      await deleteDoc(doc(db, 'leads', leadId))
+      if (selected?.id === leadId) setSelected(null)
+      toast.success('Lead eliminado')
+    } catch {
+      toast.error('Error al eliminar')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  // ── NUEVO: Eliminar todos los leads ───────────────────────────────
+  const handleDeleteAll = async () => {
+    if (!window.confirm(`¿Eliminar TODOS los ${leads.length} leads? Esta acción no se puede deshacer.`)) return
+    setDeletingAll(true)
+    try {
+      // Firestore batch: máximo 500 por batch
+      const chunks = []
+      for (let i = 0; i < leads.length; i += 500) {
+        chunks.push(leads.slice(i, i + 500))
+      }
+      for (const chunk of chunks) {
+        const batch = writeBatch(db)
+        chunk.forEach(lead => batch.delete(doc(db, 'leads', lead.id)))
+        await batch.commit()
+      }
+      setSelected(null)
+      toast.success(`${leads.length} leads eliminados`)
+    } catch {
+      toast.error('Error al eliminar todos')
+    } finally {
+      setDeletingAll(false)
+    }
+  }
+
+  // ── Conteggi per tab stati ─────────────────────────────────────────
+  const conteggioPerStato = useMemo(() => {
+    const c = { tutti: leads.length }
+    STATI.forEach(s => {
+      c[s.id] = leads.filter(l => (l.stato || 'nuovo') === s.id).length
+    })
+    return c
+  }, [leads])
+
+  // ── WhatsApp URL ────────────────────────────────────────────────────
+  const whatsappUrl = (phone, name) => {
+    const tel = phone?.replace(/\D/g, '')
+    const msg = encodeURIComponent(`Hola ${name || ''}, soy del equipo. Te contacto por tu consulta.`)
+    return `https://wa.me/${tel}?text=${msg}`
+  }
+
+  return (
+    <div>
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 4 }}>
+            📥 Inbox Lead
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>
+            {leads.length} leads totales · {conteggioPerStato.nuovo || 0} nuevos
+          </p>
+        </div>
+
+        {/* Botones acción */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => exportCSV(leadsFiltrati)}
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)', padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+          >
+            ↓ Exportar CSV
+          </button>
+
+          {/* NUEVO: Eliminar todos */}
+          {leads.length > 0 && (
+            <button
+              onClick={handleDeleteAll}
+              disabled={deletingAll}
+              style={{ background: 'rgba(255,60,60,0.08)', border: '1px solid rgba(255,60,60,0.25)', color: '#ff6060', padding: '8px 16px', borderRadius: 8, cursor: deletingAll ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 600, opacity: deletingAll ? 0.6 : 1 }}
+            >
+              {deletingAll ? 'Eliminando…' : `🗑 Eliminar todos (${leads.length})`}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Stats cards ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10, marginBottom: 20 }}>
+        {[{ id: 'tutti', label: 'Totales', color: 'rgba(255,255,255,0.4)' }, ...STATI].map(s => (
+          <button
+            key={s.id}
+            onClick={() => setFiltroStato(s.id)}
+            style={{ background: filtroStato === s.id ? 'rgba(255,60,60,0.08)' : 'rgba(255,255,255,0.02)', border: `1px solid ${filtroStato === s.id ? 'var(--primary)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 10, padding: '12px 10px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s' }}
+          >
+            <div style={{ fontSize: 22, fontWeight: 800, color: s.color || 'var(--primary)' }}>
+              {conteggioPerStato[s.id] || 0}
+            </div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 1, marginTop: 3 }}>
+              {s.label}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* ── Filtri ── */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+        <input
+          className="admin-input"
+          style={{ flex: 1, minWidth: 200 }}
+          placeholder="Buscar por nombre, email, teléfono..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        {zoneUniche.length > 0 && (
+          <select
+            className="admin-input"
+            style={{ width: 180 }}
+            value={filtroZona}
+            onChange={e => setFiltroZona(e.target.value)}
+          >
+            <option value="">Todas las zonas</option>
+            {zoneUniche.map(z => <option key={z} value={z}>{z}</option>)}
+          </select>
+        )}
+      </div>
+
+      {/* ── Layout: lista + dettaglio ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 1fr' : '1fr', gap: 16 }}>
+
+        {/* Lista lead */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {loading && (
+            <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.3)' }}>Cargando...</div>
+          )}
+          {!loading && leadsFiltrati.length === 0 && (
+            <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.25)', fontSize: 14, border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 12 }}>
+              No hay leads
+            </div>
+          )}
+          {leadsFiltrati.map(lead => (
+            <div
+              key={lead.id}
+              style={{ background: selected?.id === lead.id ? 'rgba(255,60,60,0.06)' : 'rgba(255,255,255,0.02)', border: `1px solid ${selected?.id === lead.id ? 'rgba(255,60,60,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 12, padding: '14px 16px', transition: 'all 0.15s', display: 'flex', alignItems: 'flex-start', gap: 10 }}
+              onMouseEnter={e => { if (selected?.id !== lead.id) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)' }}
+              onMouseLeave={e => { if (selected?.id !== lead.id) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
+            >
+              {/* Contenido clickeable */}
+              <div
+                onClick={() => { setSelected(lead); setNoteText('') }}
+                style={{ flex: 1, cursor: 'pointer', minWidth: 0 }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, fontSize: 14 }}>{lead.name || 'Sin nombre'}</span>
+                      <StatoBadge stato={lead.stato || 'nuovo'} />
+                      {lead.agente && (
+                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>→ {lead.agente}</span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>
+                      {[lead.zona, lead.servizio].filter(Boolean).join(' · ')}
+                    </div>
+                    {lead.email && (
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>{lead.email}</div>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', flexShrink: 0, textAlign: 'right' }}>
+                    {formatDate(lead.createdAt)}
+                    {(lead.note?.length > 0) && (
+                      <div style={{ marginTop: 4, color: 'rgba(255,200,0,0.5)' }}>📝 {lead.note.length}</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* NUEVO: Botón eliminar individual */}
+              <button
+                onClick={(e) => { e.stopPropagation(); handleDeleteLead(lead.id) }}
+                disabled={deletingId === lead.id}
+                title="Eliminar lead"
+                style={{ flexShrink: 0, background: 'rgba(255,60,60,0.06)', border: '1px solid rgba(255,60,60,0.18)', color: '#ff6060', width: 30, height: 30, borderRadius: 6, cursor: deletingId === lead.id ? 'not-allowed' : 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: deletingId === lead.id ? 0.4 : 1, transition: 'all 0.15s', marginTop: 2 }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,60,60,0.16)'; e.currentTarget.style.borderColor = 'rgba(255,60,60,0.4)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,60,60,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,60,60,0.18)' }}
+              >
+                {deletingId === lead.id ? '…' : '🗑'}
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Dettaglio lead — INTACTO */}
+        {selected && (
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 20, position: 'sticky', top: 20, alignSelf: 'start' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{selected.name}</h3>
+              <button
+                onClick={() => setSelected(null)}
+                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 18 }}
+              >✕</button>
+            </div>
+
+            {/* Dati contatto */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+              {[
+                { label: 'Email',    value: selected.email   },
+                { label: 'Teléfono',value: selected.phone   },
+                { label: 'Zona',    value: selected.zona    },
+                { label: 'Servicio',value: selected.servizio },
+                { label: 'Fecha',   value: formatDate(selected.createdAt) },
+              ].filter(r => r.value).map(row => (
+                <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                  <span style={{ color: 'rgba(255,255,255,0.4)' }}>{row.label}</span>
+                  <span style={{ fontWeight: 500 }}>{row.value}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Messaggio */}
+            {selected.message && (
+              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, marginBottom: 16 }}>
+                "{selected.message}"
+              </div>
+            )}
+
+            {/* Azioni rapide */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+              {selected.phone && (
+                <a href={whatsappUrl(selected.phone, selected.name)} target="_blank" rel="noreferrer"
+                  style={{ flex: 1, textAlign: 'center', background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.3)', color: '#25d366', padding: '8px 12px', borderRadius: 8, textDecoration: 'none', fontSize: 12, fontWeight: 700 }}>
+                  💬 WhatsApp
+                </a>
+              )}
+              {selected.email && (
+                <a href={`mailto:${selected.email}?subject=Respuesta a tu consulta`}
+                  style={{ flex: 1, textAlign: 'center', background: 'rgba(55,138,221,0.1)', border: '1px solid rgba(55,138,221,0.3)', color: '#378add', padding: '8px 12px', borderRadius: 8, textDecoration: 'none', fontSize: 12, fontWeight: 700 }}>
+                  ✉️ Email
+                </a>
+              )}
+              {selected.phone && (
+                <a href={`tel:${selected.phone}`}
+                  style={{ flex: 1, textAlign: 'center', background: 'rgba(29,158,117,0.1)', border: '1px solid rgba(29,158,117,0.3)', color: '#1D9E75', padding: '8px 12px', borderRadius: 8, textDecoration: 'none', fontSize: 12, fontWeight: 700 }}>
+                  📞 Llamar
+                </a>
+              )}
+            </div>
+
+            {/* Cambio stato */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Estado</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {STATI.map(s => (
+                  <button key={s.id} onClick={() => updateStato(selected.id, s.id)}
+                    style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none', background: (selected.stato || 'nuovo') === s.id ? s.color : `${s.color}20`, color: (selected.stato || 'nuovo') === s.id ? 'white' : s.color, transition: 'all 0.15s' }}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Assegna agente */}
+            {agenti.length > 0 && (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Agente asignado</div>
+                <select className="admin-input" value={selected.agente || ''} onChange={e => assignAgent(selected.id, e.target.value)}>
+                  <option value="">No asignado</option>
+                  {agenti.map(a => (
+                    <option key={a.id || a.nome} value={a.nome}>{a.nome} — {a.zone?.join(', ')}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Note interne */}
+            <div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Notas internas</div>
+              {(selected.note || []).map((n, i) => (
+                <div key={i} style={{ background: 'rgba(255,200,0,0.04)', border: '1px solid rgba(255,200,0,0.1)', borderRadius: 6, padding: '8px 10px', fontSize: 12, marginBottom: 6 }}>
+                  <div style={{ color: 'rgba(255,255,255,0.5)' }}>{n.testo}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10, marginTop: 3 }}>
+                    {new Date(n.data).toLocaleString('es-ES')}
+                  </div>
+                </div>
+              ))}
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <input className="admin-input" style={{ flex: 1 }} placeholder="Añadir nota..."
+                  value={noteText} onChange={e => setNoteText(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && saveNote()} />
+                <button className="save-btn" onClick={saveNote} disabled={savingNote || !noteText.trim()} style={{ padding: '10px 14px', fontSize: 12 }}>
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* NUEVO: Eliminar este lead desde el detalle */}
+            <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <button
+                onClick={() => handleDeleteLead(selected.id)}
+                disabled={deletingId === selected.id}
+                style={{ width: '100%', padding: '10px', background: 'rgba(255,60,60,0.06)', border: '1px solid rgba(255,60,60,0.2)', color: '#ff6060', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, opacity: deletingId === selected.id ? 0.5 : 1 }}
+              >
+                {deletingId === selected.id ? 'Eliminando…' : '🗑 Eliminar este lead'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+</file>
+
 <file path="src/components/admin/tabs/TestimonialsTab.jsx">
 import { useState } from 'react'
 import { saveTestimonial, deleteTestimonial } from '../../../lib/firebaseHelpers'
@@ -4197,68 +3957,159 @@ export default function AboutSection({ brand }) {
 }
 </file>
 
-<file path="src/hooks/useUIStrings.js">
+<file path="src/hooks/useTranslatedContent.js">
 /**
- * useUIStrings.js — FIXED v2
+ * useTranslatedContent.js — v2
  *
- * FIX IDIOMA (Problema 3):
- * useMemo no detecta cambios en window.__SITE_LANGUAGE__ porque es una
- * variable global, no estado React. Fix: useState + listener del custom
- * event 'sitelang' que LanguageTab dispara al guardar. Cuando el evento
- * llega, el hook re-calcula el idioma y todos los componentes que lo usan
- * se re-renderizan automáticamente con los strings correctos.
+ * NUEVO: resolveTargetLang detecta el idioma del browser del visitante
+ * cuando el admin no configuró ningún idioma.
+ *
+ * Prioridad:
+ *  1. brand.language (admin configuró) → siempre respetarlo
+ *  2. window.__SITE_LANGUAGE__ (resuelto por applyBrandColors)
+ *  3. navigator.language del browser del visitante
+ *  4. DEFAULT_LANGUAGE ('it') como fallback
  */
 
-import { useState, useEffect, useMemo } from 'react'
-import { getStrings, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from '../lib/uiStrings'
+import { useState, useEffect } from 'react'
+import { translateBatch, shouldTranslate } from '../lib/translate'
+import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from '../lib/uiStrings'
 
-function resolveLang(themeLang) {
-  const supported = SUPPORTED_LANGUAGES.map(l => l.code)
+const SUPPORTED_CODES = SUPPORTED_LANGUAGES.map(l => l.code)
 
-  if (themeLang && supported.includes(themeLang)) return themeLang
+function detectBrowserLang() {
+  if (typeof navigator === 'undefined') return null
+  const lang = (navigator.language || navigator.userLanguage || '')
+    .slice(0, 2).toLowerCase()
+  return SUPPORTED_CODES.includes(lang) ? lang : null
+}
 
+function resolveTargetLang(brand) {
+  // 1. Admin configuró un idioma
+  if (brand?.language && SUPPORTED_CODES.includes(brand.language)) {
+    return brand.language
+  }
+  // 2. Variable global
   if (typeof window !== 'undefined' && window.__SITE_LANGUAGE__) {
     const wl = window.__SITE_LANGUAGE__
-    if (supported.includes(wl)) return wl
+    if (SUPPORTED_CODES.includes(wl)) return wl
   }
-
-  if (typeof navigator !== 'undefined' && navigator.language) {
-    const bl = navigator.language.slice(0, 2).toLowerCase()
-    if (supported.includes(bl)) return bl
-  }
-
+  // 3. Browser del visitante
+  const browserLang = detectBrowserLang()
+  if (browserLang) return browserLang
+  // 4. Fallback
   return DEFAULT_LANGUAGE
 }
 
-export function useUIStrings(brand = null, langOverride = null) {
-  // FIX: estado local que se actualiza cuando llega el custom event 'sitelang'
-  const [globalLang, setGlobalLang] = useState(
-    () => (typeof window !== 'undefined' ? window.__SITE_LANGUAGE__ : null)
-  )
+export function useTranslatedContent(content, brand, sourceLang = 'auto') {
+  const [translated, setTranslated] = useState(content)
+  const [langTick, setLangTick] = useState(0)
 
   useEffect(() => {
-    const handler = (e) => {
-      setGlobalLang(e.detail ?? window.__SITE_LANGUAGE__ ?? null)
-    }
+    const handler = () => setLangTick(t => t + 1)
     window.addEventListener('sitelang', handler)
     return () => window.removeEventListener('sitelang', handler)
   }, [])
 
-  const lang = useMemo(
-    () => resolveLang(langOverride ?? brand?.language ?? globalLang ?? null),
-    [brand?.language, langOverride, globalLang]
-  )
+  useEffect(() => {
+    setTranslated(content)
+    if (!content) return
 
-  const t = useMemo(() => getStrings(lang), [lang])
+    const targetLang = resolveTargetLang(brand)
+    if (!shouldTranslate(targetLang, sourceLang)) return
 
-  return t
+    const isString = typeof content === 'string'
+    const keys = isString
+      ? null
+      : Object.keys(content).filter(k => typeof content[k] === 'string' && content[k].trim())
+    const texts = isString ? [content] : keys.map(k => content[k])
+    if (!texts.length) return
+
+    let cancelled = false
+
+    translateBatch(texts, targetLang, sourceLang).then(results => {
+      if (cancelled) return
+      if (isString) {
+        setTranslated(results[0] ?? content)
+      } else {
+        const result = { ...content }
+        let i = 0
+        for (const key of keys) {
+          if (typeof content[key] === 'string' && content[key].trim()) {
+            result[key] = results[i] ?? content[key]
+            i++
+          }
+        }
+        setTranslated(result)
+      }
+    })
+
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    typeof content === 'string' ? content : JSON.stringify(content),
+    brand?.language,
+    langTick,
+    sourceLang,
+  ])
+
+  return translated
 }
 
-export function resolveStrings(langOrBrand) {
-  const lang = typeof langOrBrand === 'string'
-    ? langOrBrand
-    : resolveLang(langOrBrand?.language ?? null)
-  return getStrings(lang)
+export function useTranslatedArray(items, fields, brand, sourceLang = 'auto') {
+  const [translated, setTranslated] = useState(items)
+  const [langTick, setLangTick] = useState(0)
+
+  useEffect(() => {
+    const handler = () => setLangTick(t => t + 1)
+    window.addEventListener('sitelang', handler)
+    return () => window.removeEventListener('sitelang', handler)
+  }, [])
+
+  useEffect(() => {
+    setTranslated(items)
+    if (!items || !items.length) return
+
+    const targetLang = resolveTargetLang(brand)
+    if (!shouldTranslate(targetLang, sourceLang)) return
+
+    let cancelled = false
+
+    async function run() {
+      const promises = items.map(async item => {
+        const texts = fields
+          .filter(f => typeof item[f] === 'string' && item[f].trim())
+          .map(f => item[f])
+        if (!texts.length) return item
+
+        const results = await translateBatch(texts, targetLang, sourceLang)
+        const updated = { ...item }
+        let i = 0
+        for (const f of fields) {
+          if (typeof item[f] === 'string' && item[f].trim()) {
+            updated[f] = results[i] ?? item[f]
+            i++
+          }
+        }
+        return updated
+      })
+
+      const results = await Promise.allSettled(promises)
+      if (cancelled) return
+      setTranslated(results.map((r, i) => r.status === 'fulfilled' ? r.value : items[i]))
+    }
+
+    run()
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    JSON.stringify(items?.map(i => fields.map(f => i[f]))),
+    brand?.language,
+    langTick,
+    sourceLang,
+  ])
+
+  return translated
 }
 </file>
 
@@ -6763,6 +6614,83 @@ export default function TestimonialsSection({ testimonials, brand }) {
 }
 </file>
 
+<file path="src/hooks/useUIStrings.js">
+/**
+ * useUIStrings.js — v3
+ *
+ * Prioridad de idioma:
+ *  1. langOverride (pasado explícitamente al hook)
+ *  2. brand.language (lo que el admin configuró en el panel)
+ *  3. window.__SITE_LANGUAGE__ (ya resuelto por applyBrandColors)
+ *  4. navigator.language del visitante (detección automática por país/browser)
+ *  5. DEFAULT_LANGUAGE ('it') como último fallback
+ *
+ * Esto significa:
+ *  - Si el admin configuró español → todos ven español
+ *  - Si el admin NO configuró idioma → el visitante ve el idioma de su browser
+ *  - Si el browser del visitante no está soportado → italiano por defecto
+ */
+
+import { useState, useEffect, useMemo } from 'react'
+import { getStrings, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from '../lib/uiStrings'
+
+const SUPPORTED_CODES = SUPPORTED_LANGUAGES.map(l => l.code)
+
+function detectBrowserLang() {
+  if (typeof navigator === 'undefined') return null
+  const lang = (navigator.language || navigator.userLanguage || '').slice(0, 2).toLowerCase()
+  return SUPPORTED_CODES.includes(lang) ? lang : null
+}
+
+function resolveLang(themeLang) {
+  // 1. Idioma pasado directamente
+  if (themeLang && SUPPORTED_CODES.includes(themeLang)) return themeLang
+
+  // 2. Variable global (seteada por applyBrandColors)
+  if (typeof window !== 'undefined' && window.__SITE_LANGUAGE__) {
+    const wl = window.__SITE_LANGUAGE__
+    if (SUPPORTED_CODES.includes(wl)) return wl
+  }
+
+  // 3. Idioma del navegador del visitante
+  const browserLang = detectBrowserLang()
+  if (browserLang) return browserLang
+
+  // 4. Fallback
+  return DEFAULT_LANGUAGE
+}
+
+export function useUIStrings(brand = null, langOverride = null) {
+  const [globalLang, setGlobalLang] = useState(
+    () => (typeof window !== 'undefined' ? window.__SITE_LANGUAGE__ : null)
+  )
+
+  useEffect(() => {
+    const handler = (e) => {
+      setGlobalLang(e.detail ?? window.__SITE_LANGUAGE__ ?? null)
+    }
+    window.addEventListener('sitelang', handler)
+    return () => window.removeEventListener('sitelang', handler)
+  }, [])
+
+  const lang = useMemo(
+    () => resolveLang(langOverride ?? brand?.language ?? globalLang ?? null),
+    [brand?.language, langOverride, globalLang]
+  )
+
+  const t = useMemo(() => getStrings(lang), [lang])
+
+  return t
+}
+
+export function resolveStrings(langOrBrand) {
+  const lang = typeof langOrBrand === 'string'
+    ? langOrBrand
+    : resolveLang(langOrBrand?.language ?? null)
+  return getStrings(lang)
+}
+</file>
+
 <file path="vercel.json">
 {
   "headers": [
@@ -8643,6 +8571,55 @@ const strings = {
     // ── NUEVO: mensaje de éxito — reacciona al idioma en tiempo real ──
     successTitle:   { it: 'Richiesta ricevuta!',     en: 'Request received!',  es: '¡Solicitud recibida!',   fr: 'Demande reçue !',           de: 'Anfrage erhalten!',         pt: 'Pedido recebido!'          },
     successMessage: { it: 'Ti contatteremo entro 24 ore.', en: "We'll contact you within 24 hours.", es: 'Te contactaremos en menos de 24 horas.', fr: 'Nous vous contacterons dans les 24 heures.', de: 'Wir melden uns innerhalb von 24 Stunden.', pt: 'Entraremos em contato em até 24 horas.' },
+    // ── GDPR / Privacy checkbox ──────────────────────────────────────
+    privacyCheckbox: {
+      it: 'Ho letto e accetto la',
+      en: 'I have read and accept the',
+      es: 'He leído y acepto la',
+      fr: "J'ai lu et j'accepte la",
+      de: 'Ich habe die gelesen und akzeptiere die',
+      pt: 'Li e aceito a',
+    },
+    privacyLink: {
+      it: 'Informativa sulla Privacy',
+      en: 'Privacy Policy',
+      es: 'Política de Privacidad',
+      fr: 'Politique de Confidentialité',
+      de: 'Datenschutzerklärung',
+      pt: 'Política de Privacidade',
+    },
+    privacyModalTitle: {
+      it: 'La tua Privacy',
+      en: 'Your Privacy',
+      es: 'Tu Privacidad',
+      fr: 'Votre Confidentialité',
+      de: 'Deine Privatsphäre',
+      pt: 'A sua Privacidade',
+    },
+    privacyModalText: {
+      it: 'I dati che ci invii (nome, email e telefono) vengono utilizzati esclusivamente per rispondere alla tua richiesta. Non li vendiamo, non li condividiamo con nessuno e non ti invieremo pubblicità. Li conserviamo in modo sicuro e li eliminiamo quando non sono più necessari. Hai il diritto di chiedere la loro cancellazione in qualsiasi momento scrivendo a noi direttamente.',
+      en: 'The information you send us (name, email and phone) is used only to reply to your enquiry. We do not sell it, share it with anyone, or send you advertising. We store it securely and delete it when it is no longer needed. You can ask us to delete your data at any time by contacting us directly.',
+      es: 'Los datos que nos envías (nombre, email y teléfono) se usan únicamente para responderte. No los vendemos, no los compartimos con nadie y no te enviaremos publicidad. Los guardamos de forma segura y los eliminamos cuando ya no son necesarios. Puedes pedirnos que los eliminemos en cualquier momento escribiéndonos directamente.',
+      fr: "Les informations que vous nous envoyez (nom, e-mail et téléphone) sont utilisées uniquement pour répondre à votre demande. Nous ne les vendons pas, ne les partageons avec personne et ne vous enverrons pas de publicité. Nous les conservons en sécurité et les supprimons dès qu'elles ne sont plus nécessaires. Vous pouvez nous demander de les supprimer à tout moment en nous contactant directement.",
+      de: 'Die Daten, die du uns sendest (Name, E-Mail und Telefon), werden ausschließlich verwendet, um deine Anfrage zu beantworten. Wir verkaufen sie nicht, teilen sie mit niemandem und senden dir keine Werbung. Wir speichern sie sicher und löschen sie, wenn sie nicht mehr benötigt werden. Du kannst jederzeit die Löschung deiner Daten verlangen, indem du uns direkt kontaktierst.',
+      pt: 'Os dados que nos envia (nome, e-mail e telefone) são usados apenas para responder à sua solicitação. Não os vendemos, não os partilhamos com ninguém e não lhe enviaremos publicidade. Guardamo-los de forma segura e eliminamo-los quando já não são necessários. Pode pedir-nos que os eliminemos a qualquer momento contactando-nos diretamente.',
+    },
+    privacyModalClose: {
+      it: 'Ho capito',
+      en: 'Got it',
+      es: 'Entendido',
+      fr: 'Compris',
+      de: 'Verstanden',
+      pt: 'Entendido',
+    },
+    privacyRequired: {
+      it: 'Devi accettare la privacy policy per continuare',
+      en: 'You must accept the privacy policy to continue',
+      es: 'Debes aceptar la política de privacidad para continuar',
+      fr: 'Vous devez accepter la politique de confidentialité pour continuer',
+      de: 'Sie müssen die Datenschutzerklärung akzeptieren um fortzufahren',
+      pt: 'Você deve aceitar a política de privacidade para continuar',
+    },
   },
 
   footer: {
@@ -8733,312 +8710,6 @@ export function getStrings(lang = DEFAULT_LANGUAGE) {
   }
 
   return resolve(strings)
-}
-</file>
-
-<file path="src/components/site/ContactSection.jsx">
-/**
- * ContactSection.jsx — PhoneInput + 100% responsivo + traducción editorial
- */
-
-import { useState } from 'react'
-import { processNewLead } from '../../lib/leadHelpers'
-import { useUIStrings } from '../../hooks/useUIStrings'
-import { useTranslatedContent } from '../../hooks/useTranslatedContent'
-import PhoneInput from '../common/PhoneInput'
-
-function parseFields(raw) {
-  if (Array.isArray(raw)) return raw
-  try { return JSON.parse(raw || '[]') } catch { return [] }
-}
-
-const FIELD_TRANSLATIONS = {
-  name:     { it:'Nome e Cognome',        en:'Full Name',             es:'Nombre completo',      fr:'Nom complet',           de:'Vollständiger Name',      pt:'Nome completo'        },
-  nome:     { it:'Nome e Cognome',        en:'Full Name',             es:'Nombre completo',      fr:'Nom complet',           de:'Vollständiger Name',      pt:'Nome completo'        },
-  email:    { it:'Email',                 en:'Email',                 es:'Email',                fr:'E-mail',                de:'E-Mail',                  pt:'E-mail'               },
-  phone:    { it:'Telefono',              en:'Phone',                 es:'Teléfono',             fr:'Téléphone',             de:'Telefon',                 pt:'Telefone'             },
-  telefono: { it:'Telefono',              en:'Phone',                 es:'Teléfono',             fr:'Téléphone',             de:'Telefon',                 pt:'Telefone'             },
-  zona:     { it:'Città / Zona',          en:'City / Area',           es:'Ciudad / Zona',        fr:'Ville / Zone',          de:'Stadt / Gebiet',          pt:'Cidade / Zona'        },
-  city:     { it:'Città / Zona',          en:'City / Area',           es:'Ciudad / Zona',        fr:'Ville / Zone',          de:'Stadt / Gebiet',          pt:'Cidade / Zona'        },
-  company:  { it:'Azienda / Progetto',    en:'Company / Project',     es:'Empresa / Proyecto',   fr:'Entreprise / Projet',   de:'Unternehmen / Projekt',   pt:'Empresa / Proyecto'   },
-  azienda:  { it:'Azienda / Progetto',    en:'Company / Project',     es:'Empresa / Proyecto',   fr:'Entreprise / Projet',   de:'Unternehmen / Projekt',   pt:'Empresa / Projeto'    },
-  service:  { it:'Servizio di interesse', en:'Service of interest',   es:'Servicio de interés',  fr:'Service souhaité',      de:'Gewünschter Service',     pt:'Serviço de interesse' },
-  servizio: { it:'Servizio di interesse', en:'Service of interest',   es:'Servicio de interés',  fr:'Service souhaité',      de:'Gewünschter Service',     pt:'Serviço de interesse' },
-  message:  { it:'Descrivi il progetto',  en:'Describe your project', es:'Describe tu proyecto', fr:'Décrivez votre projet', de:'Ihr Projekt beschreiben', pt:'Descreva seu projeto' },
-  messaggio:{ it:'Descrivi il progetto',  en:'Describe your project', es:'Describe tu proyecto', fr:'Décrivez votre projet', de:'Ihr Projekt beschreiben', pt:'Descreva seu projeto' },
-  notes:    { it:'Note',                  en:'Notes',                 es:'Notas',                fr:'Notes',                 de:'Anmerkungen',             pt:'Notas'                },
-}
-
-const PLACEHOLDERS = {
-  name:    { it:'Mario Rossi',               en:'John Smith',               es:'Juan García',               fr:'Jean Dupont',            de:'Max Mustermann',           pt:'João Silva'           },
-  email:   { it:'mario@email.com',           en:'john@email.com',           es:'juan@email.com',            fr:'jean@email.com',         de:'max@email.com',            pt:'joao@email.com'       },
-  zona:    { it:'Es: Milano, Roma...',        en:'E.g: New York, London...', es:'Ej: Madrid, Barcelona...',  fr:'Ex: Paris, Lyon...',     de:'z.B: Berlin, München...', pt:'Ex: Lisboa, Porto...' },
-  message: { it:'Raccontaci cosa cerchi...', en:'Tell us what you need...', es:'Cuéntanos qué necesitas...', fr:'Dites-nous ce dont vous avez besoin...', de:'Erzählen Sie was Sie brauchen...', pt:'Diga-nos o que precisa...' },
-}
-
-const SERVICE_OPTIONS = {
-  it: ['Sito Web', 'E-commerce', 'Branding', 'Marketing', 'Altro'],
-  en: ['Website', 'E-commerce', 'Branding', 'Marketing', 'Other'],
-  es: ['Diseño Web', 'E-commerce', 'Branding', 'Marketing', 'Otro'],
-  fr: ['Site Web', 'E-commerce', 'Branding', 'Marketing', 'Autre'],
-  de: ['Webseite', 'E-commerce', 'Branding', 'Marketing', 'Andere'],
-  pt: ['Site Web', 'E-commerce', 'Branding', 'Marketing', 'Outro'],
-}
-
-function rl(dict, lang) { return dict?.[lang] || dict?.['en'] || '' }
-
-function translateField(field, lang) {
-  const id = field.id?.toLowerCase()
-  return {
-    ...field,
-    label:       rl(FIELD_TRANSLATIONS[id], lang) || field.label,
-    placeholder: rl(PLACEHOLDERS[id], lang) || field.placeholder || '',
-  }
-}
-
-function isPhoneField(field) {
-  return ['phone', 'telefono', 'tel'].includes(field.id?.toLowerCase()) || field.type === 'tel'
-}
-
-export default function ContactSection({ contact, footer, brand, site }) {
-  const primary = brand?.primary || '#ff3c3c'
-  const t = useUIStrings(brand)
-
-  const lang = brand?.language
-    || (typeof window !== 'undefined' ? window.__SITE_LANGUAGE__ : null)
-    || 'it'
-
-  const translatedContact = useTranslatedContent(
-    {
-      title:    contact?.title    || t.contact.eyebrow,
-      subtitle: contact?.subtitle || '',
-      ctaLabel: contact?.ctaLabel || t.contact.sendBtn,
-    },
-    brand
-  )
-
-  const rawFields = parseFields(contact?.fields)
-  const fields = (rawFields.length > 0 ? rawFields : [
-    { id: 'name',    label: 'Name',    type: 'text',     required: true  },
-    { id: 'email',   label: 'Email',   type: 'email',    required: true  },
-    { id: 'phone',   label: 'Phone',   type: 'tel',      required: true  },
-    { id: 'zona',    label: 'Zone',    type: 'text',     required: true  },
-    { id: 'company', label: 'Company', type: 'text',     required: false },
-    { id: 'service', label: 'Service', type: 'select',   required: false },
-    { id: 'message', label: 'Message', type: 'textarea', required: false },
-  ]).map(f => translateField(f, lang))
-
-  const [values,   setValues]  = useState(() => Object.fromEntries(fields.map(f => [f.id, ''])))
-  const [errors,   setErrors]  = useState({})
-  const [sending,  setSending] = useState(false)
-  const [success,  setSuccess] = useState(false)
-  const [apiErr,   setApiErr]  = useState('')
-  const [agentMsg, setAgentMsg]= useState('')
-
-  const setValue = (id, val) => {
-    setValues(p => ({ ...p, [id]: val }))
-    if (errors[id]) setErrors(p => ({ ...p, [id]: '' }))
-  }
-
-  const validate = () => {
-    const next = {}
-    fields.forEach(f => {
-      if (f.required && !values[f.id]?.trim()) next[f.id] = t.contact.fieldRequired
-      if (f.type === 'email' && values[f.id] && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values[f.id])) {
-        next[f.id] = t.contact.emailInvalid
-      }
-      if (isPhoneField(f) && f.required && values[f.id] && values[f.id].replace(/\D/g, '').length < 7) {
-        next[f.id] = t.contact.fieldRequired
-      }
-    })
-    setErrors(next)
-    return Object.keys(next).length === 0
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!validate()) return
-    setSending(true); setApiErr('')
-    try {
-      const phoneField = fields.find(f => isPhoneField(f))
-      const leadData = {
-        name:     values.name     || values.nome     || '',
-        email:    values.email    || '',
-        phone:    phoneField ? values[phoneField.id] : (values.phone || values.telefono || ''),
-        zona:     values.zona     || values.city     || '',
-        servizio: values.servizio || values.service  || '',
-        message:  values.message  || values.messaggio || '',
-        rawFields: { ...values },
-      }
-      const results = await processNewLead(leadData, site)
-      if (results.agente) setAgentMsg(`${results.agente.nome} — ${leadData.zona}`)
-      setSuccess(true)
-    } catch (err) {
-      console.error(err)
-      setApiErr(t.contact.errorRetry)
-    } finally {
-      setSending(false)
-    }
-  }
-
-  const handleReset = () => {
-    setSuccess(false); setAgentMsg('')
-    setValues(Object.fromEntries(fields.map(f => [f.id, ''])))
-    setErrors({}); setApiErr('')
-  }
-
-  const serviceOptions = SERVICE_OPTIONS[lang] || SERVICE_OPTIONS['en']
-
-  return (
-    <section id="contacto" style={{ padding: 'clamp(60px,10vw,100px) clamp(16px,6%,80px)', background: `radial-gradient(ellipse at 50% 0%, ${primary}08 0%, transparent 60%)` }}>
-      <style>{`
-        .ct-input,.ct-textarea,.ct-select{
-          background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);
-          color:var(--text-main);padding:13px 16px;border-radius:10px;
-          width:100%;font-size:14px;font-family:inherit;outline:none;
-          transition:border-color 0.2s;box-sizing:border-box;
-        }
-        .ct-input:focus,.ct-textarea:focus,.ct-select:focus{border-color:${primary};}
-        .ct-input::placeholder,.ct-textarea::placeholder{color:var(--text-muted);}
-        .ct-input.ct-err,.ct-textarea.ct-err,.ct-select.ct-err{border-color:rgba(255,80,80,0.6);}
-        .ct-textarea{resize:vertical;min-height:110px;}
-        .ct-select{
-          -webkit-appearance:none;appearance:none;cursor:pointer;
-          background-image:url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1L6 7L11 1' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
-          background-repeat:no-repeat;background-position:right 16px center;
-        }
-        .ct-select option{background:#111;color:white;}
-        .ct-submit-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center;}
-        @keyframes ctIn{from{opacity:0;transform:scale(0.94) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
-        @keyframes ctCheck{from{stroke-dashoffset:60}to{stroke-dashoffset:0}}
-        @keyframes ctSpin{to{transform:rotate(360deg)}}
-        @media(max-width:600px){
-          .ct-submit-row{flex-direction:column;}
-          .ct-submit-row a,.ct-submit-row button[type="submit"]{width:100%;justify-content:center;box-sizing:border-box;}
-        }
-      `}</style>
-
-      <div style={{ maxWidth: 760, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 'clamp(32px,5vw,56px)' }}>
-          <p style={{ color: primary, fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 14 }}>
-            {t.contact.eyebrow}
-          </p>
-          <h2 style={{ fontSize: 'clamp(1.8rem,5vw,3.5rem)', fontWeight: 800, lineHeight: 1.1, marginBottom: 16, color: 'var(--text-main)' }}>
-            {translatedContact.title}
-          </h2>
-          {translatedContact.subtitle && (
-            <p style={{ color: 'var(--text-dim)', fontSize: 'clamp(14px,2vw,16px)', maxWidth: 480, margin: '0 auto', lineHeight: 1.7 }}>
-              {translatedContact.subtitle}
-            </p>
-          )}
-        </div>
-
-        {success ? (
-          <div style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${primary}40`, borderRadius: 20, padding: 'clamp(28px,5vw,56px)', textAlign: 'center', animation: 'ctIn 0.5s cubic-bezier(0.23,1,0.32,1) both' }}>
-            <div style={{ width: 80, height: 80, borderRadius: '50%', background: `${primary}15`, border: `2px solid ${primary}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px' }}>
-              <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                <path d="M8 18L15 25L28 11" stroke={primary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="60" style={{ animation: 'ctCheck 0.5s 0.2s cubic-bezier(0.23,1,0.32,1) both' }} />
-              </svg>
-            </div>
-            <h3 style={{ fontSize: 'clamp(1.4rem,3vw,1.8rem)', fontWeight: 800, marginBottom: 12, color: 'var(--text-main)' }}>{t.contact.successTitle}</h3>
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '16px 20px', margin: '20px auto', maxWidth: 440 }}>
-              <p style={{ color: 'var(--text-dim)', fontSize: 15, lineHeight: 1.7, margin: 0 }}>{agentMsg || t.contact.successMessage}</p>
-            </div>
-            <button onClick={handleReset} style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.15)', padding: '10px 24px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', marginTop: 12 }}>
-              {t.contact.sendAnother}
-            </button>
-          </div>
-        ) : (
-          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 'clamp(20px,5vw,48px)' }}>
-            <form onSubmit={handleSubmit} noValidate>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                {fields.map(field => {
-                  const err = errors[field.id] || ''
-                  const ec  = err ? ' ct-err' : ''
-                  const isService = ['service','servizio'].includes(field.id?.toLowerCase())
-                  const isPhone   = isPhoneField(field)
-
-                  return (
-                    <div key={field.id}>
-                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: err ? 'rgba(255,130,130,0.8)' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 7 }}>
-                        {field.label}
-                        {field.required && <span style={{ color: primary, marginLeft: 4 }}>*</span>}
-                      </label>
-
-                      {isPhone ? (
-                        <PhoneInput
-                          value={values[field.id] || ''}
-                          onChange={val => setValue(field.id, val)}
-                          error={err}
-                          primary={primary}
-                        />
-                      ) : field.type === 'textarea' ? (
-                        <>
-                          <textarea className={`ct-textarea${ec}`} value={values[field.id] || ''} onChange={e => setValue(field.id, e.target.value)} placeholder={field.placeholder || ''} rows={4} />
-                          {err && <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>{err}</p>}
-                        </>
-                      ) : field.type === 'select' ? (
-                        <>
-                          <select className={`ct-select${ec}`} value={values[field.id] || ''} onChange={e => setValue(field.id, e.target.value)}>
-                            <option value="">{t.contact.selectOpt}</option>
-                            {isService
-                              ? serviceOptions.map(o => <option key={o} value={o}>{o}</option>)
-                              : (field.options || '').split(',').map(o => o.trim()).filter(Boolean).map(o => <option key={o} value={o}>{o}</option>)
-                            }
-                          </select>
-                          {err && <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>{err}</p>}
-                        </>
-                      ) : (
-                        <>
-                          <input className={`ct-input${ec}`} type={field.type || 'text'} value={values[field.id] || ''} onChange={e => setValue(field.id, e.target.value)} placeholder={field.placeholder || ''} />
-                          {err && <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>{err}</p>}
-                        </>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-
-              {apiErr && (
-                <div style={{ marginTop: 16, background: 'rgba(255,60,60,0.08)', border: '1px solid rgba(255,60,60,0.25)', borderRadius: 8, padding: '12px 16px', color: 'rgba(255,130,130,0.9)', fontSize: 13 }}>
-                  {apiErr}
-                </div>
-              )}
-
-              <div className="ct-submit-row" style={{ marginTop: 28 }}>
-                <button
-                  type="submit"
-                  disabled={sending}
-                  style={{ flex: 1, minWidth: 160, padding: '16px 32px', background: sending ? `${primary}80` : primary, color: 'white', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: '0.9rem', letterSpacing: 1.5, textTransform: 'uppercase', cursor: sending ? 'not-allowed' : 'pointer', transition: 'all 0.3s', boxShadow: sending ? 'none' : `0 0 30px ${primary}35`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontFamily: 'inherit' }}
-                >
-                  {sending ? (
-                    <><span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'ctSpin 0.7s linear infinite' }} />{t.contact.sending}</>
-                  ) : translatedContact.ctaLabel}
-                </button>
-
-                {footer?.whatsapp && footer.whatsapp !== '#' && (
-                  <a href={footer.whatsapp} target="_blank" rel="noreferrer"
-                    style={{ padding: '16px 24px', background: 'transparent', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, textDecoration: 'none', fontWeight: 700, fontSize: 13, transition: 'all 0.2s', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 8 }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = primary; e.currentTarget.style.color = primary }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = 'var(--text-muted)' }}>
-                    💬 {t.contact.whatsappBtn}
-                  </a>
-                )}
-              </div>
-              <p style={{ marginTop: 16, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>{t.contact.privacy}</p>
-            </form>
-          </div>
-        )}
-
-        {footer?.email && (
-          <div style={{ textAlign: 'center', marginTop: 32 }}>
-            <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{t.contact.orEmail} </span>
-            <a href={`mailto:${footer.email}`} style={{ color: primary, fontSize: 13, textDecoration: 'none', fontWeight: 600 }}>{footer.email}</a>
-          </div>
-        )}
-      </div>
-    </section>
-  )
 }
 </file>
 
@@ -9607,6 +9278,770 @@ export default function NavBar({ brand }) {
 }
 </file>
 
+<file path="src/pages/AdminPanel.jsx">
+/**
+ * AdminPanel.jsx — FIXED v2
+ *
+ * FIX BOTÓN GUARDAR TAPADO:
+ *   Aggiunta classe `admin-main-content` al <main> per applicare il
+ *   padding-bottom corretto (120px mobile, 100px desktop) che garantisce
+ *   che il bottone "Guardar" non venga coperto dalla bottom nav mobile.
+ *
+ *   Combinato con .save-btn-wrap sticky in index.css → il bottone è
+ *   sempre visibile e cliccabile su qualsiasi dimensione schermo.
+ */
+
+import { useState, useEffect } from 'react'
+import { useAuth }          from '../lib/useAuth'
+import { useSiteData }      from '../hooks/useSiteData'
+import AdminSidebar         from '../components/admin/AdminSidebar'
+import AdminHeader          from '../components/admin/AdminHeader'
+import SiteConfigTab        from '../components/admin/tabs/SiteConfigTab'
+import HeroTab              from '../components/admin/tabs/HeroTab'
+import ServicesTab          from '../components/admin/tabs/ServicesTab'
+import EcosystemsTab        from '../components/admin/tabs/EcosystemsTab'
+import ProjectsTab          from '../components/admin/tabs/ProjectsTab'
+import TestimonialsTab      from '../components/admin/tabs/TestimonialsTab'
+import ContactTab           from '../components/admin/tabs/ContactTab'
+import LanguageTab          from '../components/admin/tabs/LanguageTab'
+import LeadsTab             from '../components/admin/tabs/LeadsTab'
+import AgentsTab            from '../components/admin/tabs/AgentsTab'
+import NotificationsTab     from '../components/admin/tabs/NotificationsTab'
+
+export default function AdminPanel() {
+  const [activeTab,   setActiveTab]   = useState('site')
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const { logout } = useAuth()
+  const data = useSiteData()
+
+  useEffect(() => {
+    if (data.site?.brand?.primary) {
+      document.documentElement.style.setProperty('--primary', data.site.brand.primary)
+    }
+    if (data.site?.brand?.bg) {
+      document.documentElement.style.setProperty('--bg', data.site.brand.bg)
+      document.body.style.backgroundColor = data.site.brand.bg
+    }
+    if (data.site?.brand?.language) {
+      window.__SITE_LANGUAGE__ = data.site.brand.language
+    }
+  }, [data.site?.brand?.primary, data.site?.brand?.bg, data.site?.brand?.language])
+
+  const tabs = {
+    site:          <SiteConfigTab    data={data} />,
+    hero:          <HeroTab          data={data} />,
+    services:      <ServicesTab      data={data} />,
+    ecosystems:    <EcosystemsTab    data={data} />,
+    projects:      <ProjectsTab      data={data} />,
+    testimonials:  <TestimonialsTab  data={data} />,
+    contact:       <ContactTab       data={data} />,
+    language:      <LanguageTab      data={data} />,
+    leads:         <LeadsTab         data={data} />,
+    agents:        <AgentsTab        data={data} />,
+    notifications: <NotificationsTab data={data} />,
+  }
+
+  return (
+    <>
+      <style>{`
+        @media (max-width: 767px) {
+          .admin-header-wrap { padding: 0 1rem !important; }
+          .admin-main-wrap   { padding: 1rem !important; }
+        }
+      `}</style>
+
+      <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#030303' }}>
+        <AdminSidebar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          open={sidebarOpen}
+          onToggle={() => setSidebarOpen(p => !p)}
+          brand={data.site?.brand}
+        />
+
+        <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <AdminHeader
+            onLogout={logout}
+            onToggleSidebar={() => setSidebarOpen(p => !p)}
+            activeTab={activeTab}
+          />
+
+          {/* FIX: clase admin-main-content añadida para el padding-bottom correcto */}
+          <main
+            className="admin-main-wrap admin-main-content"
+            style={{ flex: 1, padding: '2rem', maxWidth: 900 }}
+          >
+            {tabs[activeTab]}
+          </main>
+        </div>
+      </div>
+    </>
+  )
+}
+</file>
+
+<file path="src/pages/PublicSite.jsx">
+/**
+ * PublicSite.jsx — con AboutSection integrada
+ */
+
+import { useEffect }            from 'react'
+import { useSiteData }          from '../hooks/useSiteData'
+import NavBar                   from '../components/site/NavBar'
+import Hero                     from '../components/site/Hero'
+import AboutSection             from '../components/site/AboutSection'
+import ServicesSection          from '../components/site/ServicesSection'
+import EcosystemSection         from '../components/site/EcosystemSection'
+import ProjectsSection          from '../components/site/ProjectsSection'
+import TestimonialsSection      from '../components/site/TestimonialsSection'
+import ContactSection           from '../components/site/ContactSection'
+import Footer                   from '../components/site/Footer'
+
+function isLightColor(hex = '') {
+  const h = hex.replace('#', '')
+  if (h.length < 6) return false
+  const r = parseInt(h.substring(0, 2), 16)
+  const g = parseInt(h.substring(2, 4), 16)
+  const b = parseInt(h.substring(4, 6), 16)
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5
+}
+
+export function applyBrandColors(brand) {
+  if (!brand) return
+  const root = document.documentElement
+
+  if (brand.primary) root.style.setProperty('--primary', brand.primary)
+
+  if (brand.bg) {
+    root.style.setProperty('--bg', brand.bg)
+    document.body.style.backgroundColor = brand.bg
+
+    const isLight = isLightColor(brand.bg)
+    const theme   = isLight ? 'light' : 'dark'
+    document.body.setAttribute('data-theme', theme)
+    root.setAttribute('data-theme', theme)
+
+    if (isLight) {
+      root.style.setProperty('--text-main',  '#0a0a0a')
+      root.style.setProperty('--text-dim',   'rgba(0,0,0,0.6)')
+      root.style.setProperty('--text-muted', 'rgba(0,0,0,0.4)')
+      root.style.setProperty('--border',     'rgba(0,0,0,0.1)')
+      root.style.setProperty('--card-bg',    '#f5f5f5')
+    } else {
+      root.style.setProperty('--text-main',  '#ffffff')
+      root.style.setProperty('--text-dim',   'rgba(255,255,255,0.55)')
+      root.style.setProperty('--text-muted', 'rgba(255,255,255,0.35)')
+      root.style.setProperty('--border',     'rgba(255,255,255,0.08)')
+      root.style.setProperty('--card-bg',    '#0d0d0d')
+    }
+  }
+
+  // Prioridad: 1) admin configuró idioma  2) navegador del visitante  3) italiano por defecto
+  const SUPPORTED = ['it', 'en', 'es', 'fr', 'de', 'pt']
+  if (brand.language) {
+    window.__SITE_LANGUAGE__ = brand.language
+  } else {
+    const browserLang = (navigator.language || 'it').slice(0, 2).toLowerCase()
+    window.__SITE_LANGUAGE__ = SUPPORTED.includes(browserLang) ? browserLang : 'it'
+  }
+}
+
+function SiteLoader() {
+  const primary = getComputedStyle(document.documentElement)
+    .getPropertyValue('--primary').trim() || '#ff3c3c'
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'var(--bg)',
+      gap: 20,
+    }}>
+      <div style={{
+        width: 40, height: 40,
+        borderRadius: '50%',
+        border: `3px solid rgba(255,255,255,0.08)`,
+        borderTopColor: primary,
+        animation: 'siteSpin 0.75s linear infinite',
+      }} />
+      <style>{`@keyframes siteSpin { to { transform: rotate(360deg) } }`}</style>
+    </div>
+  )
+}
+
+export default function PublicSite() {
+  const { site, ecosystems, projects, testimonials, services, loading, hasData } = useSiteData()
+
+  useEffect(() => {
+    if (site?.brand) applyBrandColors(site.brand)
+  }, [site?.brand])
+
+  if (loading && !hasData) {
+    return <SiteLoader />
+  }
+
+  return (
+    <div style={{ background: 'var(--bg)', color: 'var(--text-main)' }}>
+      <NavBar brand={site.brand} />
+
+      {/* 1 — Portada */}
+      <Hero hero={site.hero} brand={site.brand} />
+
+      {/* 2 — Quiénes somos */}
+      <AboutSection brand={site.brand} about={site.about} />
+
+      {/* 3 — Servicios */}
+      <ServicesSection services={services} brand={site.brand} />
+
+      {/* 4 — Ecosistemas / Membresías */}
+      <EcosystemSection
+        ecosystems={ecosystems}
+        brand={site.brand}
+        projects={projects}
+      />
+
+      {/* 5 — Proyectos */}
+      <ProjectsSection
+        projects={projects}
+        brand={site.brand}
+        site={site}
+      />
+
+      {/* 6 — Testimonios */}
+      <TestimonialsSection
+        testimonials={testimonials}
+        brand={site.brand}
+      />
+
+      {/* 7 — Contacto */}
+      <ContactSection
+        contact={site.contact}
+        footer={site.footer}
+        brand={site.brand}
+        site={site}
+      />
+
+      <Footer site={site} />
+    </div>
+  )
+}
+</file>
+
+<file path="src/components/site/ContactSection.jsx">
+/**
+ * ContactSection.jsx — PhoneInput + 100% responsivo + traducción editorial
+ */
+
+import { useState } from 'react'
+import { processNewLead } from '../../lib/leadHelpers'
+import { useUIStrings } from '../../hooks/useUIStrings'
+import { useTranslatedContent } from '../../hooks/useTranslatedContent'
+import PhoneInput from '../common/PhoneInput'
+
+function parseFields(raw) {
+  if (Array.isArray(raw)) return raw
+  try { return JSON.parse(raw || '[]') } catch { return [] }
+}
+
+const FIELD_TRANSLATIONS = {
+  name:     { it:'Nome e Cognome',        en:'Full Name',             es:'Nombre completo',      fr:'Nom complet',           de:'Vollständiger Name',      pt:'Nome completo'        },
+  nome:     { it:'Nome e Cognome',        en:'Full Name',             es:'Nombre completo',      fr:'Nom complet',           de:'Vollständiger Name',      pt:'Nome completo'        },
+  email:    { it:'Email',                 en:'Email',                 es:'Email',                fr:'E-mail',                de:'E-Mail',                  pt:'E-mail'               },
+  phone:    { it:'Telefono',              en:'Phone',                 es:'Teléfono',             fr:'Téléphone',             de:'Telefon',                 pt:'Telefone'             },
+  telefono: { it:'Telefono',              en:'Phone',                 es:'Teléfono',             fr:'Téléphone',             de:'Telefon',                 pt:'Telefone'             },
+  zona:     { it:'Città / Zona',          en:'City / Area',           es:'Ciudad / Zona',        fr:'Ville / Zone',          de:'Stadt / Gebiet',          pt:'Cidade / Zona'        },
+  city:     { it:'Città / Zona',          en:'City / Area',           es:'Ciudad / Zona',        fr:'Ville / Zone',          de:'Stadt / Gebiet',          pt:'Cidade / Zona'        },
+  company:  { it:'Azienda / Progetto',    en:'Company / Project',     es:'Empresa / Proyecto',   fr:'Entreprise / Projet',   de:'Unternehmen / Projekt',   pt:'Empresa / Proyecto'   },
+  azienda:  { it:'Azienda / Progetto',    en:'Company / Project',     es:'Empresa / Proyecto',   fr:'Entreprise / Projet',   de:'Unternehmen / Projekt',   pt:'Empresa / Projeto'    },
+  service:  { it:'Servizio di interesse', en:'Service of interest',   es:'Servicio de interés',  fr:'Service souhaité',      de:'Gewünschter Service',     pt:'Serviço de interesse' },
+  servizio: { it:'Servizio di interesse', en:'Service of interest',   es:'Servicio de interés',  fr:'Service souhaité',      de:'Gewünschter Service',     pt:'Serviço de interesse' },
+  message:  { it:'Descrivi il progetto',  en:'Describe your project', es:'Describe tu proyecto', fr:'Décrivez votre projet', de:'Ihr Projekt beschreiben', pt:'Descreva seu projeto' },
+  messaggio:{ it:'Descrivi il progetto',  en:'Describe your project', es:'Describe tu proyecto', fr:'Décrivez votre projet', de:'Ihr Projekt beschreiben', pt:'Descreva seu projeto' },
+  notes:    { it:'Note',                  en:'Notes',                 es:'Notas',                fr:'Notes',                 de:'Anmerkungen',             pt:'Notas'                },
+}
+
+const PLACEHOLDERS = {
+  name:    { it:'Mario Rossi',               en:'John Smith',               es:'Juan García',               fr:'Jean Dupont',            de:'Max Mustermann',           pt:'João Silva'           },
+  email:   { it:'mario@email.com',           en:'john@email.com',           es:'juan@email.com',            fr:'jean@email.com',         de:'max@email.com',            pt:'joao@email.com'       },
+  zona:    { it:'Es: Milano, Roma...',        en:'E.g: New York, London...', es:'Ej: Madrid, Barcelona...',  fr:'Ex: Paris, Lyon...',     de:'z.B: Berlin, München...', pt:'Ex: Lisboa, Porto...' },
+  message: { it:'Raccontaci cosa cerchi...', en:'Tell us what you need...', es:'Cuéntanos qué necesitas...', fr:'Dites-nous ce dont vous avez besoin...', de:'Erzählen Sie was Sie brauchen...', pt:'Diga-nos o que precisa...' },
+}
+
+const SERVICE_OPTIONS = {
+  it: ['Sito Web', 'E-commerce', 'Branding', 'Marketing', 'Altro'],
+  en: ['Website', 'E-commerce', 'Branding', 'Marketing', 'Other'],
+  es: ['Diseño Web', 'E-commerce', 'Branding', 'Marketing', 'Otro'],
+  fr: ['Site Web', 'E-commerce', 'Branding', 'Marketing', 'Autre'],
+  de: ['Webseite', 'E-commerce', 'Branding', 'Marketing', 'Andere'],
+  pt: ['Site Web', 'E-commerce', 'Branding', 'Marketing', 'Outro'],
+}
+
+function rl(dict, lang) { return dict?.[lang] || dict?.['en'] || '' }
+
+function translateField(field, lang) {
+  const id = field.id?.toLowerCase()
+  return {
+    ...field,
+    label:       rl(FIELD_TRANSLATIONS[id], lang) || field.label,
+    placeholder: rl(PLACEHOLDERS[id], lang) || field.placeholder || '',
+  }
+}
+
+function isPhoneField(field) {
+  return ['phone', 'telefono', 'tel'].includes(field.id?.toLowerCase()) || field.type === 'tel'
+}
+
+export default function ContactSection({ contact, footer, brand, site }) {
+  const primary = brand?.primary || '#ff3c3c'
+  const t = useUIStrings(brand)
+
+  const lang = brand?.language
+    || (typeof window !== 'undefined' ? window.__SITE_LANGUAGE__ : null)
+    || 'it'
+
+  const translatedContact = useTranslatedContent(
+    {
+      title:    contact?.title    || t.contact.eyebrow,
+      subtitle: contact?.subtitle || '',
+      ctaLabel: contact?.ctaLabel || t.contact.sendBtn,
+    },
+    brand
+  )
+
+  const rawFields = parseFields(contact?.fields)
+  const fields = (rawFields.length > 0 ? rawFields : [
+    { id: 'name',    label: 'Name',    type: 'text',     required: true  },
+    { id: 'email',   label: 'Email',   type: 'email',    required: true  },
+    { id: 'phone',   label: 'Phone',   type: 'tel',      required: true  },
+    { id: 'zona',    label: 'Zone',    type: 'text',     required: true  },
+    { id: 'company', label: 'Company', type: 'text',     required: false },
+    { id: 'service', label: 'Service', type: 'select',   required: false },
+    { id: 'message', label: 'Message', type: 'textarea', required: false },
+  ]).map(f => translateField(f, lang))
+
+  const [values,   setValues]  = useState(() => Object.fromEntries(fields.map(f => [f.id, ''])))
+  const [errors,   setErrors]  = useState({})
+  const [sending,  setSending] = useState(false)
+  const [success,  setSuccess] = useState(false)
+  const [apiErr,   setApiErr]  = useState('')
+  const [agentMsg, setAgentMsg]= useState('')
+  const [privacyChecked, setPrivacyChecked] = useState(false)
+  const [privacyError,   setPrivacyError]   = useState(false)
+  const [privacyModal,   setPrivacyModal]   = useState(false)
+
+  const setValue = (id, val) => {
+    setValues(p => ({ ...p, [id]: val }))
+    if (errors[id]) setErrors(p => ({ ...p, [id]: '' }))
+  }
+
+  const validate = () => {
+    // Validar checkbox de privacidad (obligatorio RGPD)
+    if (!privacyChecked) {
+      setPrivacyError(true)
+      return false
+    }
+    setPrivacyError(false)
+    const next = {}
+    fields.forEach(f => {
+      if (f.required && !values[f.id]?.trim()) next[f.id] = t.contact.fieldRequired
+      if (f.type === 'email' && values[f.id] && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values[f.id])) {
+        next[f.id] = t.contact.emailInvalid
+      }
+      if (isPhoneField(f) && f.required && values[f.id] && values[f.id].replace(/\D/g, '').length < 7) {
+        next[f.id] = t.contact.fieldRequired
+      }
+    })
+    setErrors(next)
+    return Object.keys(next).length === 0
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!validate()) return
+    setSending(true); setApiErr('')
+    try {
+      const phoneField = fields.find(f => isPhoneField(f))
+      const leadData = {
+        name:     values.name     || values.nome     || '',
+        email:    values.email    || '',
+        phone:    phoneField ? values[phoneField.id] : (values.phone || values.telefono || ''),
+        zona:     values.zona     || values.city     || '',
+        servizio: values.servizio || values.service  || '',
+        message:  values.message  || values.messaggio || '',
+        rawFields: { ...values },
+      }
+      const results = await processNewLead(leadData, site)
+      if (results.agente) setAgentMsg(`${results.agente.nome} — ${leadData.zona}`)
+      setSuccess(true)
+    } catch (err) {
+      console.error(err)
+      setApiErr(t.contact.errorRetry)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const handleReset = () => {
+    setSuccess(false); setAgentMsg('')
+    setValues(Object.fromEntries(fields.map(f => [f.id, ''])))
+    setErrors({}); setApiErr('')
+    setPrivacyChecked(false); setPrivacyError(false)
+  }
+
+  const serviceOptions = SERVICE_OPTIONS[lang] || SERVICE_OPTIONS['en']
+
+  return (
+    <section id="contacto" style={{ padding: 'clamp(60px,10vw,100px) clamp(16px,6%,80px)', background: `radial-gradient(ellipse at 50% 0%, ${primary}08 0%, transparent 60%)` }}>
+      <style>{`
+        .ct-input,.ct-textarea,.ct-select{
+          background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);
+          color:var(--text-main);padding:13px 16px;border-radius:10px;
+          width:100%;font-size:14px;font-family:inherit;outline:none;
+          transition:border-color 0.2s;box-sizing:border-box;
+        }
+        .ct-input:focus,.ct-textarea:focus,.ct-select:focus{border-color:${primary};}
+        .ct-input::placeholder,.ct-textarea::placeholder{color:var(--text-muted);}
+        .ct-input.ct-err,.ct-textarea.ct-err,.ct-select.ct-err{border-color:rgba(255,80,80,0.6);}
+        .ct-textarea{resize:vertical;min-height:110px;}
+        .ct-select{
+          -webkit-appearance:none;appearance:none;cursor:pointer;
+          background-image:url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1L6 7L11 1' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+          background-repeat:no-repeat;background-position:right 16px center;
+        }
+        .ct-select option{background:#111;color:white;}
+        .ct-submit-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center;}
+        @keyframes ctIn{from{opacity:0;transform:scale(0.94) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
+        @keyframes ctCheck{from{stroke-dashoffset:60}to{stroke-dashoffset:0}}
+        @keyframes ctSpin{to{transform:rotate(360deg)}}
+        @media(max-width:600px){
+          .ct-submit-row{flex-direction:column;}
+          .ct-submit-row a,.ct-submit-row button[type="submit"]{width:100%;justify-content:center;box-sizing:border-box;}
+        }
+      `}</style>
+
+      <div style={{ maxWidth: 760, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 'clamp(32px,5vw,56px)' }}>
+          <p style={{ color: primary, fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 14 }}>
+            {t.contact.eyebrow}
+          </p>
+          <h2 style={{ fontSize: 'clamp(1.8rem,5vw,3.5rem)', fontWeight: 800, lineHeight: 1.1, marginBottom: 16, color: 'var(--text-main)' }}>
+            {translatedContact.title}
+          </h2>
+          {translatedContact.subtitle && (
+            <p style={{ color: 'var(--text-dim)', fontSize: 'clamp(14px,2vw,16px)', maxWidth: 480, margin: '0 auto', lineHeight: 1.7 }}>
+              {translatedContact.subtitle}
+            </p>
+          )}
+        </div>
+
+        {success ? (
+          <div style={{
+            borderRadius: 20,
+            padding: 'clamp(28px,5vw,56px)',
+            textAlign: 'center',
+            animation: 'ctIn 0.5s cubic-bezier(0.23,1,0.32,1) both',
+            // Usa var(--card-bg) y var(--border) que cambian con el tema claro/oscuro
+            background: 'var(--card-bg)',
+            border: `2px solid ${primary}`,
+            boxShadow: `0 8px 40px ${primary}15`,
+          }}>
+
+            {/* Icono animado — círculo con check */}
+            <div style={{
+              width: 90, height: 90, borderRadius: '50%',
+              background: primary,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 28px',
+              boxShadow: `0 0 0 12px ${primary}18, 0 0 0 24px ${primary}08`,
+              animation: 'ctIn 0.5s cubic-bezier(0.23,1,0.32,1) both',
+            }}>
+              <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+                <path
+                  d="M10 22L19 31L34 13"
+                  stroke="white"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray="70"
+                  style={{ animation: 'ctCheck 0.6s 0.2s cubic-bezier(0.23,1,0.32,1) both' }}
+                />
+              </svg>
+            </div>
+
+            {/* Título — usa var(--text-main) que cambia con el tema */}
+            <h3 style={{
+              fontSize: 'clamp(1.4rem,3vw,1.9rem)',
+              fontWeight: 800,
+              marginBottom: 12,
+              color: 'var(--text-main)',
+              letterSpacing: '-0.3px',
+            }}>
+              {t.contact.successTitle}
+            </h3>
+
+            {/* Mensaje — usa var(--text-dim) que cambia con el tema */}
+            <p style={{
+              color: 'var(--text-dim)',
+              fontSize: 'clamp(13px,2vw,15px)',
+              lineHeight: 1.8,
+              maxWidth: 400,
+              margin: '0 auto 28px',
+            }}>
+              {agentMsg || t.contact.successMessage}
+            </p>
+
+            {/* Botón — usa primary y var(--text-main) */}
+            <button
+              onClick={handleReset}
+              style={{
+                background: primary,
+                color: 'white',
+                border: 'none',
+                padding: '12px 32px',
+                borderRadius: 8,
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 700,
+                fontFamily: 'inherit',
+                letterSpacing: 1,
+                textTransform: 'uppercase',
+                transition: 'all 0.2s',
+                boxShadow: `0 4px 20px ${primary}35`,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+              onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)' }}
+            >
+              {t.contact.sendAnother}
+            </button>
+          </div>
+        ) : (
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 'clamp(20px,5vw,48px)' }}>
+            <form onSubmit={handleSubmit} noValidate>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                {fields.map(field => {
+                  const err = errors[field.id] || ''
+                  const ec  = err ? ' ct-err' : ''
+                  const isService = ['service','servizio'].includes(field.id?.toLowerCase())
+                  const isPhone   = isPhoneField(field)
+
+                  return (
+                    <div key={field.id}>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: err ? 'rgba(255,130,130,0.8)' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 7 }}>
+                        {field.label}
+                        {field.required && <span style={{ color: primary, marginLeft: 4 }}>*</span>}
+                      </label>
+
+                      {isPhone ? (
+                        <PhoneInput
+                          value={values[field.id] || ''}
+                          onChange={val => setValue(field.id, val)}
+                          error={err}
+                          primary={primary}
+                        />
+                      ) : field.type === 'textarea' ? (
+                        <>
+                          <textarea className={`ct-textarea${ec}`} value={values[field.id] || ''} onChange={e => setValue(field.id, e.target.value)} placeholder={field.placeholder || ''} rows={4} />
+                          {err && <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>{err}</p>}
+                        </>
+                      ) : field.type === 'select' ? (
+                        <>
+                          <select className={`ct-select${ec}`} value={values[field.id] || ''} onChange={e => setValue(field.id, e.target.value)}>
+                            <option value="">{t.contact.selectOpt}</option>
+                            {isService
+                              ? serviceOptions.map(o => <option key={o} value={o}>{o}</option>)
+                              : (field.options || '').split(',').map(o => o.trim()).filter(Boolean).map(o => <option key={o} value={o}>{o}</option>)
+                            }
+                          </select>
+                          {err && <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>{err}</p>}
+                        </>
+                      ) : (
+                        <>
+                          <input className={`ct-input${ec}`} type={field.type || 'text'} value={values[field.id] || ''} onChange={e => setValue(field.id, e.target.value)} placeholder={field.placeholder || ''} />
+                          {err && <p style={{ margin: '5px 0 0', fontSize: 11, color: 'rgba(255,100,100,0.8)' }}>{err}</p>}
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {apiErr && (
+                <div style={{ marginTop: 16, background: 'rgba(255,60,60,0.08)', border: '1px solid rgba(255,60,60,0.25)', borderRadius: 8, padding: '12px 16px', color: 'rgba(255,130,130,0.9)', fontSize: 13 }}>
+                  {apiErr}
+                </div>
+              )}
+
+              <div className="ct-submit-row" style={{ marginTop: 28 }}>
+                <button
+                  type="submit"
+                  disabled={sending}
+                  style={{ flex: 1, minWidth: 160, padding: '16px 32px', background: sending ? `${primary}80` : primary, color: 'white', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: '0.9rem', letterSpacing: 1.5, textTransform: 'uppercase', cursor: sending ? 'not-allowed' : 'pointer', transition: 'all 0.3s', boxShadow: sending ? 'none' : `0 0 30px ${primary}35`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontFamily: 'inherit' }}
+                >
+                  {sending ? (
+                    <><span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'ctSpin 0.7s linear infinite' }} />{t.contact.sending}</>
+                  ) : translatedContact.ctaLabel}
+                </button>
+
+                {footer?.whatsapp && footer.whatsapp !== '#' && (
+                  <a href={footer.whatsapp} target="_blank" rel="noreferrer"
+                    style={{ padding: '16px 24px', background: 'transparent', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, textDecoration: 'none', fontWeight: 700, fontSize: 13, transition: 'all 0.2s', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 8 }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = primary; e.currentTarget.style.color = primary }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = 'var(--text-muted)' }}>
+                    💬 {t.contact.whatsappBtn}
+                  </a>
+                )}
+              </div>
+              {/* GDPR / Privacy checkbox — obligatorio para UE, Suiza, Brasil */}
+              <div style={{ marginTop: 18 }}>
+                <label style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 12,
+                  cursor: 'pointer',
+                }}>
+                  {/* Checkbox personalizado */}
+                  <div
+                    onClick={() => { setPrivacyChecked(p => !p); setPrivacyError(false) }}
+                    style={{
+                      flexShrink: 0,
+                      width: 20, height: 20,
+                      borderRadius: 5,
+                      border: `2px solid ${privacyError ? 'rgba(255,80,80,0.8)' : privacyChecked ? primary : 'rgba(255,255,255,0.2)'}`,
+                      background: privacyChecked ? primary : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.2s',
+                      marginTop: 1,
+                    }}
+                  >
+                    {privacyChecked && (
+                      <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                        <path d="M1 4L4 7L10 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                  {/* Texto del checkbox */}
+                  <span style={{ fontSize: 12, color: privacyError ? 'rgba(255,100,100,0.9)' : 'var(--text-muted)', lineHeight: 1.6 }}>
+                    {t.contact.privacyCheckbox}{' '}
+                    <button
+                      type="button"
+                      onClick={e => { e.preventDefault(); setPrivacyModal(true) }}
+                      style={{ background: 'none', border: 'none', padding: 0, color: primary, textDecoration: 'underline', fontWeight: 600, cursor: 'pointer', fontSize: 'inherit', fontFamily: 'inherit' }}
+                    >
+                      {t.contact.privacyLink}
+                    </button>
+                    {' '}*
+                  </span>
+                </label>
+                {privacyError && (
+                  <p style={{ margin: '6px 0 0 32px', fontSize: 11, color: 'rgba(255,100,100,0.9)' }}>
+                    {t.contact.privacyRequired}
+                  </p>
+                )}
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* ── MODAL PRIVACIDAD ── */}
+        {privacyModal && (
+          <>
+            {/* Backdrop */}
+            <div
+              onClick={() => setPrivacyModal(false)}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 9000,
+                background: 'rgba(0,0,0,0.6)',
+                backdropFilter: 'blur(6px)',
+                WebkitBackdropFilter: 'blur(6px)',
+                animation: 'ctIn 0.25s ease both',
+              }}
+            />
+            {/* Panel */}
+            <div style={{
+              position: 'fixed',
+              top: '50%', left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 9001,
+              width: 'min(520px, 92vw)',
+              background: 'var(--card-bg)',
+              border: `1px solid ${primary}40`,
+              borderRadius: 20,
+              padding: 'clamp(28px,5vw,48px)',
+              boxShadow: `0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px ${primary}20`,
+              animation: 'ctIn 0.3s cubic-bezier(0.16,1,0.3,1) both',
+            }}>
+              {/* Icono */}
+              <div style={{
+                width: 52, height: 52, borderRadius: '50%',
+                background: `${primary}15`,
+                border: `1px solid ${primary}40`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 24, margin: '0 auto 20px',
+              }}>
+                🔒
+              </div>
+
+              {/* Título */}
+              <h3 style={{
+                textAlign: 'center',
+                fontSize: 'clamp(1.1rem,3vw,1.4rem)',
+                fontWeight: 800,
+                marginBottom: 16,
+                color: 'var(--text-main)',
+              }}>
+                {t.contact.privacyModalTitle}
+              </h3>
+
+              {/* Texto simple y humano */}
+              <p style={{
+                fontSize: 'clamp(13px,2vw,15px)',
+                color: 'var(--text-dim)',
+                lineHeight: 1.85,
+                marginBottom: 28,
+                textAlign: 'center',
+              }}>
+                {t.contact.privacyModalText}
+              </p>
+
+              {/* Botón cerrar */}
+              <button
+                onClick={() => { setPrivacyModal(false); setPrivacyChecked(true); setPrivacyError(false) }}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  background: primary,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 10,
+                  fontWeight: 800,
+                  fontSize: 14,
+                  letterSpacing: 0.5,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  transition: 'opacity 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.opacity = '0.85' }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
+              >
+                {t.contact.privacyModalClose} ✓
+              </button>
+            </div>
+          </>
+        )}
+
+        {footer?.email && (
+          <div style={{ textAlign: 'center', marginTop: 32 }}>
+            <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{t.contact.orEmail} </span>
+            <a href={`mailto:${footer.email}`} style={{ color: primary, fontSize: 13, textDecoration: 'none', fontWeight: 600 }}>{footer.email}</a>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+</file>
+
 <file path="src/components/site/ProjectsSection.jsx">
 /**
  * ProjectsSection.jsx — iframe auto-translate + 100% responsivo
@@ -9710,7 +10145,38 @@ function buildSrcDoc(html, targetLang) {
     });
   <\/script>`
 
-  const inject = translateScript + injector
+  // CSS + Script que oculta CUALQUIER botón X dentro del demo HTML
+  const hideCloseScript = `<style>
+    [class*="close"],[class*="Close"],[class*="cerrar"],[class*="cancel"],
+    [class*="Cancel"],[class*="dismiss"],[class*="chiudi"],[class*="fermer"],
+    [id*="close"],[id*="Close"],[id*="cancel"],[id*="dismiss"] {
+      display: none !important;
+    }
+  </style>
+  <script>
+(function() {
+  function hideX() {
+    document.querySelectorAll('button, a, span, div, i').forEach(function(el) {
+      var hasNoElementChildren = el.children.length === 0;
+      var txt = (el.innerText || el.textContent || '').trim();
+      var isX = hasNoElementChildren && /^[×✕✖xX❌]$|^[xX]\s*$/.test(txt);
+      var cls = ((el.className || '') + ' ' + (el.id || '')).toLowerCase();
+      var isClose = /(close|cerrar|cancel|dismiss|chiudi|fermer|schlie)/.test(cls);
+      if (isX || isClose) {
+        el.style.cssText += 'display:none!important;visibility:hidden!important;pointer-events:none!important;';
+      }
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', hideX);
+  } else { hideX(); }
+  setTimeout(hideX, 300);
+  setTimeout(hideX, 800);
+  setTimeout(hideX, 2000);
+})();
+<\/script>`
+
+  const inject = hideCloseScript + translateScript + injector
 
   if (/<!doctype\s+html/i.test(html) || /<html[\s>]/i.test(html)) {
     return html
@@ -9831,7 +10297,7 @@ function ProjectShell({ project, brand, site, onClose }) {
           </button>
           <button onClick={onClose} className="proj-back-btn"
             style={{ padding: 'clamp(7px,1.5vw,9px) clamp(10px,2vw,14px)', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', borderRadius: 9, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.18s', whiteSpace: 'nowrap' }}>
-            ✕
+            {t.projects?.backBtn || '← Volver'}
           </button>
         </div>
       </div>
@@ -9895,7 +10361,7 @@ function ProjectShell({ project, brand, site, onClose }) {
           style={{ flex: 1, padding: '13px', background: primary, color: 'white', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 13, textTransform: 'uppercase', cursor: 'pointer' }}>
           {t.projects?.contractThis || 'Contratar'} →
         </button>
-        <button onClick={onClose} style={{ padding: '13px 18px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>✕</button>
+
       </div>
     </div>
   )
@@ -10066,251 +10532,6 @@ export default function ProjectsSection({ projects, brand, site }) {
 }
 </file>
 
-<file path="src/pages/AdminPanel.jsx">
-/**
- * AdminPanel.jsx — FIXED v2
- *
- * FIX BOTÓN GUARDAR TAPADO:
- *   Aggiunta classe `admin-main-content` al <main> per applicare il
- *   padding-bottom corretto (120px mobile, 100px desktop) che garantisce
- *   che il bottone "Guardar" non venga coperto dalla bottom nav mobile.
- *
- *   Combinato con .save-btn-wrap sticky in index.css → il bottone è
- *   sempre visibile e cliccabile su qualsiasi dimensione schermo.
- */
-
-import { useState, useEffect } from 'react'
-import { useAuth }          from '../lib/useAuth'
-import { useSiteData }      from '../hooks/useSiteData'
-import AdminSidebar         from '../components/admin/AdminSidebar'
-import AdminHeader          from '../components/admin/AdminHeader'
-import SiteConfigTab        from '../components/admin/tabs/SiteConfigTab'
-import HeroTab              from '../components/admin/tabs/HeroTab'
-import ServicesTab          from '../components/admin/tabs/ServicesTab'
-import EcosystemsTab        from '../components/admin/tabs/EcosystemsTab'
-import ProjectsTab          from '../components/admin/tabs/ProjectsTab'
-import TestimonialsTab      from '../components/admin/tabs/TestimonialsTab'
-import ContactTab           from '../components/admin/tabs/ContactTab'
-import LanguageTab          from '../components/admin/tabs/LanguageTab'
-import LeadsTab             from '../components/admin/tabs/LeadsTab'
-import AgentsTab            from '../components/admin/tabs/AgentsTab'
-import NotificationsTab     from '../components/admin/tabs/NotificationsTab'
-
-export default function AdminPanel() {
-  const [activeTab,   setActiveTab]   = useState('site')
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  const { logout } = useAuth()
-  const data = useSiteData()
-
-  useEffect(() => {
-    if (data.site?.brand?.primary) {
-      document.documentElement.style.setProperty('--primary', data.site.brand.primary)
-    }
-    if (data.site?.brand?.bg) {
-      document.documentElement.style.setProperty('--bg', data.site.brand.bg)
-      document.body.style.backgroundColor = data.site.brand.bg
-    }
-    if (data.site?.brand?.language) {
-      window.__SITE_LANGUAGE__ = data.site.brand.language
-    }
-  }, [data.site?.brand?.primary, data.site?.brand?.bg, data.site?.brand?.language])
-
-  const tabs = {
-    site:          <SiteConfigTab    data={data} />,
-    hero:          <HeroTab          data={data} />,
-    services:      <ServicesTab      data={data} />,
-    ecosystems:    <EcosystemsTab    data={data} />,
-    projects:      <ProjectsTab      data={data} />,
-    testimonials:  <TestimonialsTab  data={data} />,
-    contact:       <ContactTab       data={data} />,
-    language:      <LanguageTab      data={data} />,
-    leads:         <LeadsTab         data={data} />,
-    agents:        <AgentsTab        data={data} />,
-    notifications: <NotificationsTab data={data} />,
-  }
-
-  return (
-    <>
-      <style>{`
-        @media (max-width: 767px) {
-          .admin-header-wrap { padding: 0 1rem !important; }
-          .admin-main-wrap   { padding: 1rem !important; }
-        }
-      `}</style>
-
-      <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#030303' }}>
-        <AdminSidebar
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          open={sidebarOpen}
-          onToggle={() => setSidebarOpen(p => !p)}
-          brand={data.site?.brand}
-        />
-
-        <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
-          <AdminHeader
-            onLogout={logout}
-            onToggleSidebar={() => setSidebarOpen(p => !p)}
-            activeTab={activeTab}
-          />
-
-          {/* FIX: clase admin-main-content añadida para el padding-bottom correcto */}
-          <main
-            className="admin-main-wrap admin-main-content"
-            style={{ flex: 1, padding: '2rem', maxWidth: 900 }}
-          >
-            {tabs[activeTab]}
-          </main>
-        </div>
-      </div>
-    </>
-  )
-}
-</file>
-
-<file path="src/pages/PublicSite.jsx">
-/**
- * PublicSite.jsx — con AboutSection integrada
- */
-
-import { useEffect }            from 'react'
-import { useSiteData }          from '../hooks/useSiteData'
-import NavBar                   from '../components/site/NavBar'
-import Hero                     from '../components/site/Hero'
-import AboutSection             from '../components/site/AboutSection'
-import ServicesSection          from '../components/site/ServicesSection'
-import EcosystemSection         from '../components/site/EcosystemSection'
-import ProjectsSection          from '../components/site/ProjectsSection'
-import TestimonialsSection      from '../components/site/TestimonialsSection'
-import ContactSection           from '../components/site/ContactSection'
-import Footer                   from '../components/site/Footer'
-
-function isLightColor(hex = '') {
-  const h = hex.replace('#', '')
-  if (h.length < 6) return false
-  const r = parseInt(h.substring(0, 2), 16)
-  const g = parseInt(h.substring(2, 4), 16)
-  const b = parseInt(h.substring(4, 6), 16)
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5
-}
-
-export function applyBrandColors(brand) {
-  if (!brand) return
-  const root = document.documentElement
-
-  if (brand.primary) root.style.setProperty('--primary', brand.primary)
-
-  if (brand.bg) {
-    root.style.setProperty('--bg', brand.bg)
-    document.body.style.backgroundColor = brand.bg
-
-    const isLight = isLightColor(brand.bg)
-    const theme   = isLight ? 'light' : 'dark'
-    document.body.setAttribute('data-theme', theme)
-    root.setAttribute('data-theme', theme)
-
-    if (isLight) {
-      root.style.setProperty('--text-main',  '#0a0a0a')
-      root.style.setProperty('--text-dim',   'rgba(0,0,0,0.6)')
-      root.style.setProperty('--text-muted', 'rgba(0,0,0,0.4)')
-      root.style.setProperty('--border',     'rgba(0,0,0,0.1)')
-      root.style.setProperty('--card-bg',    '#f5f5f5')
-    } else {
-      root.style.setProperty('--text-main',  '#ffffff')
-      root.style.setProperty('--text-dim',   'rgba(255,255,255,0.55)')
-      root.style.setProperty('--text-muted', 'rgba(255,255,255,0.35)')
-      root.style.setProperty('--border',     'rgba(255,255,255,0.08)')
-      root.style.setProperty('--card-bg',    '#0d0d0d')
-    }
-  }
-
-  if (brand.language) window.__SITE_LANGUAGE__ = brand.language
-}
-
-function SiteLoader() {
-  const primary = getComputedStyle(document.documentElement)
-    .getPropertyValue('--primary').trim() || '#ff3c3c'
-
-  return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'var(--bg)',
-      gap: 20,
-    }}>
-      <div style={{
-        width: 40, height: 40,
-        borderRadius: '50%',
-        border: `3px solid rgba(255,255,255,0.08)`,
-        borderTopColor: primary,
-        animation: 'siteSpin 0.75s linear infinite',
-      }} />
-      <style>{`@keyframes siteSpin { to { transform: rotate(360deg) } }`}</style>
-    </div>
-  )
-}
-
-export default function PublicSite() {
-  const { site, ecosystems, projects, testimonials, services, loading, hasData } = useSiteData()
-
-  useEffect(() => {
-    if (site?.brand) applyBrandColors(site.brand)
-  }, [site?.brand])
-
-  if (loading && !hasData) {
-    return <SiteLoader />
-  }
-
-  return (
-    <div style={{ background: 'var(--bg)', color: 'var(--text-main)' }}>
-      <NavBar brand={site.brand} />
-
-      {/* 1 — Portada */}
-      <Hero hero={site.hero} brand={site.brand} />
-
-      {/* 2 — Quiénes somos */}
-      <AboutSection brand={site.brand} about={site.about} />
-
-      {/* 3 — Servicios */}
-      <ServicesSection services={services} brand={site.brand} />
-
-      {/* 4 — Ecosistemas / Membresías */}
-      <EcosystemSection
-        ecosystems={ecosystems}
-        brand={site.brand}
-        projects={projects}
-      />
-
-      {/* 5 — Proyectos */}
-      <ProjectsSection
-        projects={projects}
-        brand={site.brand}
-        site={site}
-      />
-
-      {/* 6 — Testimonios */}
-      <TestimonialsSection
-        testimonials={testimonials}
-        brand={site.brand}
-      />
-
-      {/* 7 — Contacto */}
-      <ContactSection
-        contact={site.contact}
-        footer={site.footer}
-        brand={site.brand}
-        site={site}
-      />
-
-      <Footer site={site} />
-    </div>
-  )
-}
-</file>
-
 <file path="src/components/site/EcosystemSection.jsx">
 /**
  * EcosystemSection.jsx — v6 PREMIUM REDESIGN + traducción editorial
@@ -10451,7 +10672,42 @@ function EcosystemFullscreen({ eco, brand, onClose, t }) {
 })();
 <\/script>`
 
-    const inject = translateScript
+    // CSS + Script que oculta CUALQUIER botón X dentro del demo HTML
+    const hideCloseScript = `<style>
+      /* Ocultar por clase/id comunes de cierre */
+      [class*="close"],[class*="Close"],[class*="cerrar"],[class*="cancel"],
+      [class*="Cancel"],[class*="dismiss"],[class*="chiudi"],[class*="fermer"],
+      [id*="close"],[id*="Close"],[id*="cancel"],[id*="dismiss"] {
+        display: none !important;
+      }
+    </style>
+    <script>
+(function() {
+  function hideX() {
+    document.querySelectorAll('button, a, span, div, i').forEach(function(el) {
+      // Sin hijos de tipo elemento — es un nodo hoja
+      var hasNoElementChildren = el.children.length === 0;
+      var txt = (el.innerText || el.textContent || '').trim();
+      // Texto que sea solo X en cualquier variante
+      var isX = hasNoElementChildren && /^[×✕✖xX❌]$|^[xX]\s*$/.test(txt);
+      // Clase o id que sugiera cierre
+      var cls = ((el.className || '') + ' ' + (el.id || '')).toLowerCase();
+      var isClose = /(close|cerrar|cancel|dismiss|chiudi|fermer|schlie|back|volver|zurück|retour)/.test(cls);
+      if (isX || isClose) {
+        el.style.cssText += 'display:none!important;visibility:hidden!important;pointer-events:none!important;';
+      }
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', hideX);
+  } else { hideX(); }
+  setTimeout(hideX, 300);
+  setTimeout(hideX, 800);
+  setTimeout(hideX, 2000);
+})();
+<\/script>`
+
+    const inject = hideCloseScript + translateScript
 
     if (/<!doctype\s+html/i.test(html) || /<html[\s>]/i.test(html)) {
       // Inyecta data-pt-lang en el tag <html> y el script en <head>
@@ -10515,7 +10771,7 @@ function EcosystemFullscreen({ eco, brand, onClose, t }) {
           </a>
           <button onClick={onClose} className="shell-back-btn"
             style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.55)', borderRadius: 9, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.18s', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
-            ✕ {t.ecosystems?.close || 'Cerrar'}
+            {t.ecosystems?.shellBack || '← Volver'}
           </button>
         </div>
       </div>
@@ -10548,7 +10804,7 @@ function EcosystemFullscreen({ eco, brand, onClose, t }) {
           style={{ flex: 1, padding: '13px', background: primary, color: 'white', borderRadius: 10, fontWeight: 800, fontSize: 13, textDecoration: 'none', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.8 }}>
           {t.ecosystems?.ctaContact || 'Contratar'} →
         </a>
-        <button onClick={onClose} style={{ padding: '13px 16px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>✕</button>
+
       </div>
     </div>
   )
